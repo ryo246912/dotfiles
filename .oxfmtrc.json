@@ -8,6 +8,7 @@
     "config/obsidian/**",
     "config/navi/**",
     "unmanaged/rectangle/**",
+    "unmanaged/thaw/**",
     "config-mac/vicinae/**",
     "**/bun.lock",
     "**/*.toml"

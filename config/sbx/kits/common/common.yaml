@@ -12,13 +12,11 @@ args:
   term:
     default: xterm-256color
     env: TERM
-  lefthook_config:
-    default: lefthook.local.yml
-    env: LEFTHOOK_CONFIG
-  install_local_lefthook:
-    default: "0"
-    env: INSTALL_LOCAL_LEFTHOOK
 capabilities:
+  # v3 kits must request forwarding explicitly, even when enabled on the host.
+  - type: com.docker.sandbox/ssh-agent@1
+    config:
+      phase: runtime
   - type: com.docker.sandbox/network-policy@1
     config:
       runtime:

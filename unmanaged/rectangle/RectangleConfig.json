@@ -104,7 +104,7 @@
 
     },
     "gapSize" : {
-      "float" : 4
+      "float" : 0
     },
     "greenButtonOverride" : {
       "bool" : false

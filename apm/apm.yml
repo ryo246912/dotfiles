@@ -21,6 +21,11 @@ dependencies:
   # - tag が無い依存は ref を書かず、apm.lock.yaml の resolved_commit で pin する。
   #   Renovate の lockFileMaintenance が定期的に最新 commit へ更新する。
   apm:
+    # pr-author-all-review から対象差分に応じて使う専門レビュー。
+    - petrkindlmann/qa-skills/skills/ai-qa-review#v3.6.0
+    - supabase/agent-skills/skills/supabase-postgres-best-practices#v0.1.9
+    - vercel-labs/agent-skills/skills/web-design-guidelines
+    - vercel-labs/agent-skills/skills/react-best-practices
     # Plannotatorのreview / annotate / last launcher skills。
     - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.6
     - backnotprop/plannotator/apps/skills/core/plannotator-annotate#v0.28.6
@@ -32,6 +37,11 @@ dependencies:
     - plannotator/effective-html/skills/html-prototype
     - plannotator/effective-html/skills/html-plan
     - plannotator/effective-html/skills/html-diagram
+    # /understand は Claude Code のセッションを分岐して使うため、targets を claude に絞る。
+    - git: fkubota/understand-mode
+      path: skill/understand
+      targets:
+        - claude
     # crit（tomasz-tomczyk/crit プラグイン）。
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit#v0.19.1
     - tomasz-tomczyk/crit/integrations/claude-code/skills/crit-cli#v0.19.1
@@ -49,11 +59,17 @@ dependencies:
     # grill-me が呼び出す interview loop。本体と同じ tag に pin する（Renovate で同一PRにまとめる）。
     - mattpocock/skills/skills/productivity/grilling#v1.2.3
     - cathrynlavery/diagram-design/skills/diagram-design
-    - vercel-labs/skills/skills/find-skills#v1.8.1
+    - vercel-labs/skills/skills/find-skills#v1.9.0
+    - GoogleChrome/modern-web-guidance/skills/modern-web-guidance#v1.0.1
     # AI tool向けのprompt生成・改善skill（tag なし、lockfileのcommitでpin）。
     - nidhinjs/prompt-master
-    # Ponytail は repository 全体を plugin package として取り込み、6 skills と hooks を配布する。
-    - DietrichGebert/ponytail#v5.1.0
+    # Ponytail は skill ディレクトリ単位で配布する。
+    - DietrichGebert/ponytail/skills/ponytail#v5.1.0
+    - DietrichGebert/ponytail/skills/ponytail-audit#v5.1.0
+    - DietrichGebert/ponytail/skills/ponytail-debt#v5.1.0
+    - DietrichGebert/ponytail/skills/ponytail-gain#v5.1.0
+    - DietrichGebert/ponytail/skills/ponytail-help#v5.1.0
+    - DietrichGebert/ponytail/skills/ponytail-review#v5.1.0
     # desloppify は CLI（mise の pipx:desloppify）に同梱された SKILL.md を配布する。skill は CLI と
     # 対で更新される（古いと CLI が警告する）ため、ref は mise の version と揃える。
     # path 末尾が `global` で配置名が skill 名にならないため、object 形式 + alias で書く。

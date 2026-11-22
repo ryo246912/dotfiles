@@ -44,7 +44,7 @@
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら読み込まない）
 #   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
-#   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
+#   CLAUDE_CODE_ENABLE_CFC  明示された値だけ Claude sandbox へ転送（既定値なし）
 #
 # sandbox を作成したときの呼び出しを ${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh に
 # 記録する。`mise run sandbox:recreate` はこれに --new --setup-only を付けて再実行し、
@@ -361,7 +361,17 @@ fi
 case "$AGENT" in
     claude)
         if [[ "$CLAUDE_OAUTH" != true ]]; then
-            : "${CONFIG_DIR:=${HOME}/.claude}"
+            if [[ -z "$CONFIG_DIR" ]]; then
+                case "$CLAUDE_ACCOUNT" in
+                    "" | account1) CONFIG_DIR="${HOME}/.claude" ;;
+                    account2) CONFIG_DIR="${HOME}/.claude-account2" ;;
+                    work3) CONFIG_DIR="${HOME}/.claude-work3" ;;
+                    *)
+                        log_error "このアカウントでは --config-dir を指定してください: $CLAUDE_ACCOUNT"
+                        exit 1
+                        ;;
+                esac
+            fi
             AGENT_CONFIG_ENV="CLAUDE_CONFIG_DIR"
         fi
         ;;
@@ -436,6 +446,15 @@ fi
 # ---------------------------------------------------------------------------
 log_info "ホスト設定と共有 mount を確認します"
 MOUNTS=()
+# 会話ログは選択したホストアカウントの projects に残す。
+CLAUDE_PROJECTS_HOST=""
+if [[ "$AGENT" == claude ]] && ! [[ "$MOUNT_CONFIG" == true && -n "$AGENT_CONFIG_ENV" && -n "$CONFIG_DIR" ]]; then
+    CLAUDE_PROJECTS_HOST="${CONFIG_DIR:-${HOME}/.claude}/projects"
+    if ! mkdir -p "$CLAUDE_PROJECTS_HOST"; then
+        log_error "会話ログの保存先を作成できません: $CLAUDE_PROJECTS_HOST"
+        exit 1
+    fi
+fi
 add_mount() {
     local spec="$1"
     local path="$spec"
@@ -639,8 +658,11 @@ elif [[ "$CLAUDE_OAUTH" == true ]]; then
     CLAUDE_AUTH_METHOD=oauth
 fi
 [[ -n "$CLAUDE_AUTH_METHOD" ]] && add_env SBX_CLAUDE_AUTH_METHOD "$CLAUDE_AUTH_METHOD"
-# lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする
-add_env INSTALL_LOCAL_LEFTHOOK "${INSTALL_LOCAL_LEFTHOOK:-0}"
+if [[ "$AGENT" == claude && -n "${CLAUDE_CODE_ENABLE_CFC+x}" ]]; then
+    # Chrome の有効化は呼び出し元（ccmanager の OAuth preset など）が選ぶ。
+    # 明示された値だけ sandbox の環境へ渡し、daemon / worker にも継承させる。
+    add_env CLAUDE_CODE_ENABLE_CFC "$CLAUDE_CODE_ENABLE_CFC"
+fi
 # workspace の mise 設定を信頼し、非対話実行で trust prompt が出ないようにする
 add_env MISE_TRUSTED_CONFIG_PATHS "/mise:$WORKSPACE"
 if [[ "$HOST_BRIDGE" == true ]]; then
@@ -713,7 +735,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # それらを「消えた worktree」とみなしてホスト側の worktree を壊すのを防ぐ
     add_git_config gc.worktreePruneExpire never
 
-    # コミット署名: sbx は SSH agent forwarding が既定で有効なので、ホストの秘密鍵を
+    # コミット署名: 共通 v3 kit が SSH agent forwarding を runtime 用に要求し、ホストの秘密鍵を
     # sandbox に渡さずに署名できる。ホストのパスは sandbox 内に無いため、鍵ファイルでは
     # なく forwarded agent の公開鍵（key:: 形式）を指定する。
     #
@@ -732,6 +754,13 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     #   未保存なら端末で一度だけパスフレーズを聞いて Keychain に保存する
     # ssh-add -L の終了コード: 0=鍵あり / 1=鍵なし / 2=agent に接続できない
     log_info "SSH 署名鍵を確認します"
+    if [[ "$(sbx settings get ssh.agentForwardingEnabled 2>/dev/null)" == false ]]; then
+        log_error "sbx の SSH agent forwarding が無効です。ホストで次を実行してから再試行してください"
+        log_error "  sbx settings set ssh.agentForwardingEnabled true"
+        log_error "  sbx daemon restart"
+        log_error "作業中の sandbox は保存してから sbx stop <name> で停止してください（削除は不要です）"
+        exit 1
+    fi
     signing_key="${SBX_AGENT_SIGNING_KEY:-${HOME}/.ssh/id_ed25519}"
     signing_key="${signing_key%.pub}"
     # agent 内の鍵との照合は「鍵種別 + 鍵本体」で行う（comment は agent 側と異なりうる）
@@ -757,8 +786,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
         if [[ -n "$signing_key_id" ]]; then
             agent_has_signing_key && signing_pubkey="$signing_key_id"
         else
-            # 鍵ファイルが無い（agent にだけ鍵がある構成）場合は従来通り先頭の鍵を使う
-            signing_pubkey=$(ssh-add -L 2>/dev/null | head -n 1)
+            log_error "署名鍵を固定するため ${signing_key}.pub が必要です（SBX_AGENT_SIGNING_KEY で変更可）"
         fi
     fi
     if [[ -n "$signing_pubkey" ]]; then
@@ -785,20 +813,19 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             add_git_config gpg.ssh.allowedSignersFile "$allowed_signers"
         fi
     else
-        # ホストの gitconfig が GPG 署名を有効にしていても、GPG 秘密鍵は sandbox に
-        # 渡らないため commit が毎回失敗する。署名だけ無効化する。
-        add_git_config commit.gpgsign false
+        log_error "署名用の鍵を利用できないため起動を中止します（署名は無効化しません）"
         if [[ $agent_rc -eq 2 ]]; then
-            log_warn "ホストの ssh-agent に接続できないため sandbox 内のコミット署名を無効化します"
-            log_warn "  SSH_AUTH_SOCK=${SSH_AUTH_SOCK:-（未設定）} を確認してください（tmux の古いセッションでは古いソケットを指していることがあります）"
+            log_error "ホストの SSH_AUTH_SOCK を確認し、ssh-add -l が成功するシェルから再実行してください"
+            log_error "tmux の古いセッションでは古いソケットを指していることがあります"
         else
-            log_warn "署名用の鍵（${signing_key}）をホストの ssh-agent に登録できないため sandbox 内のコミット署名を無効化します"
+            log_error "署名鍵の公開鍵ファイルと agent への登録を確認してください: ${signing_key}.pub"
             if [[ "$(uname -s)" == Darwin ]]; then
-                log_warn "  一度だけ ssh-add --apple-use-keychain ${signing_key} を実行すると、以降は自動で読み込みます"
+                log_error "  ssh-add --apple-use-keychain \"${signing_key}\""
             else
-                log_warn "  ssh-add ${signing_key} で鍵を登録してください"
+                log_error "  ssh-add \"${signing_key}\""
             fi
         fi
+        exit 1
     fi
 
     if [[ ${#GIT_CONFIG_PAIRS[@]} -gt 0 ]]; then
@@ -847,7 +874,7 @@ sandbox_host_port() {
 # （sbx exec -d は 0.45.0 で非対応になったので前景で実行する）
 #
 # --no-host-bridge でもスキップしない。初期化スクリプトの中身は nvim 設定の共有・生成物の
-# 分離・lefthook といったホスト連携と無関係な処理も含んでおり、mac-host 関連は
+# 分離といったホスト連携と無関係な処理も含んでおり、mac-host 関連は
 # SBX_HOST_SSH_KEY が無ければスクリプト側で自動的にスキップされる。
 run_post_create() {
     local -a env_args=()
@@ -875,7 +902,7 @@ run_post_create() {
 # 作成したときの呼び出しを、そのまま実行できる bash スクリプトとして記録する。
 # 追加の引数（"$@"）は agent 引数の `--` より前に入るので、--new --setup-only を後から足せる。
 # 記録に失敗しても sandbox 自体は使えるため warning 止まりにする。
-readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY INSTALL_LOCAL_LEFTHOOK)
+readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY)
 record_invocation() {
     local dir="${XDG_STATE_HOME:-${HOME}/.local/state}/sbx-agent" file var
     file="${dir}/${SANDBOX_NAME}.sh"
@@ -992,6 +1019,23 @@ prepare_env_files() {
         path="${spec%:ro}"
         mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
     done
+    if [[ -n "$CLAUDE_PROJECTS_HOST" ]]; then
+        # 別 target の rw mount で、明示された read-only mount を迂回しない。
+        if ! python3 - "$CLAUDE_PROJECTS_HOST" ${MOUNTS[@]+"${MOUNTS[@]}"} <<'PYPROJECTS'
+import os, sys
+projects = os.path.realpath(sys.argv[1])
+for spec in sys.argv[2:]:
+    if not spec.endswith(":ro"):
+        continue
+    readonly = os.path.realpath(spec[:-3])
+    if os.path.commonpath([projects, readonly]) in (projects, readonly):
+        sys.exit("projects の永続化と read-only mount が競合します: " + spec)
+PYPROJECTS
+        then
+            exit 1
+        fi
+        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$CLAUDE_PROJECTS_HOST" '$m + [{path:$p,target:"/home/agent/.claude/projects",readOnly:false}]') || exit 1
+    fi
     if [[ "$HOST_BRIDGE" == true ]]; then
         PUBLISH_PORTS+=("$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT")
     fi
@@ -1171,6 +1215,30 @@ PYORG
     )
 fi
 
+# ホストで鍵が見えていても、daemon の古い socket や設定により relay が無い場合がある。
+# agent と同じユーザーで実際に署名し、login shell の socket を起動環境へ明示的に渡す。
+if [[ "$MOUNT_CONFIG" == true ]]; then
+    log_info "sandbox 内の SSH 署名を検証します"
+    signing_socket=$(sbx exec -u agent --env "SBX_SIGNING_PUBKEY=$signing_pubkey" "$SANDBOX_NAME" bash -lc '
+        set -eu
+        test -n "${SSH_AUTH_SOCK:-}" && test -S "$SSH_AUTH_SOCK" || {
+            echo "署名用 SSH_AUTH_SOCK が未設定、または relay socket がありません" >&2
+            exit 1
+        }
+        probe=$(mktemp -d)
+        trap "rm -rf -- \"\$probe\"" EXIT
+        printf "%s\n" "$SBX_SIGNING_PUBKEY" >"$probe/key.pub"
+        printf "sbx-agent signing probe\n" | ssh-keygen -Y sign -U -n git -f "$probe/key.pub" >/dev/null
+        printf "%s" "$SSH_AUTH_SOCK"
+    ') || {
+        log_error "sandbox 内で署名できないため起動を中止します。署名設定と作業データは保持しています"
+        log_error "ホストで ssh-add -l と sbx settings get ssh.agentForwardingEnabled を確認してください"
+        log_error "設定変更時は sbx daemon restart、続いて sbx stop $SANDBOX_NAME を実行し、同じシェルで sbx-agent を再実行してください"
+        exit 1
+    }
+    add_env SSH_AUTH_SOCK "$signing_socket"
+fi
+
 if [[ "$SETUP_ONLY" == true ]]; then
     log_info "sandbox の準備が完了しました: $SANDBOX_NAME"
     exit 0
@@ -1179,7 +1247,8 @@ fi
 # 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
 # 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
 log_info "${AGENT} を起動します"
-run_cmd=(sbx run --name "$SANDBOX_NAME")
+# 再利用時も現在の署名鍵・Git 設定・socket を渡す（overlay は作成時の設定）。
+run_cmd=(sbx run --name "$SANDBOX_NAME" ${ENV_ARGS[@]+"${ENV_ARGS[@]}"})
 [[ -n "$CLAUDE_AUTH_METHOD" ]] && run_cmd+=(--env "SBX_CLAUDE_AUTH_METHOD=$CLAUDE_AUTH_METHOD")
 [[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")

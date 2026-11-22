@@ -5,8 +5,10 @@
 PGSSLROOTCERT = "/etc/ssl/cert.pem"
 
 [tools]
-# Docker Sandboxes (sbx)。Apple Silicon 専用
-"github:docker/sbx-releases" = { version = "0.53.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
+# Docker Sandboxes (sbx)。Apple Silicon 専用。T3 Connect が使う SRV/TXT の修正は
+# v0.55.0-rc4 に収録（0.53/0.54 は未対応）。正式版 0.55.0 以降が出たら更新する。
+# https://github.com/docker/sbx-releases/issues/791
+"github:docker/sbx-releases" = { version = "0.55.0-rc4", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
 "github:hzqtc/taproom"       = { version = "0.6.2", bin = "taproom" }
 "http:terminal-browser"      = { version = "0.15.3", platforms.macos-arm64 = { url = "https://terminal-browser.sh/install/dl/stable/v{{ version }}/terminal-browser-darwin-arm64.tar.gz", strip_components = 1, bin_path = "bin" } }
 
@@ -33,9 +35,6 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew:tig"          = "latest" # 2.6.1
 "brew:tree"         = "latest" # 2.3.2
 "brew:ugrep"        = "latest" # 7.8.3
-# 独自 tap（[bootstrap.brew.taps]）の formula。bottle が無く mise がソースビルドする（要 Xcode CLT）。
-# Homebrew API メタデータが無く renovate で追えないためバージョンマーカーは付けない。
-"brew:felixkratz/formulae/borders" = "latest"
 
 # casks（下記一覧には含まれない例外あり: brew-cask 経由だと `mise bootstrap packages apply`
 # が中断/ハングするため `mise run bootstrap:mac-packages`
@@ -60,7 +59,6 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:font-hackgen-nerd" = "latest" # 2.10.0
 "brew-cask:ghostty"           = "latest" # 1.3.1
 "brew-cask:google-chrome"     = "latest" # 151.0.7922.72
-"brew-cask:hammerspoon"       = "latest" # 1.1.1
 "brew-cask:handy"             = "latest" # 0.10.1
 # 独自 tap（[bootstrap.brew.taps]）の cask。API メタデータは無いが mise が tap の Casks/thock.rb を直接読む
 "brew-cask:kamillobinski/thock/thock" = "latest"
@@ -73,34 +71,16 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:rectangle"                 = "latest" # 1.100
 "brew-cask:slack"                     = "latest" # 4.51.180
 "brew-cask:syncthing-app"             = "latest" # 2.1.2-1
-"brew-cask:thebrowsercompany-dia"     = "latest" # 1.42.1,84365
-"brew-cask:vicinae"                   = "latest" # 0.28.2
-"brew-cask:visual-studio-code"        = "latest" # 1.106.3
-"brew-cask:wezterm@nightly"           = "latest"
+"brew-cask:t3-code"                   = "latest" # 0.1.9
+# 独自 tap の cask。Thaw 3 は macOS 27 必須のため、macOS 26 では 2.x を使う。Renovate の API 照会対象外なのでバージョン注記は付けない
+"brew-cask:thaw-app/tap/thaw@2"   = "latest"
+"brew-cask:thebrowsercompany-dia" = "latest" # 1.42.1,84365
+"brew-cask:vicinae"               = "latest" # 0.28.2
+"brew-cask:visual-studio-code"    = "latest" # 1.106.3
+"brew-cask:wezterm@nightly"       = "latest"
 
 [bootstrap.brew.taps]
-"felixkratz/formulae" = "https://github.com/FelixKratz/homebrew-formulae.git"
 "kamillobinski/thock" = "https://github.com/kamillobinski/homebrew-thock.git"
-
-# borders の常駐（`mise bootstrap macos launchd-agents apply` で適用）。
-# 既定の枠設定は bordersrc を作らず起動引数で渡す（引数があると borders は bordersrc を読まない）。
-# アプリごとの色は ~/.config/hammerspoon/app_borders_rules.lua でウィンドウ単位に上書きする。
-# inactive_color を透明にしているため、ルールに無いアプリは非フォーカス時に枠を出さない
-[bootstrap.macos.launchd.agents.borders]
-args = [
-    "style=round",
-    "width=12.0",
-    "hidpi=on",
-    "active_color=0xffe2e2e3",
-    "inactive_color=0x00000000",
-]
-environment = { LANG = "en_US.UTF-8" }
-keep_alive = true
-process_type = "Interactive"
-program = "/opt/homebrew/bin/borders"
-run_at_load = true
-stderr_path = "~/Library/Logs/borders.err.log"
-stdout_path = "~/Library/Logs/borders.out.log"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。）
 # Dock は起動時にしか設定を読まないため、適用後に `killall Dock` で再起動する。
@@ -131,5 +111,3 @@ key_repeat         = 2
 [bootstrap.macos.defaults]
 "NSGlobalDomain"   = { "com.apple.swipescrolldirection" = false }
 "com.apple.finder" = { AppleShowAllExtensions = true, QuitMenuItem = true }
-# Hammerspoon の設定を ~/.hammerspoon ではなく ~/.config/hammerspoon から読ませる（~ は Hammerspoon 側で展開）
-"org.hammerspoon.Hammerspoon" = { MJConfigFile = "~/.config/hammerspoon/init.lua" }
