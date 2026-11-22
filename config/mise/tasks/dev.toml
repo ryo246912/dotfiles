@@ -136,10 +136,51 @@ else
 fi
 
 if [ -f "$global_dir/rulesync.jsonc" ] && [ -d "$global_dir/.rulesync" ]; then
+  mise run rulesync:prune-stale-skills
   (cd "$global_dir" && rulesync generate)
 else
   echo "warning: global rulesync source not found under $global_dir; skipping global generation" >&2
 fi
+'''
+shell = "bash -c"
+
+["rulesync:prune-stale-skills"]
+description = "Remove retired skill directories left by dotfiles deployment"
+hide = true
+run = '''
+set -eu
+
+source_dir="${DOTFILES_DIR:-$HOME/dotfiles}"
+case "$source_dir" in
+  "~") source_dir="$HOME" ;;
+  "~/"*) source_dir="$HOME/${source_dir#"~/"}" ;;
+esac
+source_skills="$source_dir/config/rulesync/.rulesync/skills"
+deployed_skills="$HOME/.config/rulesync/.rulesync/skills"
+[ -f "$source_dir/mise.toml" ] && [ -d "$source_skills" ] && [ -d "$deployed_skills" ] || exit 0
+source_skills=$(cd "$source_skills" && pwd -P)
+deployed_skills=$(cd "$deployed_skills" && pwd -P)
+[ "$source_skills" != "$deployed_skills" ] || exit 0
+
+# SKILL.md のない旧ディレクトリも rulesync はスキルとして読み込む。
+# 旧名の下に残った mise のリンク切れだけを外し、空になった階層を削除する。
+for skill in "$deployed_skills"/*; do
+  [ -d "$skill" ] && [ ! -L "$skill" ] || continue
+  [ ! -e "$source_skills/${skill##*/}" ] && [ ! -f "$skill/SKILL.md" ] || continue
+  find "$skill" -type l -exec bash -eu -c '
+    deployed_skills=$1
+    source_skills=$2
+    shift 2
+    for link; do
+      [ ! -e "$link" ] || continue
+      expected="$source_skills/${link#"$deployed_skills"/}"
+      if [ "$(readlink "$link")" = "$expected" ]; then
+        rm -f "$link"
+      fi
+    done
+  ' bash "$deployed_skills" "$source_skills" {} +
+  find "$skill" -depth -type d -empty -delete
+done
 '''
 shell = "bash -c"
 
@@ -476,6 +517,7 @@ if ! command -v rulesync >/dev/null 2>&1; then
   exit 0
 fi
 set -e
+mise run rulesync:prune-stale-skills
 cd ~/.config/rulesync && rulesync generate --targets claudecode --features commands --simulate-commands
 cd ~/.config/rulesync && rulesync generate --targets codexcli --features skills
 '''
