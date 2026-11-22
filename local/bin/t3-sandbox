@@ -16,6 +16,8 @@ import tempfile
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
 ACCOUNTS = {"account1": (".claude", 3773), "account2": (".claude-account2", 3774), "work3": (".claude-work3", 3775), "oauth": (None, 3776)}
+# Match the account prefixes in the CCManager presets.
+REPOSITORY_PREFIXES = {"account1": "a1", "account2": "a2", "work3": "w3", "oauth": "oauth"}
 # Tailscale Serve only publishes HTTPS on these ports.
 TAILSCALE_HTTPS_PORTS = {"account1": 443, "account2": 10000, "work3": 8443}
 CODEX_NETWORK = "auth.openai.com:443,chatgpt.com:443,api.openai.com:443"
@@ -46,7 +48,11 @@ def profile_key(account, repository=None):
         return account
     slug = re.sub(r"[^a-z0-9]+", "-", repository.name.lower())[:24].strip("-") or "repo"
     digest = sha256(os.fsencode(repository)).hexdigest()[:16]
-    return f"{account}-{slug}-{digest}"
+    return f"{slug}-{REPOSITORY_PREFIXES[account]}-{digest}-t3"
+
+
+def sandbox_name(account, repository):
+    return f"t3-{account}" if repository is None else profile_key(account, repository)
 
 
 def profile_path(account, repository=None):
@@ -69,7 +75,7 @@ def save_json(path, value):
 def load_profile(account, repository=None):
     with profile_path(account, repository).open() as stream:
         profile = json.load(stream)
-    if profile["account"] != account or profile["name"] != f"t3-{profile_key(account, repository)}":
+    if profile["account"] != account or profile["name"] != sandbox_name(account, repository):
         raise ValueError("profile のアカウントが一致しません")
     if repository is not None and profile["workspace"] != str(repository):
         raise ValueError("profile の workspace が一致しません")
@@ -293,8 +299,8 @@ def tailscale_pair(profile):
     print("Token は一度使うと無効です。ブラウザで Pair URL を開かず、アプリに直接入力してください。")
 
 
-def host_service_command(profile):
-    label = "local.t3-sandbox." + profile["name"].removeprefix("t3-")
+def host_service_command(profile, repository):
+    label = "local.t3-sandbox." + profile_key(profile["account"], repository)
     if sys.platform == "darwin":
         require("launchctl")
         return ["launchctl", "print", f"gui/{os.getuid()}/{label}"]
@@ -405,7 +411,7 @@ def account_profile(account, workspace, port, repository):
         if token.is_symlink() or not token.is_file() or not token.stat().st_size:
             raise ValueError(f"{account} の token が未登録です。dotfiles の checkout root に移動して mise run sandbox:claude-token {account} を実行してください")
     storage = (Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share"))) / "t3-sandbox" / profile_key(account, repository)).resolve()
-    profile = {"account": account, "name": f"t3-{profile_key(account, repository)}", "workspace": str(workspace),
+    profile = {"account": account, "name": sandbox_name(account, repository), "workspace": str(workspace),
                "storage": str(storage), "port": port or ACCOUNTS[account][1]}
     path = profile_path(account, repository)
     if path.is_file():
@@ -546,7 +552,7 @@ def main():
                 install_service(profile, repository, refresh=True)
                 print("sandbox を停止し、自動起動環境を更新して再起動しました。起動後に pair または connect status で確認してください。")
                 return
-            command = host_service_command(profile)
+            command = host_service_command(profile, repository)
         else:
             require("sbx")
             if arguments[0] == "connect" and not any(flag in arguments for flag in ("--help", "-h")):

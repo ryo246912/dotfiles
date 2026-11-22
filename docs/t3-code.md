@@ -155,7 +155,9 @@ mise run t3:cli -- --repo --sbx oauth pair
 ```
 
 `--repo` は Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
-個別に作る。同名のリポジトリを別の場所に clone した場合も別環境になる。
+個別に作る。名前は CCManager の preset と同じアカウント識別子（`a1`、`a2`、`w3`、`oauth`）を使い、
+`where-platform-oauth-<パスのハッシュ>-t3` の形式になる。
+同名のリポジトリを別の場所に clone した場合も別環境になる。
 初回は環境ごとに未使用の `--port` を指定する。共有環境の既定値 3773〜3776 は予約済み。
 同じリポジトリの再セットアップでは登録済みのポートを再利用できる。
 `server-status`、`restart-server`、`login` なども `--repo` を付けて実行する。
@@ -487,7 +489,7 @@ Tailscale は private ホストで `mise run bootstrap:mac-packages` が導入�
 データ領域はそのアカウントの sandbox に追加 mount し、ホスト用 profile は mount の外に置く。
 XDG_DATA_HOME / XDG_STATE_HOME / XDG_CONFIG_HOME の指定にも対応。
 同じ環境に別 workspace / port を指定して setup を再実行した場合は、既存設定を変更せず停止する。
-リポジトリ別環境では、表の `<account>` の位置にアカウント・リポジトリ名・パスのハッシュを使う。
+リポジトリ別環境では、表の `<account>` の位置にリポジトリ別 sandbox の名前を使う。
 別アカウントを追加しても既存アカウントの T3 とデータを変更しない。
 データはホストに永続化されるが、sandbox の削除・再作成は動いている作業を終了し、
 追加の provider ログインが必要になることもある。認証情報を template に焼き込まない。
