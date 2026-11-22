@@ -449,7 +449,7 @@ log_info "ホスト設定と共有 mount を確認します"
 MOUNTS=()
 # 会話ログは選択したホストアカウントの projects に残す。
 CLAUDE_PROJECTS_HOST=""
-if [[ "$AGENT" == claude ]]; then
+if [[ "$AGENT" == claude ]] && ! [[ "$MOUNT_CONFIG" == true && -n "$AGENT_CONFIG_ENV" && -n "$CONFIG_DIR" ]]; then
     CLAUDE_PROJECTS_HOST="${CONFIG_DIR:-${HOME}/.claude}/projects"
     if ! mkdir -p "$CLAUDE_PROJECTS_HOST"; then
         log_error "会話ログの保存先を作成できません: $CLAUDE_PROJECTS_HOST"
@@ -1023,6 +1023,20 @@ prepare_env_files() {
         mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
     done
     if [[ -n "$CLAUDE_PROJECTS_HOST" ]]; then
+        # 別 target の rw mount で、明示された read-only mount を迂回しない。
+        if ! python3 - "$CLAUDE_PROJECTS_HOST" ${MOUNTS[@]+"${MOUNTS[@]}"} <<'PYPROJECTS'
+import os, sys
+projects = os.path.realpath(sys.argv[1])
+for spec in sys.argv[2:]:
+    if not spec.endswith(":ro"):
+        continue
+    readonly = os.path.realpath(spec[:-3])
+    if os.path.commonpath([projects, readonly]) in (projects, readonly):
+        sys.exit("projects の永続化と read-only mount が競合します: " + spec)
+PYPROJECTS
+        then
+            exit 1
+        fi
         mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$CLAUDE_PROJECTS_HOST" '$m + [{path:$p,target:"/home/agent/.claude/projects",readOnly:false}]') || exit 1
     fi
     if [[ "$HOST_BRIDGE" == true ]]; then
