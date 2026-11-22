@@ -11,3 +11,9 @@ description = "Select a T3 operation for the current repository"
 dir         = "{{cwd}}"
 raw         = true
 run         = 'exec "$HOME/.local/bin/t3-sandbox" cli'
+
+["t3:reset"]
+description = "Recreate a T3 sandbox for the current repository"
+dir         = "{{cwd}}"
+raw         = true
+run         = 'exec "$HOME/.local/bin/t3-sandbox" reset'

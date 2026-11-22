@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Initial account selection and host service for app-driven T3 in a repository sandbox."""
 import argparse
+from contextlib import contextmanager
 import fcntl
 from hashlib import sha256
 import json
@@ -192,7 +193,7 @@ def mapped_t3_ports(name):
             if len(fields := row.split()) >= 3 and fields[2] == "3773" and fields[1].isdigit()]
 
 
-def prepare(profile):
+def prepare(profile, rebuild=False):
     require("sbx", "sbx-agent")
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
     account = profile["account"]
@@ -203,10 +204,12 @@ def prepare(profile):
     else:
         auth_args = ["--claude-account", account, "--config-dir", Path.home() / ACCOUNTS[account]]
         environment = os.environ
-    run(["sbx-agent", "claude", *auth_args,
-         "--workspace", profile["workspace"], "--name", profile["name"],
-         "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"],
-        env=environment)
+    command = ["sbx-agent", "claude", *auth_args,
+               "--workspace", profile["workspace"], "--name", profile["name"],
+               "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"]
+    if rebuild:
+        command.append("--new")
+    run(command, env=environment)
     mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", profile["workspace"]])
     if mounted.returncode:
         raise ValueError(f"{profile['name']} 内で workspace にアクセスできません: {profile['workspace']}。"
@@ -300,6 +303,15 @@ def stop_sandbox(profile):
         run(["sbx", "stop", profile["name"]])
 
 
+def service_path(label):
+    if sys.platform == "darwin":
+        return Path.home() / "Library/LaunchAgents" / f"{label}.plist"
+    if sys.platform == "linux":
+        config = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config")))
+        return config / "systemd/user" / f"{label}.service"
+    raise ValueError("ホストサービスの操作は macOS / Linux 用です")
+
+
 def install_service(profile, repository, refresh=False):
     # Resolve tool paths through mise without exposing an extra lifecycle task.
     require("mise")
@@ -312,7 +324,7 @@ def install_service(profile, repository, refresh=False):
     logs.mkdir(parents=True, exist_ok=True, mode=0o700)
     if sys.platform == "darwin":
         require("launchctl")
-        path = Path.home() / "Library/LaunchAgents" / f"{label}.plist"
+        path = service_path(label)
         if refresh and not path.is_file():
             raise ValueError("自動起動は未登録です。登録する場合は mise run t3:setup を実行してください")
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -342,7 +354,7 @@ def install_service(profile, repository, refresh=False):
         run(["launchctl", "bootstrap", domain, path])
     elif sys.platform == "linux":
         require("systemctl")
-        path = Path(os.environ.get("XDG_CONFIG_HOME", str(Path.home() / ".config"))) / "systemd/user" / f"{label}.service"
+        path = service_path(label)
         if path.is_file() and not refresh:
             print("自動起動は登録済みです。サービス定義と実行中の T3 は変更しません")
             return
@@ -436,6 +448,15 @@ def available_port(account, reserved):
     raise ValueError(f"{account} のポート枠（{ports.start}〜{ports.stop - 1}）に空きがありません")
 
 
+@contextmanager
+def setup_lock():
+    root = state_root()
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (root / "setup.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield root
+
+
 def setup(args):
     repository = git_workspace(args.workspace)
     print(f"Workspace: {repository}", flush=True)
@@ -444,10 +465,7 @@ def setup(args):
         raise ValueError("--port はアカウントを一つだけ選んだ場合に指定できます。")
     print("選択したアカウント: " + ", ".join(accounts), flush=True)
     require("sbx", "sbx-agent")
-    root = state_root()
-    root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    with (root / "setup.lock").open("a") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with setup_lock() as root:
         registered_ports = {}
         for path in (root / "profiles").glob("*.json"):
             with path.open() as stream:
@@ -480,6 +498,50 @@ def setup(args):
             setup_account(profile, repository, args.no_autostart)
 
 
+def reset():
+    repository = git_workspace(None)
+    account = choose_accounts(repository, multiple=False, configured_only=True)[0]
+    name = profile_key(account, repository)
+    print(f"Workspace: {repository}\nSandbox: {name}")
+    print("実行中の作業は中断し、sandbox 内だけにあるファイルは消えます。"
+          "ホスト側の T3 設定・履歴と公開ポートは再利用します。")
+    if input("作り直しますか？ [y/N] ").strip().lower() not in ("y", "yes"):
+        raise KeyboardInterrupt
+    require("sbx", "sbx-agent")
+    with setup_lock():
+        profile = load_profile(account, repository)
+        account_profile(account, repository, profile["port"])
+        label = f"local.t3-sandbox.{name}"
+        path = service_path(label)
+        restart = None
+        if sys.platform == "darwin":
+            require("launchctl")
+            domain = f"gui/{os.getuid()}"
+            target = f"{domain}/{label}"
+            loaded = subprocess.run(["launchctl", "print", target],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if loaded.returncode == 0:
+                if not path.is_file():
+                    raise ValueError(f"自動起動の設定ファイルが見つかりません: {path}")
+                run(["launchctl", "bootout", target])
+            if path.is_file():
+                restart = ["launchctl", "bootstrap", domain, path]
+        elif path.is_file():
+            require("systemctl")
+            run(["systemctl", "--user", "stop", path.name])
+            restart = ["systemctl", "--user", "start", path.name]
+        try:
+            prepare(profile, rebuild=True)
+        except (OSError, ValueError, subprocess.CalledProcessError, KeyboardInterrupt):
+            if restart:
+                print("自動起動を停止したままにしました。原因を解消して t3:reset を再実行してください。",
+                      file=sys.stderr)
+            raise
+        if restart:
+            run(restart)
+    print(f"再作成済み: {name} — http://127.0.0.1:{profile['port']}")
+
+
 def main():
     parser = argparse.ArgumentParser(prog="t3-sandbox", description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
@@ -490,6 +552,7 @@ def main():
     initial.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
     initial.add_argument("--port", type=int)
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
+    sub.add_parser("reset", help="設定済みの sandbox を選び、確認後に再作成")
     service = sub.add_parser("run")
     service.add_argument("account", choices=ACCOUNTS)
     service.add_argument("--repository", type=Path)
@@ -504,6 +567,9 @@ def main():
         if args.port is not None and not 1024 <= args.port <= 65535:
             parser.error("--port は 1024〜65535 で指定してください")
         setup(args)
+        return
+    if args.action == "reset":
+        reset()
         return
     if args.action == "run":
         profile = load_profile(args.account, args.repository)

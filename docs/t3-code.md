@@ -488,6 +488,14 @@ sandbox を削除した場合はサービス経由ではなく、対象アカウ
 `mise run t3:setup -- --sbx work3 --workspace /path/to/project` を実行し、
 再作成時の plan を手動で確認・承認する。サービスからの無条件な自動承認は行わない。
 
+### 設定済み sandbox を作り直す
+
+対象リポジトリで `mise run t3:reset` を実行し、fzf でアカウントを選んで確認する。
+自動起動サービスが登録されていれば一時停止し、現在の mount 設定で sandbox を再作成してから起動する。
+公開ポートとホストに保存された T3 の設定・履歴は再利用する。
+実行中の作業は中断されるため、sandbox 内だけにある必要なファイルは先に保存する。
+作り直しが失敗したら、原因を解消して `mise run t3:reset` を再実行する。
+
 ### macOS で旧 sandbox の自動起動を解除する
 
 旧 `t3-account1` や `t3-work3` は、LaunchAgent の `KeepAlive` により、sandbox を削除しても再作成されることがある。
@@ -510,7 +518,7 @@ done
 
 ## 検証と実機確認
 
-mise タスクは初回設定の `t3:setup` と、接続・診断用の `t3:cli` の二つだけ。
+mise タスクは初回設定の `t3:setup`、接続・診断用の `t3:cli`、sandbox 再作成用の `t3:reset`。
 ポート確認・サービス状態・再起動も `t3:cli` のメニューから実行できる。
 処理本体は `local/bin/t3-sandbox` の Python スクリプトに置き、
 自動起動サービスは mise でツール環境を読み込んでから、このスクリプトを直接呼び出す。
