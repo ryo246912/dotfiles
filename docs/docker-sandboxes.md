@@ -448,7 +448,7 @@ sbx-agent --help
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx env create` で作成する。このとき
-   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/git/attributes:ro` / `~/.aws/config:ro` /
+   `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
    `~/.local/share/agent-lessons`（`.git` を含めて書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
    これにより sandbox 内でも `lessons:sync` と週次収集の pull / ブランチ作成 / commit / push ができる。
@@ -456,6 +456,11 @@ sbx-agent --help
    `.git/hooks` や `.git/config`（`core.hooksPath` / `core.fsmonitor` / `core.sshCommand` など）の変更は、
    後続のホスト側 Git 操作（SessionStart の pull や `lessons:sync`）でコード実行につながる。
    この共有 clone はホストでのコード実行を許容できる信頼済み agent に限って使い、sandbox をホスト実行の信頼境界の内側として扱う。
+   Git の `config`・`gitignore`・`attributes` は、checkout や設定再生成による inode の置換で
+   `Stale file handle` にならないよう、sandbox ごとの state に実体をコピーし、そのディレクトリを
+   `~/.config/git` へ read-only で mount する。ホストの Git 設定ディレクトリ全体は公開しない。
+   コピーは `sbx-agent` の再実行時に更新する。従来のファイル mount を使う sandbox には
+   `sbx-agent <agent> --new` による再作成が必要（事前に sandbox 内の必要なデータを保存する）。
    マウントは作成時にしか付かないため、追加したマウント（例: mergiraf 用の `git/attributes`）を既存の sandbox に反映するには
    `sbx-agent <agent> --new`（`multi-worktree dev ... --new`）で作り直す。
    作成時の呼び出しは `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh` に記録され、
