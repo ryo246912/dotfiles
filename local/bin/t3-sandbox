@@ -299,6 +299,8 @@ def stop_sandbox(profile):
     if profile["name"] in names:
         print(f"{profile['name']} を停止し、sandbox 内に残った T3 サーバーを終了します", flush=True)
         run(["sbx", "stop", profile["name"]])
+        return True
+    return False
 
 
 def service_path(label):
@@ -507,7 +509,7 @@ def reset():
         raise KeyboardInterrupt
     require("sbx")
     with setup_lock():
-        load_profile(account, repository)
+        profile = load_profile(account, repository)
         label = f"local.t3-sandbox.{name}"
         path = service_path(label)
         if sys.platform == "darwin":
@@ -523,9 +525,7 @@ def reset():
             run(["systemctl", "--user", "disable", "--now", path.name])
             path.unlink()
             run(["systemctl", "--user", "daemon-reload"])
-        listing = run(["sbx", "ls"], capture_output=True, text=True)
-        names = {line.split()[0] for line in listing.stdout.splitlines() if line.strip()}
-        if name in names:
+        if stop_sandbox(profile):
             run(["sbx", "rm", name])
         profile_path(account, repository).unlink()
     print(f"削除済み: {name}。再度使う場合は mise run t3:setup を実行してください。")
