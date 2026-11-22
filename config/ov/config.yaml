@@ -1,0 +1,14 @@
+# 検索語に大文字が含まれる場合だけ大小文字を区別する。
+SmartCaseSensitive: true
+General:
+  LineNumMode: true
+  Wrap: "none"
+# j/k で移動。j の既定の jump_target 割り当てを解除して競合を避ける。
+KeyBind:
+  down:
+    - "Down"
+    - "j"
+  up:
+    - "Up"
+    - "k"
+  jump_target: []

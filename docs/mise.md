@@ -119,9 +119,31 @@ initial_key_repeat = 15
 "NSGlobalDomain" = { "com.apple.swipescrolldirection" = false }
 ```
 
+`defaults -currentHost` 相当のホスト固有設定は、
+`[[bootstrap.macos.defaults_entries]]` に `host = "current"` を指定する。
+メニューバーの余白は `config/mise/config.toml`（配置先:
+`~/.config/mise/config.toml`）で次のように管理している。
+
+```toml
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host = "current"
+key = "NSStatusItemSelectionPadding"
+value = 6
+
+[[bootstrap.macos.defaults_entries]]
+domain = "NSGlobalDomain"
+host = "current"
+key = "NSStatusItemSpacing"
+value = 10
+```
+
+これらも `mise bootstrap macos defaults apply` で適用する。
+`bootstrap:mac-defaults` タスクはログイン項目を設定し、メニューバーの余白は変更しない。
+反映されない場合はログアウトして再ログインする。
+
 **制約**（このリポジトリで実際に踏んだもの）:
 
-- `defaults -currentHost` 相当（ホスト固有の設定。メニューバーのアイコン間隔など）は非対応。
 - 値は bool/int/float/string のみ。array/dict（キーボードショートカットの割り当てなど）は非対応。
 - macOS の「ログイン項目」に相当する設定はない。`[bootstrap.macos.launchd.agents]` は
   実行ファイル起動用の LaunchAgent 定義で、`.app` バンドルを「ログイン項目」として登録する
@@ -380,8 +402,8 @@ Homebrew API メタデータ（`api/formula/<name>.json` / `api/cask/<token>.jso
 
 ただし mise 2026.10 時点では、API メタデータが無くても `[bootstrap.brew.taps]` に tap を
 宣言しておけば tap 内の `Formula/*.rb`・`Casks/*.rb` を直接読んで導入できるケースがある。
-`borders`（`felixkratz/formulae`）と `thock`（`kamillobinski/thock`。formula から cask に移行済み）は
-どちらも API メタデータ（`api/...json`）が 404 だが、`mise bootstrap packages apply` で
+`thock`（`kamillobinski/thock`。formula から cask に移行済み）は
+API メタデータ（`api/...json`）が 404 だが、`mise bootstrap packages apply` で
 新規導入できることを実機で確認したため `[bootstrap.packages]` に置いている。
 `opencode-bar`（`opgginc/tap`）も `api/cask/opencode-bar.json` は 404 だが、こちらは
 tap を宣言しても `mise bootstrap packages apply` が `api/cask/opencode-bar.json` の取得失敗で
@@ -548,7 +570,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
   mise のネイティブな `mise.<ENV>.toml` オーバーレイ機構（`MISE_ENV` に応じて自動マージ
   される、`config.mac.toml`/`config.linux.toml` と同じ仕組み）で `mise.mac.toml`/
   `mise.linux.toml` に振り分けている。現在は mise 自体の tool/config pin
-  （`config-mac/mise`）、hammerspoon・vicinae（`config-mac/`）、autohotkey
+  （`config-mac/mise`）、vicinae（`config-mac/`）、autohotkey
   （`config-linux/`）と、`~/.config` 共通 symlink-each の OS 別 exclude（旧 `.chezmoiignore` の
   darwin/else 分岐相当）がこの振り分けの対象。
 - **Go template → Tera の書き換え**: 実際にやってみると `{{ if eq .chezmoi.os "darwin" }}`
@@ -713,7 +735,7 @@ root に固定する書き方は mise 2026.9.15 以降でしか効かないた�
   ディレクトリ単位でまとめて宣言してよい。今後そのディレクトリにファイルを追加しても
   `[dotfiles]` 側の追記が不要になる。
   本リポジトリでは mise 自体の tool/config pin（`config-mac/mise`）と
-  hammerspoon・vicinae を `mise.mac.toml`、autohotkey を `mise.linux.toml` で宣言している。
+  vicinae を `mise.mac.toml`、autohotkey を `mise.linux.toml` で宣言している。
   （一時期は track mode の `~/.config` へ pre-dotfiles hook で「無いものだけ」seed する
   運用にしていたが、`config/` の更新が既存ファイルへ反映されないため、`config/` の
   各ファイルへ symlink-each でリンクを張る双方向の構成に変えた。）

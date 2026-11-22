@@ -1,0 +1,2 @@
+# actionlint 相当の検査を使い、セキュリティ・ポリシー検査は既存の専用 lint に任せる。
+profile: correctness

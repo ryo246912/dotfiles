@@ -10,12 +10,12 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
 
 | スコープ         | 設定ファイル                       | ソース (`.rulesync` 相当)      | 生成先                                                                                                 | 用途                                                                                                                                                         |
 | ---------------- | ---------------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` を生成する自己参照的な設定                                                                                              |
+| プロジェクト単位 | `rulesync.jsonc`（リポジトリ直下） | `.rulesync/`（リポジトリ直下） | リポジトリ直下（`outputRoots: ["."]`）                                                                 | **このリポジトリ自身**の `CLAUDE.md` / `AGENTS.md` を生成する自己参照的な設定                                                                                |
 | グローバル       | `config/rulesync/rulesync.jsonc`   | `config/rulesync/.rulesync/`   | `~/.claude/`, `~/.codex/`, `~/.agents/`, `~/.copilot/` など（`global: true` により実ホームへ書き込み） | どのプロジェクトでも使える skill / rule / hooks の配布（MCP は agent に配布せず、sandbox 用に `config/sbx/mcp.yml` で管理。`docs/docker-sandboxes.md` 参照） |
 
-- プロジェクト単位の設定が生成するのは、あなたが今読んでいる **この `CLAUDE.md` そのもの**です。
-  ソースは `.rulesync/rules/CLAUDE.md` で、ここを編集して `rulesync generate` すると `CLAUDE.md` に反映されます。
-  `CLAUDE.md` を直接編集しても次の `generate` で上書きされるので注意してください。
+- プロジェクト単位の設定が生成するのは、あなたが今読んでいる **`CLAUDE.md` と `AGENTS.md`**です。
+  ソースは `.rulesync/rules/CLAUDE.md` で、ここを編集して `rulesync generate` すると `CLAUDE.md` / `AGENTS.md` に反映されます。
+  `CLAUDE.md` / `AGENTS.md` を直接編集しても次の `generate` で上書きされるので注意してください。
 - グローバル設定は chezmoi で `~/.config/rulesync/` 配下に配布されます。
   - `config/rulesync/rulesync.jsonc` → `~/.config/rulesync/rulesync.jsonc`
   - `config/rulesync/.rulesync/` → `~/.config/rulesync/.rulesync/`
@@ -23,7 +23,7 @@ Claude Code / Codex CLI / Copilot など複数の AI エージェント向け設
     `~/.config/rulesync/.rulesync/` に残っていても削除はされない）
   - `rulesync.jsonc` の `"global": true` により、`~/.config/rulesync` から実行しても出力は
     カレントディレクトリではなく実際の `$HOME` 配下（`~/.claude/skills/...` 等）に書き込まれる
-  - ここに自作 skill（`memo` / `planning` / `pr-reviewer-comment` 等、`config/rulesync/.rulesync/skills/`）や
+  - ここに自作 skill（`memo` / `planning` / `pr-reviewer-all-review` 等、`config/rulesync/.rulesync/skills/`）や
     共通ルール（`config/rulesync/.rulesync/rules/COMMON.md`）、hooks
     （`config/rulesync/.rulesync/hooks.json`）、permissions
     （`config/rulesync/.rulesync/permissions.jsonc`）が入っている
@@ -46,14 +46,18 @@ module path・namespace・APMが生成したnamespaceなしcommandの削除先�
 ## `rulesync init` で生成されるファイルの扱い
 
 このリポジトリでは **rulesync のソースは git 管理し、rulesync の出力先は原則 git 管理しません**。
-ただし、プロジェクト単位スコープの出力である `CLAUDE.md` は「このリポジトリ自体で参照したい生成物」なので、
-例外的にリポジトリ直下へ生成しますが、`.gitignore` で git 管理から外しています。
+ただし、プロジェクト単位の `CLAUDE.md` と `AGENTS.md` は、初回 clone やクラウド環境で
+生成前から指示を参照できるよう、実ファイルを Git 管理します。正本は `.rulesync/rules/CLAUDE.md` です。
+変更後はリポジトリ直下で `rulesync generate` を実行してください。
+`mise run lint:rulesync` は一時ディレクトリで再生成し、`CLAUDE.md`・`AGENTS.md`・
+`.claude/settings.json`・`.codex/hooks.json` の4ファイルを比較して、不足や差分で失敗します。
+CI でも毎回実行するため、ソース・設定・生成物の更新漏れを検知できます。
 
 | 種類                               | 例                                                                              | git 管理 | 理由                                                                                                                              |
 | ---------------------------------- | ------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | プロジェクト単位の rulesync 設定   | `rulesync.jsonc`                                                                | する     | generate の入力であり、リポジトリ固有の target / output 設定だから                                                                |
 | プロジェクト単位の rulesync source | `.rulesync/rules/CLAUDE.md`, `.rulesync/hooks.json`                             | する     | 生成物の正本だから                                                                                                                |
-| プロジェクト単位の生成物           | `CLAUDE.md`                                                                     | しない   | `rulesync generate` で再生成される出力だから                                                                                      |
+| プロジェクト単位の生成物           | `CLAUDE.md`, `AGENTS.md`                                                        | する     | 初回 clone とクラウド環境で生成前から参照するため                                                                                 |
 | プロジェクト単位の hooks 生成物    | `.claude/settings.json`, `.codex/hooks.json`                                    | する     | 新しい clone やクラウド環境では rulesync を実行する前に AI のセッションが始まり、生成物がないと SessionStart フックが動かないから |
 | グローバル配布用の rulesync 設定   | `config/rulesync/rulesync.jsonc`                                                | する     | `[dotfiles]` で `~/.config/rulesync/rulesync.jsonc` へ配布する入力だから                                                          |
 | グローバル配布用の rulesync source | `config/rulesync/.rulesync/rules/COMMON.md`, `.../skills/*/SKILL.md`            | する     | `[dotfiles]` で `~/.config/rulesync/.rulesync/` へ配布する正本だから                                                              |
@@ -68,7 +72,7 @@ Rulesync では、`rulesync init` が作る `rulesync.jsonc` と `.rulesync/` �
 
 この状態で `mise run rulesync:generate` を実行しても、`.rulesync/rules/CLAUDE.md` は **入力 source**、
 リポジトリ直下の `CLAUDE.md` は **生成 output** なので、パスが異なりバッティングしません。output の
-`CLAUDE.md` は `.gitignore` で git 管理から外しているため、初回生成で作られるローカル生成物として扱います。
+`CLAUDE.md` と `AGENTS.md` は Git 管理し、再生成による差分を lint で検知します。
 
 ### 既存ファイルと `rulesync init` のバッティングについて
 
@@ -103,28 +107,43 @@ CodeRabbit CLI のローカルレビューは Claude Code・Codex CLI・Copilot 
 Claude / Codex の `tool_input` と Copilot の `toolArgs`（オブジェクトまたは JSON 文字列）から
 コマンドを安全に分割して `git push`・`gh pr create` を判定します。
 単独のコマンドと、リテラルの `cd <path> &&` に続くコマンドを扱い、対象リポジトリで実行します。
-commit と push の連結、その他の複合コマンド、展開を含む対象コマンドは分割を促して止めます。
+push 後の echo / printf / tail とリダイレクトにも対応します。
+commit と push の連結、その他の状態を変更する複合コマンド、展開を含むコマンドは分割を促して止めます。
 `git -C <path> push` と、別ブランチ・コミットを送信元にした push / PR の `--head` に対応します。
 送信元が実行ディレクトリの HEAD と異なる場合は、一時的な detached worktree でそのコミットをレビューします。
 現在のブランチや未コミットの編集は変更しません。レビュー後は一時 worktree を削除します。
 複数 ref、削除 push、ローカルで解決できない送信元、`-C` 以外の git グローバルオプションは拒否します。
 
 ```bash
-git push origin other-branch:refs/heads/other-branch
-git -C /path/to/other-worktree push origin HEAD
+# 現在の HEAD と異なるローカルブランチから、別名のリモートブランチへ送る
+git push origin other-branch:refs/heads/destination
+# ローカルで解決できるコミット SHA も送信元にできる（abc1234 は実際の SHA に置換）
+git push origin abc1234:refs/heads/destination
+# 別 worktree の HEAD を送る。cd と push だけを1回の呼び出しで実行する
+cd /path/to/other-worktree && git push origin HEAD:refs/heads/destination
+# -C でも同じ worktree を指定できる
+git -C /path/to/other-worktree push origin HEAD:refs/heads/destination
 gh pr create --head other-branch
 ```
 
+`<source>:<destination>` の source は現在の HEAD や destination と一致する必要はありません。
+レビュー対象は destination 側のコミットではなく、source を解決したローカルコミットです。
+レビュー結果で一度停止した場合は、結果を確認・対応したうえで同じコマンドを再実行します。
+レビュー後に一度停止し、結果を確認してから同じコマンドを再実行する動作は従来どおりです。
+
+sandbox 内のフックは template に COPY されます。古いフックが HEAD 以外を拒否する場合、
+ホストでの checkout / dotfiles apply だけでは更新されません。
+`mise run sandbox:build-template <agent>` で template を更新し、必要な sandbox 内データを退避してから、
+対象プロジェクトで `sbx-agent <agent> --new` により sandbox を再作成してください。
+
 レビュー対象は `--committed` のコミット済み変更だけで、未コミットの編集は含みません。
 `.coderabbit.yaml` と CLI がある場合に送信元の HEAD ごとに一度レビューし、結果を agent に返して
-その実行を止めます。CLI の失敗時は続行します。
+その実行を止めます。CLI 不在・レビュー準備や実行の失敗時は、理由を通知してレビューをスキップし、操作を続行します。
+スキップしたコミットはレビュー済みとして記録しません。
 レビュー記録は Git の共通ディレクトリ内に送信元 ref ごとに保存し、別ブランチのレビューと混同しません。
 2回目以降は前回レビューした HEAD からの差分だけを `--base-commit` でレビューします。
 前回の HEAD が祖先でない（rebase / force push）ときは全体をレビューします。
-`git push` は、前回レビューからの変更が 50 行未満か、10 分以内ならスキップします。
-スキップではレビュー済みの印を更新しないため、小さい変更は次のレビューに累積します。
-`gh pr create` は最後の関門なのでスキップしません。
-閾値は環境変数 `CODERABBIT_SKIP_LINES`・`CODERABBIT_SKIP_MINUTES` で変更でき、`0` で無効になります。
+変更量・経過時間によるレビューの間引きは行いません。正常にレビュー済みの同一コミットのみ再実行を省略します。
 Copilot CLI は `bash` matcher を使用し、結果を stdout の deny JSON で agent に返します。
 Claude / Codex は stderr と終了コード 2 で止めます。
 認証は private / work3 ともブラウザーログインで保存した CLI の認証情報を使います。
@@ -139,10 +158,9 @@ hook は API key の環境変数やファイルを読みません。
 | `codexcli.hooks`   | `~/.codex/hooks.json`                 | ai-rule-hook（`UserPromptSubmit` / `Stop`）、plannotator           |
 | `copilot.hooks`    | `~/.copilot/hooks/copilot-hooks.json` | ai-rule-hook（`copilotcli` target が `copilot.hooks` を参照する）  |
 
-`rulesync.jsonc` の `"preserveUnownedHooks": true` により、rulesync が書いていない hooks（APM が
-plugin package から merge する ponytail の hooks 等）は generate 後も残る。rulesync が書いた hooks は
-各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks だけが削除される。
-この設定が無いと rulesync は hooks 一覧を丸ごと置き換えるため、generate のたびに APM 由来の hooks が消える。
+`rulesync.jsonc` の `"preserveUnownedHooks": true` により、手動設定などで追加した hooks は generate 後も残る。
+rulesync が書いた hooks は各 hooks ファイルの隣の `.rulesync-hooks-lock.json` に記録され、source から消した hooks は
+次回の generate で削除される。将来、APM で配布するパッケージが hooks を追加した場合も、それらは保持される。
 
 ### permissions（`config/rulesync/.rulesync/permissions.jsonc`）
 
@@ -165,7 +183,7 @@ plugin package から merge する ponytail の hooks 等）は generate 後も�
 ## skill のコンテキストへの載せ方
 
 自作 skill（`config/rulesync/.rulesync/skills/`）を足したら、`claude/settings.json` の `skillOverrides` にも追加します
-（[`docs/ai.md` の「skill のコンテキスト管理」](ai.md#skill-のコンテキスト管理)）。
+（[`docs/ai-skill.md` の「skill のコンテキスト管理」](ai-skill.md#skill-のコンテキスト管理)）。
 
 ## 生成コマンド
 
@@ -227,6 +245,12 @@ rm -rf ~/.claude/skills/<name> ~/.agents/skills/<name>
 
 `delete: true` にはしません。`--delete` は出力先のうち `.rulesync/` から生成されなかったファイルを消すため、
 同じ `~/.claude/skills/`・`~/.agents/skills/` に APM が置いた外部 skill まで消えてしまいます。
+
+レビュースキルの改名後は、次の順で旧名の `pr-reviewer-comment` と `pr-reviewer-comment-crit` を片付けます。
+
+1. 以前のコピーが `~/.config/rulesync/.rulesync/skills/` に残っていれば、旧名のディレクトリを削除します。ローカル設定を追加していた場合は先に退避します。
+2. Rulesync で再配布し、新しい `pr-reviewer-all-review` と `pr-crit` が生成されたことを確認します。
+3. `~/.claude/skills/` と `~/.agents/skills/` に残った旧名のディレクトリを削除します。
 
 ### プロジェクト単位の `.codex/config.toml` について
 

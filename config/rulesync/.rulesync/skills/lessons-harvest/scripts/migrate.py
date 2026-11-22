@@ -20,7 +20,7 @@ import json
 import re
 import sys
 from collections import Counter
-from typing import Callable
+from collections.abc import Callable
 
 import lessonlib as L
 
@@ -61,7 +61,10 @@ def main() -> int:
         return 2
 
     outdated = {p: mb for p, mb in files.items() if L.version_of(mb[0]) < L.SCHEMA_VERSION}
-    summary = {"schema_version": L.SCHEMA_VERSION, "files": {f"v{v}": n for v, n in sorted(versions.items())}}
+    summary = {
+        "schema_version": L.SCHEMA_VERSION,
+        "files": {f"v{v}": n for v, n in sorted(versions.items())},
+    }
     if args.check:
         print(json.dumps({**summary, "outdated": len(outdated)}))
         return 1 if outdated else 0

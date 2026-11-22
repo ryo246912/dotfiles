@@ -88,6 +88,9 @@ ijq
 # jq : [-r:raw output]['.[]':expand array]['.[i:j]':expand array]['.key1,.key2':expand value]
 jq -r '.'
 
+# ov : pager [-f:follow][-H:header lines][--column-rainbow:color columns]
+ov
+
 # sed : replace [-e:multi command][ex:sed -e 1d -e '$ s/$/\n/'][regex:.|[a-z]|[^0-9]|.*][ex:sed 's| |!|']
 sed -e 's/<regex>/<after>/g'
 

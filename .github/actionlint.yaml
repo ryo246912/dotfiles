@@ -1,6 +1,0 @@
-paths:
-  .github/workflows/lint.yaml:
-    ignore:
-      - 'unexpected key "background"'
-      - 'unexpected key "wait-all"'
-      - 'step must run script .* "run"'

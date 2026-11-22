@@ -61,7 +61,7 @@ nohup caffeinate -i bash -c '
 ' _ '<message>' > ~/claude-resume.log 2>&1 &
 ```
 $ hv: echo -e "v\nh"
-$ resurrect_file: find ~/.local/share/tmux/resurrect/ -type f | head -n 10
+$ resurrect_file: find ~/.local/share/tmux/resurrect/ -type f -name 'tmux_resurrect_*.txt' | sort -r --- --fzf-overrides "--no-sort"
 $ pane_from: echo "." && \
   tmux lsp -a \
   -F "#S:#I.#P [#{b:pane_current_path}] [#{pane_current_command}] [#{pane_width}x#{pane_height}] #{pane_current_path} #{pane_tty}" \

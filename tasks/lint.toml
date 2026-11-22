@@ -2,6 +2,7 @@
 # 独立したlint:shellタスクをリポジトリ全体の既定値へ含めないよう明示的に列挙する。
 # shellの検査をhookで強制するのはAI用devcontainerだけとする。
 depends = [
+    "lint:rulesync",
     "lint:action",
     "lint:toml",
     "lint:yaml",
@@ -14,12 +15,12 @@ depends = [
 description = "Run all linters"
 
 ["lint:action"]
-depends     = ["lint:actionlint", "lint:ghalint", "lint:zizmor", "lint:pinact"]
+depends     = ["lint:jactionlint", "lint:ghalint", "lint:zizmor", "lint:pinact"]
 description = "Run all action linters"
 
-["lint:actionlint"]
-description = "Run actionlint"
-run         = "actionlint -ignore 'SC2016:'"
+["lint:jactionlint"]
+description = "Run jactionlint"
+run         = "jactionlint --profile correctness --ignore 'SC2016:'"
 
 ["lint:ghalint"]
 description = "Run ghalint"
@@ -35,7 +36,8 @@ run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn 
 
 ["lint:dockerfile-pin"]
 description = "Run dockerfile-pin check"
-run         = "dockerfile-pin check --ignore-images docker/sandbox-templates:*"
+# sandbox template の agent は VARIANT で選び、公開 workload の latest を追従する。
+run = "dockerfile-pin check --ignore-images docker/sandbox-templates:* --ignore-images docker.io/sbx/*"
 
 ["lint:toml"]
 description = "Run lint TOML files"
@@ -73,3 +75,27 @@ run         = "betterleaks git --staged -v"
 description = "Check shell script formatting with shfmt"
 # `shfmt -l .` は .zsh 等も探索し、bash として解析できず失敗するため、git 管理下の *.sh だけを対象にする。
 run = "shfmt -l $(git ls-files '*.sh')"
+
+["lint:rulesync"]
+description = "rulesync のソースと生成済みルール・hooks の差分を検査する"
+run = '''
+set -euo pipefail
+
+cd "$MISE_PROJECT_ROOT"
+repo_dir="$PWD"
+check_dir="$(mktemp -d)"
+trap 'rm -rf "$check_dir"' EXIT
+cp rulesync.jsonc "$check_dir/"
+cp -R .rulesync "$check_dir/"
+(cd "$check_dir" && rulesync generate)
+
+status=0
+for file in CLAUDE.md AGENTS.md .claude/settings.json .codex/hooks.json; do
+	diff -u "$repo_dir/$file" "$check_dir/$file" || status=1
+done
+if [ "$status" -ne 0 ]; then
+	echo 'rulesync の生成物に差分があります。リポジトリ直下で rulesync generate を実行してください。' >&2
+fi
+exit "$status"
+'''
+shell = "bash -c"

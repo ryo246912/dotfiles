@@ -16,13 +16,13 @@ depends = [
 description = "Run all linters"
 
 ["lint:action"]
-depends     = ["lint:actionlint", "lint:ghalint", "lint:zizmor", "lint:pinact"]
+depends     = ["lint:jactionlint", "lint:ghalint", "lint:zizmor", "lint:pinact"]
 description = "Run all action linters"
 
-["lint:actionlint"]
-description = "Run actionlint"
+["lint:jactionlint"]
+description = "Run jactionlint"
 dir         = "{{cwd}}"
-run         = "actionlint -ignore 'SC2016:'"
+run         = "jactionlint --profile correctness --ignore 'SC2016:'"
 
 ["lint:ghalint"]
 description = "Run ghalint"
@@ -42,7 +42,7 @@ run         = "if [ -n \"$GITHUB_TOKEN\" ]; then pinact run --check; else ghtkn 
 ["lint:dockerfile-pin"]
 description = "Run dockerfile-pin check"
 dir         = "{{cwd}}"
-run         = "dockerfile-pin check --ignore-images docker/sandbox-templates:*"
+run         = "dockerfile-pin check --ignore-images docker/sandbox-templates:* --ignore-images docker.io/sbx/*"
 
 ["lint:toml"]
 description = "Run lint TOML files"

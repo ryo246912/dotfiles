@@ -28,6 +28,11 @@ config/sbx/allow-domains.*.txt
 config/sbx/mcp.*.yml
 # 会社などのリポジトリを並べた agent-lessons の収集対象（雛形は targets.work.yml.example）
 config/agent-lessons/targets.*.yml
+# pr-author-all-review の環境別追加段階（雛形は *.md.example）
+/config/rulesync/.rulesync/skills/pr-author-all-review/*.md
+!/config/rulesync/.rulesync/skills/pr-author-all-review/SKILL.md
+/config/rulesync/.rulesync/skills/pr-reviewer-all-review/*.md
+!/config/rulesync/.rulesync/skills/pr-reviewer-all-review/SKILL.md
 # コミットしたくない固有名詞を含む navi チートシート（例: <name>.secret.cheat.md）
 config/navi/cheats/*.secret.cheat.md
 
@@ -39,9 +44,6 @@ config/navi/cheats/*.secret.cheat.md
 
 ## claude
 settings.local.json
-
-## rulesync 配布先（ソースは .rulesync/rules/ 配下）
-/CLAUDE.md
 
 ## VSCode
 mcp.json

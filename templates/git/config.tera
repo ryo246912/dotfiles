@@ -26,6 +26,15 @@
   lineNumber = true
 [merge]
   conflictStyle = diff3
+[merge "mergiraf"]
+  # 構文を理解する merge driver。適用するファイルは ~/.config/git/attributes（config/git/attributes）で指定。
+  # 解決結果は `mergiraf review <file>_<id>`（merge 時に表示される）で line-based merge との差分を確認できる。
+  # mergiraf が実行できない（未インストール、mise shim で version 未解決など）まま直接呼ぶと、git はファイルを
+  # ours のまま conflict marker なしで conflict 扱いにし theirs の変更が失われるため、その場合は git merge-file に切り替える。
+  # 一時的に無効にするときは `mergiraf=0 git rebase ...` のように環境変数を付ける。
+  # 値全体を "..." で囲むのは、囲まないと ; 以降が gitconfig のコメント扱いになるため。
+  name = mergiraf
+  driver = "sh -c 'if mergiraf --version >/dev/null 2>&1; then exec mergiraf merge --git \"$1\" \"$2\" \"$3\" -s \"$4\" -x \"$5\" -y \"$6\" -p \"$7\" -l \"$8\"; fi; exec git merge-file -L \"$5\" -L \"$4\" -L \"$6\" --marker-size \"$8\" \"$2\" \"$1\" \"$3\"' mergiraf %O %A %B %S %X %Y %P %L"
 [pager]
   diff = delta
   log = delta
