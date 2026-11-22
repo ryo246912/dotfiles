@@ -61,6 +61,7 @@
     "dev-webtest-plan": "user-invocable-only",
     "diagram-design": "name-only",
     "find-skills": "user-invocable-only",
+    "gridlines": "name-only",
     "grill-me": "name-only",
     "grilling": "name-only",
     "html": "name-only",
