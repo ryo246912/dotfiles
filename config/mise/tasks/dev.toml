@@ -185,8 +185,7 @@ description = "Deploy user-scope external skills and commands to agent dirs"
 # 登録しない。MCP は sandbox からホストの sbx mcp 経由でだけ使う（config/sbx/mcp.yml、docs/apm.md 参照）。
 run = [
     "mise run apm:validate-lock-version",
-    "mise run apm:check-last30days",
-    "apm install -g --only apm",
+    "mise run apm:deploy",
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
@@ -197,27 +196,39 @@ description = "Reproduce user-scope APM install exactly from apm.lock.yaml"
 # npm ci 相当: lockfile と manifest の同期を必須にし、依存解決結果を更新せずに install する。
 run = [
     "mise run apm:validate-lock-version",
-    "mise run apm:check-last30days",
     # apm:install と同じく MCP は配布しない
-    "apm install -g --frozen --only apm",
+    "mise run apm:deploy --frozen",
     "mise run apm:sync-lock",
     "mise run apm:sync-commands",
     "mise run rulesync:generate-commands",
 ]
 
-["apm:check-last30days"]
-description = "Protect existing last30days installations during APM migration"
+["apm:deploy"]
+description = "Deploy APM packages while protecting existing last30days installations"
 run = '''
-module="$HOME/.apm/apm_modules/mvanhorn/last30days-skill/skills/last30days/SKILL.md"
+set -eu
+skills=("$HOME/.agents/skills/last30days" "$HOME/.claude/skills/last30days")
+marker=.dotfiles-apm-managed
 # The distributed lockfile lists desired paths before APM has installed the package locally.
-for skill in "$HOME/.agents/skills/last30days" "$HOME/.claude/skills/last30days"; do
-  if [ -L "$skill" ] || { [ -e "$skill" ] && [ ! -f "$module" ]; }; then
+for skill in "${skills[@]}"; do
+  if [ -L "$skill" ] || { [ -e "$skill" ] && [ ! -f "$skill/$marker" ]; }; then
     printf 'Existing last30days installation at %s. Move it to a backup path outside the skills directory, then retry.\n' "$skill" >&2
     exit 1
   fi
 done
+args=(-g --only apm)
+if [ "${usage_frozen:-false}" = true ]; then
+  args+=(--frozen)
+fi
+apm install "${args[@]}"
+for skill in "${skills[@]}"; do
+  if [ ! -L "$skill" ] && [ -f "$skill/SKILL.md" ]; then
+    touch "$skill/$marker"
+  fi
+done
 '''
 shell = "bash -c"
+usage = 'flag "--frozen" help "Require dependencies to match the lockfile"'
 
 ["apm:sync-lock"]
 description = "Copy the user-scope APM lockfile into the dotfiles source tree"
