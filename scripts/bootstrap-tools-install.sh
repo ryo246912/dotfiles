@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+# mise tasks にしないのは、mise bootstrap の hook から呼ぶため。`mise run` は task の前に global config の
+# 全 tool の version を解決し、lockfile が無い初回や Renovate で上げた直後は数分かかる。速度対策の
+# MISE_LOCKED=1 も、lockfile に未登録の tool（初回の gh など）を解決できなくなるので install の前には使えない。
+# 手動実行用の `mise run bootstrap:tools:install` はこのファイルを呼ぶだけにしている。
+
 # gh と mise の tool は shim 経由なので、mise bootstrap の hook の PATH には入っていない。
 if [ "$(uname)" = "Darwin" ]; then
 	export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:/opt/homebrew/bin:$PATH"
