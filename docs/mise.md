@@ -626,11 +626,16 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     `mise bootstrap dotfiles save`、history-watch、full bootstrap、
     素の`mise bootstrap dotfiles apply`ではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
-  - `post-merge`/`post-checkout` は `dotfiles-apply` の後に `mise-install` job で
-    `GITHUB_TOKEN=$(gh auth token) mise install --jobs=2` も実行する（`AI_AGENT` 設定時は skip）。
-    環境変数の `GITHUB_TOKEN` があればそれを優先し、どちらも無ければ warning を出して token なしで実行する。
-    また、mise に組み込まれた aube（npm backend）は aube CLI と違い開けるファイル数の上限（`RLIMIT_NOFILE`）を
-    引き上げないため、macOS の既定値 256 のままだと `Too many open files (os error 24)` で失敗する。job 内で
+  - `dotfiles apply` の `post-dotfiles` hook と `mise bootstrap` の `pre-tools` hook は、どちらも
+    `scripts/bootstrap-tools-install.sh` で gh 導入・認証と `GITHUB_TOKEN` 付きの `mise install` を行う
+    （`mise run bootstrap:tools:install` でも単体で実行できる）。`post-merge` の `dotfiles-apply` job は
+    この install も行うので、pull で上がった `[tools]` のバージョンがそのまま入る（`AI_AGENT` 設定時は job ごと skip）。
+    導入済みなら数秒で終わる。以前 post-merge の install を止めたときに遅かったのは、global の
+    lockfile が無くて毎回 version を network 越しに解決していたためと考えられる（今は hook が lockfile を用意する）。
+    `post-checkout` は branch 切り替えや worktree 作成のたびに install しないよう、
+    `DOTFILES_SKIP_TOOLS_INSTALL=1` で install だけを止める。
+    mise に組み込まれた aube（npm backend）は aube CLI と違い開けるファイル数の上限（`RLIMIT_NOFILE`）を
+    引き上げないため、macOS の既定値 256 のままだと `Too many open files (os error 24)` で失敗する。スクリプト内で
     `ulimit -n 10240` に引き上げてから実行する（手動で `mise install` する場合も同じく引き上げが必要）。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、

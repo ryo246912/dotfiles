@@ -94,8 +94,8 @@
     ```
 
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
-  - `dotfiles apply` は毎回 gh 導入・認証と `mise install` も行う（post-merge の自動 apply は
-    `DOTFILES_SKIP_TOOLS_INSTALL=1` で行わない）。gh 未ログインなら apply のたびに `gh auth login` のプロンプトが出て、
+  - `dotfiles apply` は毎回 gh 導入・認証と `mise install` も行う（post-merge の自動 apply も同じ。post-checkout の
+    自動 apply は `DOTFILES_SKIP_TOOLS_INSTALL=1` で行わない）。gh 未ログインなら apply のたびに `gh auth login` のプロンプトが出て、
     ログインしないと中断する。ツールだけ入れ直すときは tools ステップだけ実行する
 
     ```sh
@@ -913,7 +913,7 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     プロンプトでハングしうる。対話端末（TTY）から実行すること
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
   - `dotfiles apply` は毎回 gh 導入・認証と `mise install` をするので、2回目以降もツールが追加・更新される
-    （post-merge の自動 apply は `DOTFILES_SKIP_TOOLS_INSTALL=1` で行わない）。gh 未ログインなら apply のたびに
+    （post-merge の自動 apply も同じ。post-checkout の自動 apply は `DOTFILES_SKIP_TOOLS_INSTALL=1` で行わない）。gh 未ログインなら apply のたびに
     `gh auth login` のプロンプトが出て、ログインしないと中断する。
     ツールだけ入れ直すときは `mise bootstrap --only tools`
     （`HOST_ENV` 反映前は `MISE_ENV=linux` を付ける。ロール別のツールは入らない）
