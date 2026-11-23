@@ -46,9 +46,10 @@ def save(path, state):
     temporary.replace(path)
 
 
-def poll(repo, login, state, pending, path, number=None):
+def poll(repo, login, state, pending, path, interval, number=None):
     # Keep delivered snapshots until explicitly acknowledged by the current session.
     events = []
+    now = time.time()
     pulls = api(f'repos/{repo}/pulls?state=open&per_page=100')
     for pr in pulls:
         if pr['user']['login'] != login or (number and pr['number'] != number):
@@ -61,7 +62,11 @@ def poll(repo, login, state, pending, path, number=None):
             continue
         token = hashlib.sha256(json.dumps(
             [key, current], sort_keys=True).encode()).hexdigest()
-        pending[token] = {'pr': key, 'feedback': current}
+        # Redeliver an unacknowledged snapshot only after an interval so that a
+        # failed handling is retried without returning immediately on every call.
+        if now - pending.get(token, {}).get('delivered', 0) < interval:
+            continue
+        pending[token] = {'pr': key, 'feedback': current, 'delivered': now}
         events.append({'pr': pr['number'], 'url': pr['html_url'],
                        'comments': changed, 'ack': token})
     if events:
@@ -106,7 +111,7 @@ def main():
         while True:
             try:
                 events = poll(repo['nameWithOwner'], login, state, pending,
-                              pending_path, args.pr)
+                              pending_path, args.interval, args.pr)
                 if events:
                     print(json.dumps(events, ensure_ascii=False), flush=True)
                     return 0
