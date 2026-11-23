@@ -1042,13 +1042,13 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
   という警告が出る。taskが使わないtool（apm:sync/rulesync:syncなら、global
   configにある他の100件超）の警告は無視してよいが、**taskが実際に使うtool
-  （この場合は apm/rulesync 自体）の警告は無視しないこと**。lockfileが無くても
-  taskの実行自体は失敗しない（実機確認済み: 唯一のtool entryがlockfileに無い
-  状態でも対象taskは実行された）が、PATH上に既に解決済みのversionが無い場合は
-  そのtool無しでtaskが走ることになる（例えばapm自体が入っていなければ
-  `apm: command not found` で落ちる）。pinned versionを上げた直後など、
-  apm/rulesync自身がlockfileに無い状態になったら、`MISE_LOCKED`無しで
-  一度 `mise install` してlockfileを更新してから実行すること。
+  （この場合は apm/rulesync や task 内で使う python3 など）の警告は無視しないこと**。
+  lockfileに無いtoolはshimから解決できず、
+  `mise ERROR No version is set for shim: apm` のように task が失敗する
+  （mise は installs 配下のパスを PATH から除くので、PATH を足しても回避できない）。
+  `mise install` は既存の lockfile を更新するだけで作らないため、hook は install の前に
+  空の `~/.config/mise/mise.lock` を置き、install で global config の全 tool を lock させる
+  （初回は数分かかるが、2回目以降は既存の entry を使う）。
   hookでは、使わないtoolの未登録警告がnestedな`mise run`の回数だけ繰り返されるため、
   `MISE_LOG_LEVEL=error`も設定してmise自身のWARNだけを抑制している。この設定は
   `apm install`やrulesync taskがstderrへ出す警告・エラーには影響しない。

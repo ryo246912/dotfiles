@@ -69,6 +69,9 @@ lefthook install
 #    コメントと違い、同一プロセスの制約を受けない）。post-merge の自動 apply（lefthook.yml）は
 #    mise install をしない方針なので DOTFILES_SKIP_TOOLS_INSTALL=1 で抑止する。
 #    MISE_LOCKED=1 は lockfile 未登録の tool があると install が失敗するので、install の後で付ける。
+#    `mise install` は既存の lockfile を更新するだけで新規作成しない。global config の lockfile
+#    （~/.config/mise/mise.lock）が無いと、MISE_LOCKED=1 の task から apm・rulesync・python3 などを
+#    解決できない。そのため install の前に空の lockfile を置き、install で中身を埋める。
 [bootstrap.hooks.post-dotfiles]
 run = """
 set -e
@@ -88,6 +91,7 @@ if [ "${DOTFILES_SKIP_TOOLS_INSTALL:-}" != 1 ]; then
     exit 1
   fi
   echo "Running mise install..."
+  [ -e "$HOME/.config/mise/mise.lock" ] || : > "$HOME/.config/mise/mise.lock"
   GITHUB_TOKEN=$github_token mise install --jobs=2
 fi
 export MISE_LOCKED=1 MISE_LOG_LEVEL=error
@@ -138,6 +142,8 @@ if [ -z "$github_token" ]; then
   exit 1
 fi
 echo "Running mise install..."
+# post-tools の MISE_LOCKED=1 で解決できるよう、post-dotfiles と同じく lockfile を用意する
+[ -e "$HOME/.config/mise/mise.lock" ] || : > "$HOME/.config/mise/mise.lock"
 GITHUB_TOKEN=$github_token mise install --jobs=2
 """
 
