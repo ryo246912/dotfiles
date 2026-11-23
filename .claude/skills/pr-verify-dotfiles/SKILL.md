@@ -14,8 +14,9 @@ description: >-
 - 動作確認で見つけた PR の不具合や不備は、ユーザーの承認を待たずに PR のブランチで修正し、commit・push して、PR に対応内容をコメントする（「7. 不具合・不備の修正」）。
 - PR の範囲を大きく超える修正、設計方針の変更、原因を特定できない失敗は修正せず、報告にまとめてユーザーに確認する。
 - ホームへの配置（`mise bootstrap dotfiles apply`、グローバルの `rulesync generate` の実書き込みなど）は、確認に必要なら `~/dotfiles` の checkout でだけ行う。worktree から apply すると symlink の参照先が worktree になるなど配置が壊れるため。worktree で作業しているときは、配置を伴う確認だけ `~/dotfiles` で「1. 事前確認」「2. checkout」からやり直して行う。
-- 配置の直前に、`~/dotfiles` で `git status --short` が空であること（PR と無関係な未コミット変更を配置しないため）と、`git rev-parse HEAD` が PR の `headRefOid` と一致することを確かめる。どちらかを満たさない場合や `~/dotfiles` で checkout できない場合は配置せず、dry-run・validate・一時ディレクトリでの生成で確認して、実適用は「未実施」として記録する。
-- 配置したら、ホームが PR の内容を指していること、元のブランチに戻して `mise bootstrap dotfiles apply` すれば戻ることを報告の「作業後の状態」に書く。
+- 配置は hook（`mise.toml` の `[bootstrap.hooks]` や、そこから呼ぶ script）も実行するので、`gh pr view <PR> --json isCrossRepository` が `false`（このリポジトリのブランチの PR）の場合だけ行う。fork の PR は、ユーザーが明示しない限り配置しない。
+- 配置の直前に、`~/dotfiles` で `git status --short` が空であること（PR と無関係な未コミット変更を配置しないため）と、`git rev-parse HEAD` が PR の `headRefOid` と一致することを確かめる。これらのいずれかを満たさない場合や `~/dotfiles` で checkout できない場合は配置せず、dry-run・validate・一時ディレクトリでの生成で確認して、実適用は「未実施」として記録する。
+- 配置したら、ホームが PR の内容を指していることと戻し方を報告の「作業後の状態」に書く。既存の配置先は元のブランチに戻して `mise bootstrap dotfiles apply` すれば戻る。apply は宣言から外れた配置先を消さないので、PR が追加した `[dotfiles]` エントリの配置先は、PR の HEAD のまま `mise bootstrap dotfiles unapply <配置先>` で消してから元のブランチに戻す、という手順を配置先を列挙して書く。
 - sandbox の再作成、外部サービスの設定変更は、ユーザーが明示しない限り行わない。
 - PR が追加したツールの導入（`mise install` など）は確認に必要なら行い、導入したことを報告に書く。
 
@@ -82,7 +83,7 @@ git rev-parse HEAD   # headRefOid と一致することを確認する
 ## 6. 後片付けと報告
 
 - 報告の直前に `gh pr view <PR> --json headRefOid` を再確認する。検証後に PR が更新されていたら、HTML と報告に書く。
-- detached HEAD のまま終える。元のブランチへ戻すコマンド（`git switch <元のブランチ>`）を報告に書く。配置した場合は、戻した後に `mise bootstrap dotfiles apply` を再実行するコマンドも併記する（`AI_AGENT` を設定した環境では post-checkout の自動 apply が skip されるため、switch だけではホームが PR の内容のまま残る）。
+- detached HEAD のまま終える。元のブランチへ戻すコマンド（`git switch <元のブランチ>`）を報告に書く。配置した場合は、「スコープ」の戻し方（PR が追加した配置先の `unapply`、戻した後の `mise bootstrap dotfiles apply`）のコマンドも併記する（`AI_AGENT` を設定した環境では post-checkout の自動 apply が skip されるため、switch だけではホームが PR の内容のまま残る）。
 - チャットでは、結論、判定ごとの件数、失敗・未実施の項目、修正したコミットと PR コメントの URL、HTML のパスを伝える。
 
 ## 7. 不具合・不備の修正
