@@ -7,7 +7,7 @@ agent-lessons が設定済み（`~/.local/share/agent-lessons` がある）な�
 下の裏取りを通してから候補にする。
 
 ```bash
-python3 <skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source given,team --summary --paths <PR の変更ファイル>
+printf '%s\0' <PR の変更ファイル> | python3 <skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source given,team --summary --paths0
 ```
 
 まずタイトル・場所・Checkで選別し、関係する教訓と適用可否が不明な教訓は、出力の `path` を

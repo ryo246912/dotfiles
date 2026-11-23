@@ -103,7 +103,7 @@ globs:
 ### 権限チェックを通るシェル構文
 
 - 権限チェッカーに渡すコマンドは Bash 互換の構文で書き、`${(f)...}` などの zsh 専用の展開は使わない。zsh で実行する場合は両方のシェルに共通する構文を使い、Bash 専用の構文は `bash -c` 内で実行する。サブエージェントにシェル操作を任せるときも、このルールを依頼に含める。
-- 変更ファイルで教訓を絞るときは、`git diff --name-only -z "$base"...HEAD | python3 lessons_query.py --paths0` のように NUL 区切りの一覧を標準入力で渡す。空白、改行、先頭のハイフンを含むパスをそのまま扱い、JSON を1回で出力する。
+- 変更ファイルで教訓を絞るときは、`set -o pipefail; { git diff --name-only -z --merge-base "$base" && git ls-files -z --others --exclude-standard; } | python3 lessons_query.py --paths0` のように、未コミットの変更と未追跡ファイルも含めた NUL 区切りの一覧を標準入力で渡す。`pipefail` を付け、`git` の失敗を空の一覧（全教訓に一致）として扱わない。空白、改行、先頭のハイフンを含むパスをそのまま扱い、JSON を1回で出力する。
 
 ### Bash ツールのシェルは zsh
 
