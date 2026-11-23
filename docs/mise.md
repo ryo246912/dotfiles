@@ -1048,7 +1048,10 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   （mise は installs 配下のパスを PATH から除くので、PATH を足しても回避できない）。
   `mise install` は既存の lockfile を更新するだけで作らないため、hook は install の前に
   空の `~/.config/mise/mise.lock` を置き、install で global config の全 tool を lock させる
-  （初回は数分かかるが、2回目以降は既存の entry を使う）。
+  （初回は数分かかるが、2回目以降は既存の entry を使う）。hook 外で `apm:sync` / `rulesync:sync` を
+  `MISE_LOCKED=1` 付きで直接実行して失敗したとき（Renovate で上げた直後など）は、`MISE_LOCKED` 無しで一度
+  `mise install` して lockfile を更新してから実行すること（lockfile 自体が無ければ先に空の
+  `~/.config/mise/mise.lock` を置く）。
   hookでは、使わないtoolの未登録警告がnestedな`mise run`の回数だけ繰り返されるため、
   `MISE_LOG_LEVEL=error`も設定してmise自身のWARNだけを抑制している。この設定は
   `apm install`やrulesync taskがstderrへ出す警告・エラーには影響しない。
