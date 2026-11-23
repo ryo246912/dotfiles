@@ -146,7 +146,7 @@ RUN --mount=type=secret,id=github_token \
     MISE_TRUSTED_CONFIG_PATHS=/mise XDG_DATA_HOME="${AGENT_HOME}/.local/share" GH_CONFIG_DIR="$gh_config" \
       /mise/data/shims/gh extension install github/gh-stack --pin "$GH_STACK_VERSION"; \
     rm -rf "$gh_config"; \
-    chown -R agent:agent "${AGENT_HOME}/.local/share/gh"
+    chown -R agent:agent "${AGENT_HOME}/.local/share/gh" /mise/cache
 
 # tasks と設定ツリーは install の後に COPY する（上記の理由でキャッシュを守るため）。
 # devcontainer が bind mount していたのと同じ ~/.config/devcontainer 配下へ置くので、
