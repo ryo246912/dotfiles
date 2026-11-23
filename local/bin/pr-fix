@@ -30,7 +30,7 @@ def feedback(repo, number, login):
         for item in api(f'repos/{repo}/{path}?per_page=100'):
             body = item.get('body') or ''
             if (item.get('user', {}).get('login') == login
-                    or not body.strip() or body.startswith('**AIによる返信**')
+                    or not body.strip() or body.startswith('**以下、AIでの返信**')
                     or item.get('state') in ('PENDING', 'DISMISSED')):
                 continue
             key = f'{kind}:{item["id"]}'
