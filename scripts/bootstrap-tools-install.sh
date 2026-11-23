@@ -36,3 +36,6 @@ echo "Running mise install..."
 # lock を書かないため、global scope を先に install する。
 GITHUB_TOKEN=$github_token mise --cd "$HOME" install --jobs=2
 GITHUB_TOKEN=$github_token mise install --jobs=2
+# 以前に repo 側で入って entry が欠けたままの環境は install では直らないので、post-dotfiles の同期が
+# MISE_LOCKED=1 で使う tool だけを lock する。引数なしの `lock --global` は全 tool を解決して数十秒かかる。
+GITHUB_TOKEN=$github_token mise --cd "$HOME" lock --global aqua:microsoft/apm github:dyoshikawa/rulesync core:python

@@ -1060,7 +1060,9 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   rulesync のように repo の `mise.toml` と global の両方が宣言する tool は、repo 直下の `mise install` だと
   project 側として入り、global の lockfile に entry が入らない。しかも先に入った後は
   `mise --cd "$HOME" install` が "already installed" で lock を書かないので、hook は global scope の install を
-  repo 直下の install より先に行う。hook 外で `apm:sync` / `rulesync:sync` を
+  repo 直下の install より先に行う。以前に repo 直下で入って entry が欠けたままの環境は install の順序では
+  直らないので、hook は install の後に同期で使う apm・rulesync・python だけを `mise --cd "$HOME" lock --global <tool>`
+  で lock する（entry があれば 1 秒未満、欠けていても数秒で終わる）。hook 外で `apm:sync` / `rulesync:sync` を
   `MISE_LOCKED=1` 付きで直接実行して失敗したとき（Renovate で上げた直後など）は、`MISE_LOCKED` 無しで一度
   `mise --cd "$HOME" install` して global の lockfile を更新してから実行すること（lockfile 自体が無ければ先に空の
   `~/.config/mise/mise.lock` を置く）。既に repo 直下で入れてしまい entry が入らない場合は
