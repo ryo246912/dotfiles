@@ -636,7 +636,7 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     `DOTFILES_SKIP_TOOLS_INSTALL=1` で install だけを止める。
     mise に組み込まれた aube（npm backend）は aube CLI と違い開けるファイル数の上限（`RLIMIT_NOFILE`）を
     引き上げないため、macOS の既定値 256 のままだと `Too many open files (os error 24)` で失敗する。スクリプト内で
-    `ulimit -n 10240` に引き上げてから実行する（手動で `mise install` する場合も同じく引き上げが必要）。
+    `ulimit -Sn 10240`（soft limit だけ）に引き上げてから実行する（手動で `mise install` する場合も同じく引き上げが必要）。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの

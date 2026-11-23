@@ -21,9 +21,9 @@ fi
 
 # mise に組み込まれた aube（npm backend）は、aube CLI と違い RLIMIT_NOFILE を引き上げないため、
 # macOS の既定値（256）のままだと npm:renovate 等で "Too many open files (os error 24)" になる。
-nofile=$(ulimit -n)
+nofile=$(ulimit -Sn)
 if [ "$nofile" != unlimited ] && [ "$nofile" -lt 10240 ]; then
-	ulimit -n 10240 2>/dev/null || true
+	ulimit -Sn 10240 2>/dev/null || true
 fi
 
 # `mise install` は既存の lockfile を更新するだけで新規作成しない。lockfile が無いと、
