@@ -1,7 +1,6 @@
 ["tsuzuri:serve"]
 description = "Start the tsuzuri Japanese writing review app (install on first run)"
-dir         = "{{cwd}}"
-shell       = "bash -c"
+dir = "{{cwd}}"
 run = '''
 set -euo pipefail
 
@@ -20,3 +19,4 @@ if [ ! -d "$app_dir" ]; then
 fi
 exec python3 "$app_dir/app/server.py" "$@"
 '''
+shell = "bash -c"
