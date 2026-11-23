@@ -212,6 +212,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 
 skills = [Path.home() / agent / "skills/last30days" for agent in (".agents", ".claude")]
 marker_name = ".dotfiles-apm-managed"
@@ -261,8 +262,12 @@ if status:
 
 for skill in skills:
     if not skill.is_symlink() and (skill / "SKILL.md").is_file():
+        content = json.dumps(fingerprints(skill)) + "\n"
         marker = skill / marker_name
-        marker.write_text(json.dumps(fingerprints(skill)) + "\n")
+        with tempfile.TemporaryDirectory(dir=skill.parent) as temporary_directory:
+            pending_marker = Path(temporary_directory) / marker_name
+            pending_marker.write_text(content)
+            pending_marker.replace(marker)
 PYTHON
 '''
 shell = "bash -c"

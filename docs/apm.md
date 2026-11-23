@@ -144,8 +144,6 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 
 ```bash
 mise --cd "$HOME" run apm:install
-# または
-apm install -g
 ```
 
 `apm install -g` は cwd に依存せず `~/.apm/apm.yml` を読み、`targets` に応じた各エージェントの user scope
