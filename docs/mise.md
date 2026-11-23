@@ -627,7 +627,8 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     素の`mise bootstrap dotfiles apply`ではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
   - `dotfiles apply` の `post-dotfiles` hook と `mise bootstrap` の `pre-tools` hook は、どちらも
-    `scripts/bootstrap-tools-install.sh` で gh 導入・認証と `GITHUB_TOKEN` 付きの `mise install` を行う
+    `scripts/bootstrap-tools-install.sh` で gh 導入・認証と `GITHUB_TOKEN` 付きの `mise install` を
+    global scope（`mise --cd "$HOME" install`）、repo 直下の順に行う
     （`mise run bootstrap:tools:install` でも単体で実行できる）。`post-merge` の `dotfiles-apply` job は
     この install も行うので、pull で上がった `[tools]` のバージョンがそのまま入る（`AI_AGENT` 設定時は job ごと skip）。
     導入済みなら数秒で終わる。以前 post-merge の install を止めたときに遅かったのは、global の
@@ -1055,10 +1056,16 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   空の `~/.config/mise/mise.lock` を置き、install で base の `config.toml` の tool を lock させる
   （初回は数分かかるが、2回目以降は既存の entry を使う）。`MISE_ENV` の overlay（`config.mac.toml` など）の
   tool は `mise.<env>.lock` に振り分けられ、このファイルが無いので lock されない。hook の同期に使う
-  apm・rulesync・python3 は base にあるので、overlay を lock しなくても同期は通る。hook 外で `apm:sync` / `rulesync:sync` を
+  apm・rulesync・python3 は base にあるので、overlay を lock しなくても同期は通る。
+  rulesync のように repo の `mise.toml` と global の両方が宣言する tool は、repo 直下の `mise install` だと
+  project 側として入り、global の lockfile に entry が入らない。しかも先に入った後は
+  `mise --cd "$HOME" install` が "already installed" で lock を書かないので、hook は global scope の install を
+  repo 直下の install より先に行う。hook 外で `apm:sync` / `rulesync:sync` を
   `MISE_LOCKED=1` 付きで直接実行して失敗したとき（Renovate で上げた直後など）は、`MISE_LOCKED` 無しで一度
-  `mise install` して lockfile を更新してから実行すること（lockfile 自体が無ければ先に空の
-  `~/.config/mise/mise.lock` を置く）。
+  `mise --cd "$HOME" install` して global の lockfile を更新してから実行すること（lockfile 自体が無ければ先に空の
+  `~/.config/mise/mise.lock` を置く）。既に repo 直下で入れてしまい entry が入らない場合は
+  `mise --cd "$HOME" lock --global <tool>` で lock する（引数なしの `--global` は全 tool を解決して数十秒かかり、
+  `mise.<env>.lock` も作る）。
   hookでは、使わないtoolの未登録警告がnestedな`mise run`の回数だけ繰り返されるため、
   `MISE_LOG_LEVEL=error`も設定してmise自身のWARNだけを抑制している。この設定は
   `apm install`やrulesync taskがstderrへ出す警告・エラーには影響しない。

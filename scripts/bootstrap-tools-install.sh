@@ -31,4 +31,8 @@ fi
 [ -e "$HOME/.config/mise/mise.lock" ] || : >"$HOME/.config/mise/mise.lock"
 
 echo "Running mise install..."
+# repo と global の両方が宣言する tool（rulesync など）は、repo 直下の install だと project 側として入り、
+# global の lockfile に entry が入らない。repo 側で入った後の global の install は "already installed" で
+# lock を書かないため、global scope を先に install する。
+GITHUB_TOKEN=$github_token mise --cd "$HOME" install --jobs=2
 GITHUB_TOKEN=$github_token mise install --jobs=2
