@@ -55,8 +55,9 @@ git diff "$base" "$head_sha" --
 set -o pipefail
 {
   git diff --name-only -z "$base" "$head_sha" -- &&
-    git diff --name-only -z HEAD -- &&
-    git ls-files -z --others --exclude-standard
+    git diff --name-only -z --cached HEAD -- &&
+    git diff --name-only -z -- &&
+    git ls-files -z --others --exclude-standard --full-name -- :/
 } | python3 <この skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source received,team --summary --paths0
 ```
 
