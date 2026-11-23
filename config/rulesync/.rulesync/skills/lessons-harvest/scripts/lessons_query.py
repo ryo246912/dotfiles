@@ -40,7 +40,7 @@ def main() -> int:
         data = sys.stdin.buffer.read()
         if data and not data.endswith(b"\0"):
             ap.error("--paths0 expects NUL-terminated paths")
-        args.paths = [os.fsdecode(path) for path in data.split(b"\0")[:-1]]
+        args.paths = [os.fsdecode(path) for path in data.split(b"\0") if path]
     L.check_schema(strict=False)
 
     sources = set(args.source.split(","))
