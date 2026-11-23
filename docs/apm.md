@@ -6,7 +6,7 @@
 
 外部スキルは vendor（本文をリポジトリにコミット）せず、**すべて upstream リポジトリからの依存**として
 `apm.yml`（`~/.apm/apm.yml`）に宣言します（npm の `package.json` に相当）。各依存は release tag、または
-`apm.lock.yaml` の commit で pin し、`apm install -g`（user scope）で各エージェントの skill ディレクトリ
+`apm.lock.yaml` の commit で pin し、`mise run apm:install`（user scope）で各エージェントの skill ディレクトリ
 （`~/.claude/skills/`・`~/.agents/skills/`）へ都度 install します。依存と lockfile の更新は Renovate の
 [apm manager](https://docs.renovatebot.com/modules/manager/apm/) が行います（後述）。
 
@@ -16,7 +16,7 @@
 | ------------------------------------------ | ---------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
 | このリポジトリの `CLAUDE.md` / `AGENTS.md` | rulesync   | `.rulesync/rules/CLAUDE.md`                                  | リポジトリ直下の `CLAUDE.md` / `AGENTS.md`（Git 管理）                 |
 | グローバルな自作 skill / rule              | rulesync   | `config/rulesync/.rulesync/`                                 | `~/.claude/` 等（mise `[dotfiles]` + `rulesync generate`）             |
-| **外部スキル（グローバル）**               | **APM**    | `apm/apm.yml` の `dependencies.apm`                          | `~/.claude/skills/` 等（`apm install -g`）                             |
+| **外部スキル（グローバル）**               | **APM**    | `apm/apm.yml` の `dependencies.apm`                          | `~/.claude/skills/` 等（`mise run apm:install`）                       |
 | MCP サーバ（sandbox 用）                   | sbx mcp    | `config/sbx/mcp.yml`（APM の `dependencies.mcp` と同じ書式） | ホストの `sbx mcp`（`mise run sandbox:mcp-add`）。agent には登録しない |
 
 - **`CLAUDE.md` / `AGENTS.md`** は `.rulesync/rules/CLAUDE.md` を正本として rulesync で生成し、実ファイルも Git 管理します。生成物との差分は `mise run lint:rulesync` と CI で検知します（`docs/rulesync.md` 参照）。
@@ -129,7 +129,7 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 ## ディレクトリ構成
 
 - `apm/apm.yml` → `~/.apm/apm.yml`: user scope の APM マニフェスト（`targets` / `dependencies`）。
-- `~/.apm/apm.lock.yaml` / `~/.apm/apm_modules/` / `~/.claude/skills/` 等: `apm install -g` の生成物（配布先）。
+- `~/.apm/apm.lock.yaml` / `~/.apm/apm_modules/` / `~/.claude/skills/` 等: `mise run apm:install` の生成物（配布先）。
 
 ## 使い方
 
@@ -146,7 +146,7 @@ Renovate は `apm/` で project scope の `apm install`（`-g` なし）を実�
 mise --cd "$HOME" run apm:install
 ```
 
-`apm install -g` は cwd に依存せず `~/.apm/apm.yml` を読み、`targets` に応じた各エージェントの user scope
+`mise run apm:install` が内部で呼ぶ APM は cwd に依存せず `~/.apm/apm.yml` を読み、`targets` に応じた各エージェントの user scope
 ディレクトリ（`claude` なら `~/.claude/skills/`、その他は `~/.agents/skills/`）へスキルを配置します。
 `mise run apm:install` は続けて tsumiki commands を rulesync source へ同期し、Claude Codeにはcommand、
 Codexにはskillとして配布します。Claude Codeでは `/tsumiki-init-tech-stack`、Codexでは新しいセッションから
