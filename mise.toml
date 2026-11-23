@@ -64,7 +64,8 @@ lefthook install
 #
 #    同期の前に pre-tools hook と同じ手順（gh 導入・認証 → GITHUB_TOKEN 付き mise install）で
 #    ツールを入れる。apm/rulesync が導入済みでも、Renovate で上げたバージョンが未導入のままだと
-#    同期でツールを解決できないため、毎回 install する。hook 内の `mise` は別プロセスなので、
+#    同期でツールを解決できないため、毎回 install する。導入済みなら install は 1 秒未満で終わる
+#    （lockfile 作成直後の初回だけ数分かかる）ので、未導入時だけに絞らない。hook 内の `mise` は別プロセスなので、
 #    この apply で配置したばかりの ~/.config/mise 配下の global config を読める（mise.toml 冒頭の
 #    コメントと違い、同一プロセスの制約を受けない）。post-merge の自動 apply（lefthook.yml）は
 #    mise install をしない方針なので DOTFILES_SKIP_TOOLS_INSTALL=1 で抑止する。
