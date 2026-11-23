@@ -116,6 +116,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
+- `last30days`
 - `modern-web-guidance`
 - `prompt-master`
 - `desloppify`
@@ -135,6 +136,17 @@ mise --cd "$HOME" run apm:install
 
 再現性のため、依存先は `apm/apm.yml` の ref または `apm/apm.lock.yaml` の `resolved_commit` で固定しています。
 更新方法は [APM の pin と Renovate による更新](apm.md#pin-と-renovate-による更新)を参照してください。
+
+## `last30days`
+
+トピックについて直近30日間の投稿や反応を調べます。Claude Code では `/last30days <トピック>`、
+Codex では `$last30days <トピック>` で起動します。実行には Python 3.12 以上が必要です。
+APM はロックファイルに従ってスキルを配布し、既存の配布先を更新します。
+まず API キーなしで使える情報源を試せます。初回セットアップをスキップした後でも、たとえば
+Claude Code では `/last30days X を使えるよう設定して`、Codex では `$last30days X を使えるよう設定して`
+と入力すると、その情報源の設定案内を開けます。
+選択した情報源によっては、セットアップ時にブラウザのログイン情報の利用を求められたり、
+Homebrew で `yt-dlp` を導入したりします。入力した API キーは通常 `~/.config/last30days/.env` に保存されます。
 
 ## Plannotator / Effective HTML
 

@@ -71,6 +71,7 @@
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
+    "last30days": "user-invocable-only",
     "lessons-harvest": "user-invocable-only",
     "lessons-record": "name-only",
     "lessons-review": "user-invocable-only",
