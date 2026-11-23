@@ -13,7 +13,8 @@ description: >-
 - 対象は `ryo246912/dotfiles` の PR だけ。別リポジトリの PR なら停止して伝える。
 - 動作確認で見つけた PR の不具合や不備は、ユーザーの承認を待たずに PR のブランチで修正し、commit・push して、PR に対応内容をコメントする（「7. 不具合・不備の修正」）。
 - PR の範囲を大きく超える修正、設計方針の変更、原因を特定できない失敗は修正せず、報告にまとめてユーザーに確認する。
-- ホームへの配置（`mise bootstrap dotfiles apply`、グローバルの `rulesync generate` の実書き込みなど）、sandbox の再作成、外部サービスの設定変更は、ユーザーが明示しない限り行わない。代わりに dry-run・validate・一時ディレクトリでの生成で確認し、実適用は「未実施」として記録する。
+- ホームへの配置（`mise bootstrap dotfiles apply`、グローバルの `rulesync generate` の実書き込みなど）は、確認に必要なら `~/dotfiles` の checkout でだけ行う。worktree から apply すると symlink の参照先が worktree になるなど配置が壊れるため。worktree で作業しているときは、配置を伴う確認だけ `~/dotfiles` で「1. 事前確認」「2. checkout」からやり直して行う。`~/dotfiles` で checkout できない場合は、dry-run・validate・一時ディレクトリでの生成で確認し、実適用は「未実施」として記録する。
+- sandbox の再作成、外部サービスの設定変更は、ユーザーが明示しない限り行わない。
 - PR が追加したツールの導入（`mise install` など）は確認に必要なら行い、導入したことを報告に書く。
 
 ## 入力

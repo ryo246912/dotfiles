@@ -28,6 +28,12 @@
 
 `docs/**` と `README.md` を参照してください。
 
+## PR 作成後の動作確認
+
+- このリポジトリで PR を作成したら、ユーザーの指示を待たずに `pr-verify-dotfiles` skill で PR の動作確認を行う。見つけた不具合や不備はその skill の手順で修正・push する
+- `mise bootstrap dotfiles apply` など配置を伴う確認は、worktree ではなく `~/dotfiles` の checkout で行う。worktree から apply すると symlink の参照先が worktree になるなど、配置が壊れるため
+- 配置を伴わない確認（lint、`rulesync generate --dry-run`、`mise bootstrap dotfiles diff` など）は worktree で行ってよい
+
 ## Codex Cloud での実装・PR・レビュー対応
 
 - Codex Cloud で実装を依頼された場合は、検証・コミット・push・PR 作成までを自律的に行う。既存の作業 PR がある場合はその PR を更新する。ユーザーが作業範囲を制限した場合はその指示を優先する
