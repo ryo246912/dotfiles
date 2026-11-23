@@ -129,6 +129,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
+- `last30days`
 - `prompt-master`
 - `desloppify`
 - `pr-reviewer-behavior`（自作）
@@ -148,6 +149,12 @@ mise --cd "$HOME" run apm:install
 
 依存先は再現性のため `apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
 `ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise --cd "$HOME" run apm:install` を実行します。
+
+## `last30days`
+
+トピックについて直近30日間の投稿や反応を調べます。Claude Code では `/last30days <トピック>`、
+Codex では `$last30days <トピック>` で起動します。実行には Python 3.12 以上が必要です。
+まず API キーなしで使える情報源を試せます。情報源を追加する場合は、初回のセットアップ案内に従ってください。
 
 ## Plannotator / Effective HTML
 
