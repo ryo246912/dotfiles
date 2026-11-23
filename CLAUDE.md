@@ -11,6 +11,11 @@
 
 ツールは [mise](https://mise.jdx.dev/)（`mise.toml`）で管理し、バージョン更新は [Renovate](https://docs.renovatebot.com/) で追跡します。
 
+## スクリプトの置き場所
+
+- 処理は極力 mise tasks（`mise.toml` の `[tasks]` や `tasks/*.toml`）として定義する
+- mise tasks にすると煩雑になる、または推奨しない事象がある場合だけ、スクリプトファイル（`scripts/` など）を作る。そのファイルの冒頭に、なぜ mise tasks にしなかったのかをコメントで書く
+
 ## Homebrew 系パッケージの導入設定
 
 - brew / brew-cask の導入設定を追加・変更する際は、まず mise bootstrap の `[bootstrap.packages]` で管理できるか検討する。対象の Mac で `mise bootstrap packages apply brew:<formula>` または `mise bootstrap packages apply brew-cask:<cask>` による導入を確認し、利用可能ならこの方式を優先する
