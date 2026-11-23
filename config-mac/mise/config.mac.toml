@@ -18,6 +18,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 # 動的リンクしており arm64 mac では dyld で読めず起動不可のため使わない。
 # バージョン部分のコメントは実インストールには使われず、renovate が新バージョンを検知して
 # PR を作成するためのマーカー。実際のアップグレードは "latest" 指定によりツール自身に任せる。
+"brew:bash"         = "latest" # 5.3.20
 "brew:blueutil"     = "latest" # 2.13.0
 "brew:colordiff"    = "latest" # 1.0.22
 "brew:coreutils"    = "latest" # 9.11
