@@ -134,4 +134,3 @@ if __name__ == '__main__':
     except (subprocess.CalledProcessError, OSError, ValueError) as error:
         print(f'pr-fix: {error}', file=sys.stderr)
         sys.exit(1)
-
