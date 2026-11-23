@@ -626,12 +626,18 @@ symlink/copy/template 各モード・variants・hooks を検証したところ�
     `mise bootstrap dotfiles save`、history-watch、full bootstrap、
     素の`mise bootstrap dotfiles apply`ではhistoryを維持する。
     `post-dotfiles` hookは無効化していないため、APM/rulesync同期も従来どおり実行される。
-  - `post-merge`/`post-checkout` は `dotfiles-apply` の後に `mise-install` job で
-    `GITHUB_TOKEN=$(gh auth token) mise install --jobs=2` も実行する（`AI_AGENT` 設定時は skip）。
-    環境変数の `GITHUB_TOKEN` があればそれを優先し、どちらも無ければ warning を出して token なしで実行する。
-    また、mise に組み込まれた aube（npm backend）は aube CLI と違い開けるファイル数の上限（`RLIMIT_NOFILE`）を
-    引き上げないため、macOS の既定値 256 のままだと `Too many open files (os error 24)` で失敗する。job 内で
-    `ulimit -n 10240` に引き上げてから実行する（手動で `mise install` する場合も同じく引き上げが必要）。
+  - `dotfiles apply` の `post-dotfiles` hook と `mise bootstrap` の `pre-tools` hook は、どちらも
+    `scripts/bootstrap-tools-install.sh` で gh 導入・認証と `GITHUB_TOKEN` 付きの `mise install` を
+    global scope（`mise --cd "$HOME" install`）、repo 直下の順に行う
+    （`mise run bootstrap:tools:install` でも単体で実行できる）。`post-merge` の `dotfiles-apply` job は
+    この install も行うので、pull で上がった `[tools]` のバージョンがそのまま入る（`AI_AGENT` 設定時は job ごと skip）。
+    導入済みなら数秒で終わる。以前 post-merge の install を止めたときに遅かったのは、global の
+    lockfile が無くて毎回 version を network 越しに解決していたためと考えられる（今は hook が lockfile を用意する）。
+    `post-checkout` は branch 切り替えや worktree 作成のたびに install しないよう、
+    `DOTFILES_SKIP_TOOLS_INSTALL=1` で install だけを止める。
+    mise に組み込まれた aube（npm backend）は aube CLI と違い開けるファイル数の上限（`RLIMIT_NOFILE`）を
+    引き上げないため、macOS の既定値 256 のままだと `Too many open files (os error 24)` で失敗する。スクリプト内で
+    `ulimit -Sn 10240`（soft limit だけ）に引き上げてから実行する（手動で `mise install` する場合も同じく引き上げが必要）。
   - **ハマりどころ**: `apm:sync`/`rulesync:sync` は
     `config/mise/tasks/dev.toml`（deploy先: `~/.config/mise/tasks/dev.toml`、
     global scope）で定義したタスクだが、`post-tools` hook はこのリポジトリの
@@ -1042,13 +1048,26 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   `mise WARN Failed to resolve tool version list for ...: not in the lockfile`
   という警告が出る。taskが使わないtool（apm:sync/rulesync:syncなら、global
   configにある他の100件超）の警告は無視してよいが、**taskが実際に使うtool
-  （この場合は apm/rulesync 自体）の警告は無視しないこと**。lockfileが無くても
-  taskの実行自体は失敗しない（実機確認済み: 唯一のtool entryがlockfileに無い
-  状態でも対象taskは実行された）が、PATH上に既に解決済みのversionが無い場合は
-  そのtool無しでtaskが走ることになる（例えばapm自体が入っていなければ
-  `apm: command not found` で落ちる）。pinned versionを上げた直後など、
-  apm/rulesync自身がlockfileに無い状態になったら、`MISE_LOCKED`無しで
-  一度 `mise install` してlockfileを更新してから実行すること。
+  （この場合は apm/rulesync や task 内で使う python3 など）の警告は無視しないこと**。
+  lockfileに無いtoolはshimから解決できず、
+  `mise ERROR No version is set for shim: apm` のように task が失敗する
+  （mise は installs 配下のパスを PATH から除くので、PATH を足しても回避できない）。
+  `mise install` は既存の lockfile を更新するだけで作らないため、hook は install の前に
+  空の `~/.config/mise/mise.lock` を置き、install で base の `config.toml` の tool を lock させる
+  （初回は数分かかるが、2回目以降は既存の entry を使う）。`MISE_ENV` の overlay（`config.mac.toml` など）の
+  tool は `mise.<env>.lock` に振り分けられ、このファイルが無いので lock されない。hook の同期に使う
+  apm・rulesync・python3 は base にあるので、overlay を lock しなくても同期は通る。
+  rulesync のように repo の `mise.toml` と global の両方が宣言する tool は、repo 直下の `mise install` だと
+  project 側として入り、global の lockfile に entry が入らない。しかも先に入った後は
+  `mise --cd "$HOME" install` が "already installed" で lock を書かないので、hook は global scope の install を
+  repo 直下の install より先に行う。以前に repo 直下で入って entry が欠けたままの環境は install の順序では
+  直らないので、hook は install の後に同期で使う apm・rulesync・python だけを `mise --cd "$HOME" lock --global <tool>`
+  で lock する（entry があれば 1 秒未満、欠けていても数秒で終わる）。hook 外で `apm:sync` / `rulesync:sync` を
+  `MISE_LOCKED=1` 付きで直接実行して失敗したとき（Renovate で上げた直後など）は、`MISE_LOCKED` 無しで一度
+  `mise --cd "$HOME" install` して global の lockfile を更新してから実行すること（lockfile 自体が無ければ先に空の
+  `~/.config/mise/mise.lock` を置く）。既に repo 直下で入れてしまい entry が入らない場合は
+  `mise --cd "$HOME" lock --global <tool>` で lock する（引数なしの `--global` は全 tool を解決して数十秒かかり、
+  `mise.<env>.lock` も作る）。
   hookでは、使わないtoolの未登録警告がnestedな`mise run`の回数だけ繰り返されるため、
   `MISE_LOG_LEVEL=error`も設定してmise自身のWARNだけを抑制している。この設定は
   `apm install`やrulesync taskがstderrへ出す警告・エラーには影響しない。

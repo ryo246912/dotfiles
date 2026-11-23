@@ -128,6 +128,16 @@
             }
          }
       },
+      "@mooxl/store.raycast.coffee": {
+         "entrypoints": {
+            "caffeinateFor": {
+               "enabled": false
+            },
+            "caffeinateUntil": {
+               "enabled": false
+            }
+         }
+      },
       "@rolandleth/store.raycast.kill-process": {
          "entrypoints": {
             "index": {
