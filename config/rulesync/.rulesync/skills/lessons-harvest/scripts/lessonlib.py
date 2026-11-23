@@ -284,7 +284,7 @@ def set_section(body: str, name: str, content: str, before: str | None = None) -
 
 def glob_regex(pattern: str) -> re.Pattern:
     """`**` はディレクトリをまたぐ、`*` はまたがない glob を正規表現にする。`{a,b}` はそのどれか。"""
-    return re.compile(_glob(pattern) + r"\Z")
+    return re.compile(_glob(pattern) + r"\Z", re.DOTALL)
 
 
 def _glob(pattern: str) -> str:

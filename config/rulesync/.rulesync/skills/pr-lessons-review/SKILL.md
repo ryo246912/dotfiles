@@ -52,7 +52,13 @@ git diff "$base" "$head_sha" --
 まずタイトル・場所・Check だけで一覧にする。教訓の件数やサイズによらず、全文の一括取得から始めない。
 
 ```bash
-python3 <この skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source received,team --summary --paths <1. の変更ファイル>
+set -o pipefail
+{
+  git diff --name-only -z "$base" "$head_sha" -- &&
+    git diff --name-only -z --cached HEAD -- &&
+    git diff --name-only -z -- &&
+    git ls-files -z --others --exclude-standard --full-name -- :/
+} | python3 <この skill のディレクトリ>/../lessons-harvest/scripts/lessons_query.py --source received,team --summary --paths0
 ```
 
 - 差分に関係する教訓と、適用可否が不明な教訓を候補にする。ファイル名や技術名の一致だけで判断しない

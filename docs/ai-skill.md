@@ -141,13 +141,31 @@ mise --cd "$HOME" run apm:install
 ### 導入構成
 
 - Plannotator CLIはhostとdevcontainer / sbxの両方でmise toolとしてインストールします。
-- `plannotator-review`、`plannotator-annotate`、`plannotator-last`とEffective HTMLの6 skillsは
-  APMでuser scopeへ配布します。
+- `plannotator-review` と Effective HTML の6スキルは APM でユーザー環境へ配布します。
+- Web アプリのレビューには Rulesync で配布する `plannotator-custom-app-annotate` を使います。
 - APMのskillはClaude Codeでは`/<skill-name>`、Codexでは`$<skill-name>`として呼び出せるため、
   Plannotator用のslash command fileを別途管理しません。
 - Claude Codeのplan review hookはRulesyncのglobal hook、Codexのplan review hookは`~/.codex/hooks.json`で
   設定します。どちらもplan終了時にCLIを呼び、Plannotatorが未インストールのhostでは何もせず終了します。
-- code、HTML、agent responseのreviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
+- code と HTML の reviewはhookでは自動起動せず、次のskillを明示的に呼び出します。
+
+### 公式スキル
+
+upstream が提供するスキルの一覧です。このリポジトリで APM から配布しているのは `plannotator-review` だけで、
+ほかのスキルは使うときに `apm/apm.yml` へ追加します。
+
+| スキル                         | 用途                                                |
+| ------------------------------ | --------------------------------------------------- |
+| `plannotator-review`           | 作業ツリーや PR の差分レビュー                      |
+| `plannotator-annotate`         | ファイル、URL、フォルダに注釈を付ける               |
+| `plannotator-last`             | 直前の AI の返答を開いて注釈を付ける                |
+| `plannotator-inbox`            | 後で回答できる質問やメッセージを扱う                |
+| `plannotator`                  | CLI と各機能のリファレンス                          |
+| `plannotator-compound`         | 過去の計画レビューを分析して改善点をまとめる        |
+| `plannotator-setup-goal`       | ヒアリングとレビューを通じて `/goal` 用の計画を作る |
+| `plannotator-visual-explainer` | 計画、PR、構成図などを HTML で可視化する            |
+
+[公式コアスキル](https://github.com/backnotprop/plannotator/tree/main/apps/skills/core) · [公式追加スキル](https://github.com/backnotprop/plannotator/tree/main/apps/skills/extra)
 
 ### HTML artifactを作成してreviewする
 
@@ -174,18 +192,13 @@ $html-prototype ユーザー登録から完了までの操作可能なprototype�
 $design-artifact $html-plan この実装planをprojectのdesign languageに合わせて可視化して
 ```
 
-作成したHTMLはPlannotator skillからreviewできます。Plannotatorはskill実行時に起動するため、
-container起動時にPlannotatorを常駐起動する必要はありません。
-
-```text
-$plannotator-annotate path/to/artifact.html
-```
-
-CLIを直接実行する場合は次を使います。
+作成した HTML ファイルをレビューするときは、次の CLI コマンドを使います。
 
 ```bash
 plannotator annotate path/to/artifact.html
 ```
+
+エージェントに注釈への対応を依頼するときは、エージェントにコマンドを実行させます。別のターミナルで実行した場合は、標準出力に返った注釈をエージェントの会話に貼り付けます。
 
 ### 開発中のfrontendをreviewする
 
@@ -204,9 +217,8 @@ npm run dev -- --host 0.0.0.0
 dev serverが表示したloopback URLを別のterminalまたはagent sessionからPlannotatorへ渡します。
 `--app`はlive annotationを必須にし、pageを開けない場合はstatic contentへ自動fallbackせずerrorを返します。
 
-```text
-$plannotator-annotate http://localhost:8081 --app
-```
+- Claude Code は `/plannotator-custom-app-annotate http://localhost:8081`
+- Codex は `$plannotator-custom-app-annotate http://localhost:8081`
 
 CLIで直接起動する場合は次のとおりです。Viteの例ではportを`5173`に変えます。
 
@@ -225,7 +237,7 @@ tabを自動で閉じたくない場合は、Plannotator右上の**Settings**を
 **Auto-close Tab**を**Off**にします。この選択はbrowserに保存されるため、以後のreviewにも適用されます。
 ただし、**Send Annotations**は現在のCLI sessionを完了させる操作です。tabを残しても完了画面になり、
 同じannotation UIやlive appを引き続き操作することはできません。agentがfeedbackを反映した後に
-`$plannotator-annotate <URL> --app`をもう一度実行し、新しいreview sessionで確認してください。
+Claude Code では `/plannotator-custom-app-annotate <URL>`、Codex では `$plannotator-custom-app-annotate <URL>` を再実行して確認してください。
 critのように1つの画面をfeedback送信後も継続利用する動作は、Plannotatorの現行session modelでは利用できません。
 
 live modeで開けないpageをcontentとしてreviewする場合は、snapshot取得を明示します。
@@ -258,12 +270,6 @@ GitHub PRをreviewする場合はPR URLを渡します。
 
 ```text
 $plannotator-review https://github.com/owner/repository/pull/123
-```
-
-### agentの最後の返答をreviewする
-
-```text
-$plannotator-last
 ```
 
 ## `crit` / `crit-cli`
