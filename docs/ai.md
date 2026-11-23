@@ -37,14 +37,6 @@ devcontainer exec --workspace-folder . --config ~/.config/devcontainer/devcontai
 multi-worktree の task root では `--config` を省略します（task root に生成された
 `.devcontainer/devcontainer.json` が使われます）。
 
-## Claude Code の Bash ツールのシェル
-
-macOS 標準の古い bash や zsh 固有の展開を避けるため、Apple Silicon Mac では
-mise bootstrap で導入する Homebrew の `/opt/homebrew/bin/bash` を `CLAUDE_CODE_SHELL` に指定しています。
-この環境では Bash ツールのコマンドを bash の構文で書けます。
-指定パスが存在しない Linux などでは、Claude Code 2.1.292 は `SHELL` や `PATH` からシェルを自動検出します。
-その場合は zsh が選ばれることもあり、全環境で bash を強制する設定ではありません。
-
 ## セッションを分岐する（fork）
 
 既存セッションの会話履歴をコピーして、**新しいセッション ID の別セッション**として続けます。
