@@ -1047,8 +1047,10 @@ secretを含むファイルを新たに track する場合は、`encrypt = true`
   `mise ERROR No version is set for shim: apm` のように task が失敗する
   （mise は installs 配下のパスを PATH から除くので、PATH を足しても回避できない）。
   `mise install` は既存の lockfile を更新するだけで作らないため、hook は install の前に
-  空の `~/.config/mise/mise.lock` を置き、install で global config の全 tool を lock させる
-  （初回は数分かかるが、2回目以降は既存の entry を使う）。hook 外で `apm:sync` / `rulesync:sync` を
+  空の `~/.config/mise/mise.lock` を置き、install で base の `config.toml` の tool を lock させる
+  （初回は数分かかるが、2回目以降は既存の entry を使う）。`MISE_ENV` の overlay（`config.mac.toml` など）の
+  tool は `mise.<env>.lock` に振り分けられ、このファイルが無いので lock されない。hook の同期に使う
+  apm・rulesync・python3 は base にあるので、overlay を lock しなくても同期は通る。hook 外で `apm:sync` / `rulesync:sync` を
   `MISE_LOCKED=1` 付きで直接実行して失敗したとき（Renovate で上げた直後など）は、`MISE_LOCKED` 無しで一度
   `mise install` して lockfile を更新してから実行すること（lockfile 自体が無ければ先に空の
   `~/.config/mise/mise.lock` を置く）。
