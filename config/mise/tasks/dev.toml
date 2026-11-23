@@ -206,26 +206,64 @@ run = [
 ["apm:deploy"]
 description = "Deploy APM packages while protecting existing last30days installations"
 run = '''
-set -eu
-skills=("$HOME/.agents/skills/last30days" "$HOME/.claude/skills/last30days")
-marker=.dotfiles-apm-managed
-# The distributed lockfile lists desired paths before APM has installed the package locally.
-for skill in "${skills[@]}"; do
-  if [ -L "$skill" ] || { [ -e "$skill" ] && [ ! -f "$skill/$marker" ]; }; then
-    printf 'Existing last30days installation at %s. Move it to a backup path outside the skills directory, then retry.\n' "$skill" >&2
-    exit 1
-  fi
-done
-args=(-g --only apm)
-if [ "${usage_frozen:-false}" = true ]; then
-  args+=(--frozen)
-fi
-apm install "${args[@]}"
-for skill in "${skills[@]}"; do
-  if [ ! -L "$skill" ] && [ -f "$skill/SKILL.md" ]; then
-    touch "$skill/$marker"
-  fi
-done
+python3 - <<'PYTHON'
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+
+skills = [Path.home() / agent / "skills/last30days" for agent in (".agents", ".claude")]
+marker_name = ".dotfiles-apm-managed"
+
+
+def fingerprints(skill):
+    files = {}
+    for path in sorted(skill.rglob("*")):
+        if path == skill / marker_name:
+            continue
+        relative = path.relative_to(skill).as_posix()
+        if path.is_symlink() or not (path.is_file() or path.is_dir()):
+            raise ValueError(f"Unsupported path: {path}")
+        if path.is_dir() and path.name == "__pycache__":
+            continue
+        if path.is_file() and path.parent.name == "__pycache__" and path.suffix == ".pyc":
+            continue
+        if path.is_file():
+            files[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+        else:
+            files[relative] = None
+    return files
+
+
+# Compare each installed tree with the files recorded after its last successful deployment.
+for skill in skills:
+    if not (skill.exists() or skill.is_symlink()):
+        continue
+    marker = skill / marker_name
+    try:
+        if skill.is_symlink() or marker.is_symlink() or not marker.is_file():
+            raise ValueError
+        if json.loads(marker.read_text()) != fingerprints(skill):
+            raise ValueError
+    except (OSError, ValueError):
+        raise SystemExit(
+            f"Existing or modified last30days installation at {skill}. "
+            "Move it to a backup path outside the skills directory, then retry."
+        ) from None
+
+args = ["apm", "install", "-g", "--only", "apm"]
+if os.environ.get("usage_frozen") == "true":
+    args.append("--frozen")
+status = subprocess.run(args).returncode
+if status:
+    raise SystemExit(status)
+
+for skill in skills:
+    if not skill.is_symlink() and (skill / "SKILL.md").is_file():
+        marker = skill / marker_name
+        marker.write_text(json.dumps(fingerprints(skill)) + "\n")
+PYTHON
 '''
 shell = "bash -c"
 usage = 'flag "--frozen" help "Require dependencies to match the lockfile"'
