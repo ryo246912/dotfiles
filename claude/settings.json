@@ -3,7 +3,8 @@
   "cleanupPeriodDays": 36500,
   "env": {
     "DISABLE_AUTOUPDATER": "1",
-    "AI_AGENT": "1"
+    "AI_AGENT": "1",
+    "CLAUDE_CODE_SHELL": "/opt/homebrew/bin/bash"
   },
   "permissions": {
     "deny": [
