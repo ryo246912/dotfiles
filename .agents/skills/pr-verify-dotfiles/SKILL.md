@@ -82,7 +82,7 @@ git rev-parse HEAD   # headRefOid と一致することを確認する
 ## 6. 後片付けと報告
 
 - 報告の直前に `gh pr view <PR> --json headRefOid` を再確認する。検証後に PR が更新されていたら、HTML と報告に書く。
-- detached HEAD のまま終える。元のブランチへ戻すコマンド（`git switch <元のブランチ>`）を報告に書く。
+- detached HEAD のまま終える。元のブランチへ戻すコマンド（`git switch <元のブランチ>`）を報告に書く。配置した場合は、戻した後に `mise bootstrap dotfiles apply` を再実行するコマンドも併記する（`AI_AGENT` を設定した環境では post-checkout の自動 apply が skip されるため、switch だけではホームが PR の内容のまま残る）。
 - チャットでは、結論、判定ごとの件数、失敗・未実施の項目、修正したコミットと PR コメントの URL、HTML のパスを伝える。
 
 ## 7. 不具合・不備の修正
