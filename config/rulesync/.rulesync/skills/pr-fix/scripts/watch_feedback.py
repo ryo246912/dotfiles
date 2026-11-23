@@ -76,7 +76,7 @@ def poll(repo, login, state, pending, path, interval, number=None):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--loop', action='store_true', help='wait silently until feedback changes')
+    parser.add_argument('-w', '--watch', action='store_true', help='wait silently until feedback changes')
     parser.add_argument('--interval', type=int, default=300, help='seconds (default: 300)')
     parser.add_argument('--pr', type=int, help='limit to one authored PR')
     parser.add_argument('--ack', metavar='TOKEN', help='acknowledge a delivered snapshot after handling it')
@@ -118,10 +118,10 @@ def main():
                 delay = args.interval
             except (subprocess.CalledProcessError, OSError, ValueError) as error:
                 print(f'pr-fix: {error}', file=sys.stderr)
-                if not args.loop:
+                if not args.watch:
                     return 1
                 delay = min(max(delay * 2, 60), 3600)
-            if not args.loop:
+            if not args.watch:
                 return 0
             time.sleep(delay)
 
