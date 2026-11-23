@@ -64,6 +64,9 @@ dependencies:
     - GoogleChrome/modern-web-guidance/skills/modern-web-guidance#v1.0.1
     # AI tool向けのprompt生成・改善skill（tag なし、lockfileのcommitでpin）。
     - nidhinjs/prompt-master
+    # 日本語の執筆・推敲。閲覧アプリは mise run tsuzuri:serve で起動する。
+    - MaryCache/tsuzuri/skills/tsuzuri#v1.0.0
+    - nanaism/yomiyasu/skills/yomiyasu#v3.3.0
     # Ponytail は skill ディレクトリ単位で配布する。
     - DietrichGebert/ponytail/skills/ponytail#v5.1.0
     - DietrichGebert/ponytail/skills/ponytail-audit#v5.1.0

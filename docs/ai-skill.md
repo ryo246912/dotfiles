@@ -120,6 +120,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `modern-web-guidance`
 - `prompt-master`
 - `desloppify`
+- `tsuzuri` / `yomiyasu`
 
 ### インストール
 
@@ -136,6 +137,21 @@ mise --cd "$HOME" run apm:install
 
 再現性のため、依存先は `apm/apm.yml` の ref または `apm/apm.lock.yaml` の `resolved_commit` で固定しています。
 更新方法は [APM の pin と Renovate による更新](apm.md#pin-と-renovate-による更新)を参照してください。
+
+## `tsuzuri` / `yomiyasu`
+
+[tsuzuri](https://github.com/MaryCache/tsuzuri) は、日本語の文章を要件定義・設計・執筆・推敲の順で作成し、文ごとの執筆意図や修正履歴を閲覧できるスキルです。依存する日本語推敲スキル [yomiyasu](https://github.com/nanaism/yomiyasu) も APM で配布します。
+
+上記のインストールを行った後、Claude Code で「tsuzuri で README を書いて」などと依頼します。閲覧アプリは初回起動時に APM と同じ release tag のリポジトリを取得します。
+
+```bash
+mise run tsuzuri:serve
+mise run tsuzuri:serve -- draft.md.tsuzuri --port 8771
+```
+
+既定の URL は `http://127.0.0.1:8770/` です。閲覧アプリでコメントを付け、Claude Code に「tsuzuri のコメントを読んで直して」と依頼できます。Python は既存の mise 管理のものを使用します。
+
+要件・執筆意図・コメントなどは文章の隣の `*.tsuzuri/` に保存されるため、共有やバックアップ時には内容を確認してください。
 
 ## `last30days`
 
