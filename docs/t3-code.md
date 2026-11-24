@@ -26,6 +26,23 @@ T3 アプリから接続済みの環境で **Add Project** を選び、SBX 内�
 公開ポートは専用環境と同じアカウント別の枠から割り当てる。
 `oauth` は 3800–3809、`account1` は 3810–3819、`account2` は 3820–3829、`work3` は 3830–3839。
 
+以下は `oauth` と `work3` を選んだ場合の構成例。ポートは割り当ての一例。
+
+```text
+T3 Code アプリ
+  │ PC はローカル公開ポート、スマホは T3 Connect
+  └─ Mac（ホスト）
+      ├─ 127.0.0.1:3800 → programming-oauth-t3
+      │                     └─ T3 サーバー :3773（OAuth の認証・履歴）
+      ├─ 127.0.0.1:3830 → programming-w3-t3
+      │                     └─ T3 サーバー :3773（work3 の認証・履歴）
+      └─ 上の両 SBX に読み書き可能でマウント
+          ├─ ~/Programming/  → リポジトリ A・B・後から追加した C
+          └─ ~/dotfiles/     → 同じホスト側 checkout（通常の配置先）
+```
+
+`--repo` で作る専用環境には、対象の Git リポジトリをマウントし、別の T3 サーバーと公開ポートを割り当てる。
+
 ### 各部品の役割
 
 | 部品                    | 数                 | 役割                                                                                                                                                                            |
@@ -294,7 +311,7 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
    ターミナルのコードと画面のコードが一致することを確認して承認する。
 4. ターミナルへ戻り、**`✓ Authorized`** と表示されて処理が完了するまで待つ。
 5. 認証が正常終了し、選んだ環境の自動起動定義（macOS の LaunchAgent ファイルまたは Linux の systemd unit ファイル）がある場合は、Sandbox と T3 サーバーを自動で再起動する。
-   実行中の作業は認証前に終了しておく。自動起動定義がなく手動で起動している場合は、認証後に実行中のサーバーを止めてから `t3-sandbox run <account> --repository /path/to/repo` を実行する。
+   実行中の作業は認証前に終了しておく。自動起動定義がなく手動で起動している場合は、認証後に実行中のサーバーを止めてから、共有環境は `t3-sandbox run <account> --shared`、専用環境は `t3-sandbox run <account> --repository /path/to/repo` で起動する。
 
 既に PC のアプリへ pair で接続済みなら、対象環境の Settings → Sharing & access から
 **T3 Connect** を有効化して本人認証する方法も使える。
