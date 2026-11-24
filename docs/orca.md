@@ -83,6 +83,24 @@ Orca Mobile の **Pair** で QR コードを読むか、リンクを開く。
 アカウントを切り替える場合は、PC とスマホで対象の接続先を選ぶ。
 最初の作業前に、接続先の `orca-<account>` と worktree を確認する。
 
+### VPN なしで Orca Relay を使う
+
+外出先から VPN なしで接続する場合は、対象 sbx から公式 Relay への TCP 443 を許可する。
+次に Orca アカウントでサーバーにログインし、スマホ用の Relay リンクを発行する。
+このログインは、sbx 内で使う Claude / Codex の認証とは別に行う。
+
+```sh
+sbx policy allow network --sandbox orca-account1 \
+  'login.onorca.dev:443,auth.onorca.dev:443,relay.onorca.dev:443,*.relay.onorca.dev:443'
+mise run orca:cli -- --sbx account1 orca auth login
+mise run orca:cli -- --sbx account1 orca pair --mobile --relay
+```
+
+スマホでリンクを開き、求められたら同じ Orca アカウントでログインする。
+詳細は [Orca Relay の接続要件](https://orca.dev/docs/mobile#firewalls-and-orca-relay) を参照。
+
+### 自動起動とログ
+
 サーバーは Mac の GUI ログイン時に起動する。Mac がスリープ中は接続できない。
 自動起動のログは `${XDG_STATE_HOME:-$HOME/.local/state}/orca-sandbox/<account>.log` にある。
 サーバーのみの Linux 版で使える機能とペアリングの詳細は
