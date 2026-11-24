@@ -1,0 +1,63 @@
+# macOS系
+.DS_Store
+
+# Node.js
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# terraform
+tftui.plan
+.terraform/
+
+# Gradle
+.gradle/
+
+# Rust / Maven
+target/
+
+# git
+COMMIT_EDITMSG
+commondir
+config
+# 上の `config` は同名のディレクトリ（dotfiles の config/ 等）とその配下の未追跡ファイルまで
+# 除外してしまうため、ディレクトリだけ復帰させる（`config` という名前のファイルは除外されたまま）
+!config/
+description
+FETCH_HEAD
+gitdir
+gitui
+HEAD
+index
+index.lock
+MERGE_RR
+ORIG_HEAD
+packed-refs
+
+## Claude
+settings.local.json
+.claude/worktrees/
+
+## VSCode
+mcp.json
+
+## AI
+plan/**
+CLAUDE.local.md
+
+## crit
+.crit/
+lefthook.local.yml
+
+## desloppify
+.desloppify/
+
+## PRの動作確認
+**/pr-behavior-review/config.md
+**/pr-behavior-review/lessons/
+**/pr-reviewer-behavior/config.md
+**/pr-reviewer-behavior/lessons/
+/.pr-reviewer-artifacts/

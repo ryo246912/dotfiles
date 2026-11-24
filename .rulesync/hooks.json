@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "matcher": "startup|resume",
+        "command": "\"$(git rev-parse --show-toplevel)/scripts/ai-session-setup.sh\"",
+        "timeout": 600
+      }
+    ]
+  }
+}

@@ -2,6 +2,26 @@
 
 複数端末のセッション情報をCockroachDB Cloudに集約し、Cloud Run上のread-only Web UIで参照する構成。
 
+token使用量・costなどの分析方法（画面の見方、CLI、API）は末尾の「[分析: token使用量・costの見方](#分析-token使用量costの見方)」を参照。
+
+> [!IMPORTANT]
+> Fly.ioからの移行は完了している。Fly上のAgentsView app（`ryo-agentsview`）と`agentsview` schema／roleは削除済みで、rollback先は存在しない。Atuinは引き続きFly.io（`psgl`／`ryo-shellhistory`）を使う。GCP/CockroachDBの基盤管理（Terraform）は`ryo246912/infra`リポジトリへ移行済みで、このリポジトリにはCloud Run manifestとtaskだけが残る。
+
+## 実装済みファイル
+
+| ファイル                                  | 目的                                                                                                                   |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `config/agentsview/Dockerfile`            | upstream AgentsView imageをArtifact RegistryへmirrorするCloud Build context。`FROM`のtagがdeployするAgentsView version |
+| `config/agentsview/cloudrun-service.yaml` | clrndが所有するCloud Run Service manifest（Knative形式）。image、resource、scaling、環境変数、Secret Manager参照       |
+| `config/agentsview/clrnd.yml`             | clrnd設定。region、service名、manifest pathだけを持ち、project IDはcommitしない                                        |
+| `config/agentsview/scripts/cloudrun.sh`   | Cloud Run系taskの実体。設定解決、image URIの組み立て、secret versionのpin、Cloud Build、clrnd実行                      |
+| `config/agentsview/compose.yaml`          | local検証用CockroachDBのDocker Compose定義                                                                             |
+| `config/agentsview/prepare-dump-auth`     | dump／psql用に一時`.pgpass`を作り、passwordをprocess引数へ出さないためのhelper                                         |
+| `config/mise/tasks/agentsview.toml`       | `agentsview:*` task。secret登録、build／deploy／diff／status／rollback、local CockroachDBへのpush                      |
+| `config/mise/config.toml`                 | clrnd、gcloud、postgresql-binariesなどのversion pin                                                                    |
+
+各ファイルを変更したあとの適用手順は[運用: インフラ設定を変更したあとの適用手順](#運用-インフラ設定を変更したあとの適用手順)にある。GCP/CockroachDBの基盤（Terraform）は`ryo246912/infra`リポジトリを参照。
+
 ## Cloud Run／CockroachDBへの移行手順
 
 対象構成:
@@ -170,9 +190,9 @@ fnox exec -- sh -c '
 
 `root certificate file "~/.postgresql/root.crt" does not exist`は、password認証へ到達する前にlibpqがCA bundleを見つけられていない状態である。`PGSSLROOTCERT=system`の後に`SSL error: certificate verify failed`へ変わる場合、使用中の`psql`がlinkするOpenSSLのdefault trust storeが空またはmacOS Keychainと連携していない。`system`を続けて使わず、上記のように実在するCA bundleを明示する。
 
-macOSでは最初に`/etc/ssl/cert.pem`を使う。これは`MISE_ENV`に`mac`を含むhostで読み込まれるため、mise shell activation後の`fnox exec`、`psql`、AgentsViewに共通して適用される。既に開いているshellには遡って反映されないので、chezmoi適用後に新しいshellを開くか上記の`exec zsh`を実行する。
+macOSでは最初に`/etc/ssl/cert.pem`を使う。これは`MISE_ENV`に`mac`を含むhostで読み込まれるため、mise shell activation後の`fnox exec`、`psql`、AgentsViewに共通して適用される。既に開いているshellには遡って反映されないので、mise bootstrap dotfiles apply 後に新しいshellを開くか上記の`exec zsh`を実行する。
 
-`/etc/ssl/cert.pem`が存在しないmacOS hostでは、`dot_config/mise/config.mac.toml`の値を次のHomebrew OpenSSL bundleへ変更し、chezmoiを再適用する。
+`/etc/ssl/cert.pem`が存在しないmacOS hostでは、`config/mise/config.mac.toml`の値を次のHomebrew OpenSSL bundleへ変更し、`mise bootstrap dotfiles apply`を再実行する。
 
 ```sh
 export PGSSLROOTCERT="$(brew --prefix openssl@3)/etc/openssl@3/cert.pem"
@@ -230,7 +250,7 @@ fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_READ_PG_URL" -X -v ON_ERROR_STOP
 
 `REVOKE`前に`DELETE 0`が返るのは、対象rowが0件だっただけで権限検査には成功している状態である。`REVOKE`後は同じstatementが`permission denied`になる。ここで`DELETE 0`が返る場合は`REVOKE`が効いていない。
 
-macOSでは`PGSSLROOTCERT`が必要になる（`dot_config/mise/config.mac.toml`が`/etc/ssl/cert.pem`を設定する）。TLS errorが出る場合は`echo $PGSSLROOTCERT`で読めるpathになっているか確認する。
+macOSでは`PGSSLROOTCERT`が必要になる（`config/mise/config.mac.toml`が`/etc/ssl/cert.pem`を設定する）。TLS errorが出る場合は`echo $PGSSLROOTCERT`で読めるpathになっているか確認する。
 
 **完了確認:** ownerでschemaが作成され、push userで`agentsview pg status`が成功し、read userの`SELECT`は成功、DMLはpermission deniedになる。
 
@@ -301,6 +321,55 @@ gcloud run services logs read ryo-agentsview \
 
 logの最初のerror行に応じて対処する。
 
+- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
+- **`/api/v1/sessions/sidebar-index`だけが極端に遅い（`--write-timeout`を延ばしても切れる）** — まず`EXPLAIN ANALYZE`で、時間がどこで消えているかを確定させる。**件数やindexの問題とlock待ちは対処が正反対**なので、ここを飛ばさない。
+
+  ```sh
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
+  EXPLAIN ANALYZE
+  SELECT count(*) FROM agentsview.sessions
+  WHERE deleted_at IS NULL
+    AND COALESCE(ended_at, started_at, created_at) >= now() - INTERVAL '"'"'7 days'"'"';"'
+  ```
+
+  出力の`cumulative time spent due to contention`と`sql cpu time`を比べる。
+
+  **contentionがexecution timeのほとんどを占める場合（lock待ち）。** これが実際に起きたcaseである。`sql cpu time: 4ms`／`KV rows decoded: 4,367`に対して`KV contention time: 1m22s`だった。表が小さく全走査自体は一瞬なので、indexを足しても直らない。`sessions`へ書き込みintentを残したまま終わっていないtransactionが原因である。中断した`agentsview pg push`や`pg watch`が典型。
+
+  ```sh
+  # 実行中transactionを古い順に見る。startが極端に古いものが原因。
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
+  SELECT id, session_id, start, application_name, num_stmts
+  FROM crdb_internal.cluster_transactions ORDER BY start;"'
+
+  # sessions表で待たされているlockを見る
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "
+  SELECT table_name, txn_id, ts, lock_strength, granted, contended
+  FROM crdb_internal.cluster_locks WHERE table_name = '"'"'sessions'"'"' LIMIT 20;"'
+  ```
+
+  原因のsessionを止める。まず各PCで`agentsview pg push`／`pg watch`／daemonが残っていないかを確認し、残っていなければCockroachDB側でcancelする。
+
+  ```sh
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -c "CANCEL SESSION '"'"'<session_id>'"'"';"'
+  ```
+
+  cancel後にもう一度`EXPLAIN ANALYZE`を実行し、`contention`が消えていることを確認する。
+
+  **contentionがほぼ0で、scanに時間がかかっている場合（本当に遅いquery）。** そのときだけindexを検討する。sidebarのORDER BYとdate filterは`COALESCE(ended_at, started_at, created_at)`という式を使うが、AgentsViewが作る`sessions`のindexにこの式を支えるものは無い（`parent_session_id`、`termination_status`、`cwd`、`(project, git_branch)`、`secret_leak_count`だけ）。AgentsViewは自分のindexを`CREATE INDEX IF NOT EXISTS`で作るだけなので、追加したindexが消されることはない。
+
+  ```sh
+  fnox exec -- sh -c 'psql "$AGENTSVIEW_COCKROACH_OWNER_PG_URL" -X -v ON_ERROR_STOP=1 -c "
+  CREATE INDEX IF NOT EXISTS idx_sessions_activity
+    ON agentsview.sessions ((COALESCE(ended_at, started_at, created_at)) DESC, id DESC);"'
+  ```
+
+  なお`limit`を下げても解決しない。`limit=500`はfrontendの`SESSION_PAGE_SIZE`定数（`frontend/src/lib/stores/sessions.svelte.ts`）でimageにcompile済みで設定から変えられず、かつ`GetSidebarSessionIndex`は`limit > 0`だと`WITH RECURSIVE`のpaging経路に入り、その中の`COUNT(*)`はlimitと無関係に全体を走査する（`internal/postgres/sessions.go`）。
+
+  どちらでもない場合はCockroachDB Cloud Consoleの**Metrics > Request Units**を見る。Basic planはburst RUを使い切ると強くthrottleされる。
+
+- **画面に`request timed out`が出る／logに`status 503`と`latency 30.0秒`が並ぶ** — Cloud Runではなく**AgentsView自身のwrite timeout**である。既定は30秒で、超えると`http.TimeoutHandler`が503と`{"error":"request timed out"}`を返す（`internal/server/middleware.go`）。dashboardはanalytics APIを同時に複数叩くため、`maxScale: 1`／1 CPUの上でCockroachDBへの集計が重なると30秒に収まらない。`cloudrun-service.yaml`で`--write-timeout`を延ばし、Cloud Run側の`timeoutSeconds`をそれより長くする（先に切れるとCloud Runが504を返し、appのJSONが届かない）。延ばしても解消しない場合はCPUを2にするか、期間を短くして切り分ける。
+
 - **`locking config: open /data/config.toml.lock: read-only file system`** — `AGENTSVIEW_DATA_DIR`（image既定は`/data`）へSecret Managerのvolumeを直接mountすると起きる。AgentsViewはconfigを読む前に必ず同じdirectoryへlock fileを作るため、data dirがread-onlyだと config.toml の内容以前に落ちる。secretは`/etc/agentsview`へmountし、起動時に`$AGENTSVIEW_DATA_DIR`へcopyする（`cloudrun-service.yaml`の`command`）。data dirにsecret volumeを重ねてはならない。
 - **`install: skipping file ... as it was replaced while being copied`** — `cp`／`install`はコピー前後でsourceのmetadataを比較し、動いていれば中断する。Secret ManagerのvolumeはFUSEベースでmetadataが安定しないため誤検知する。この検査を持たない`cat`でdata dirへ書き出す（`cloudrun-service.yaml`の`command`）。
 - **`schema incompatible` / `sessions table missing required columns`** — CockroachDB側に`agentsview` schemaのtableがまだない。作業9の最初の`push`が未実行のまま作業8をdeployするとこうなる。`pg serve`はread-only roleで接続するためschema migrationを自分では実行できず、compatibility checkに落ちてexitする。先に作業9の`agentsview:cockroach:push:remote`を済ませてから再deployする。
@@ -313,12 +382,12 @@ bind addressは原因ではない。upstream imageの`CMD`は`--host 0.0.0.0 --n
 
 ```sh
 git -C ~/dotfiles pull
-chezmoi apply ~/.config/agentsview
+mise bootstrap dotfiles apply ~/.config/agentsview
 export AGENTSVIEW_IMAGE='us-west2-docker.pkg.dev/agentsview/agentsview/agentsview:0.38.1-bac4d72dc567'
 AGENTSVIEW_SKIP_BUILD=1 mise run agentsview:cloudrun:deploy
 ```
 
-repository root以外から実行すると、taskはsource treeではなくapply済みの`~/.config/agentsview`のmanifestを使う。`chezmoi apply`を忘れると古いmanifestがdeployされるため、`build`／`deploy`／`verify`／`render`／`diff`はchezmoi sourceとの差分があると停止する。`clrnd`のdiffに期待した変更が出ていない場合は、まずapply漏れを疑う。
+repository root以外から実行すると、taskはsource treeではなくapply済みの`~/.config/agentsview`のmanifestを使う。`mise bootstrap dotfiles apply`を忘れると古いmanifestがdeployされるため、`build`／`deploy`／`verify`／`render`／`diff`はdotfiles sourceとの差分があると停止する。`clrnd`のdiffに期待した変更が出ていない場合は、まずapply漏れを疑う。
 
 `AGENTSVIEW_SKIP_BUILD=1`だけを指定してimageを省略してはいけない。taskは現在のdotfiles commitから新しいtagを組み立てるため、そのtagのimageがまだbuildされていないとverifyで停止する。
 
@@ -350,7 +419,7 @@ done
 > **前提:**
 >
 > - `pg serve`は起動時にschema互換checkを行い、`sessions` tableが無いとlistenする前にexitする。read roleではmigrationを実行できないため、作業5の権限設定と`agentsview pg status`でtableが作られていることを先に確認する。まだ無い場合は作業9の`agentsview:cockroach:push:remote`を先に済ませる。
-> - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`dot_config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
+> - **Cloud Run imageのAgentsView versionは、CockroachDBへpushする側のversionと揃える。** viewerは自分より新しいdata versionのarchiveを開けず、read roleではmigrationもできないため起動に失敗する。push側を上げたら`config/agentsview/Dockerfile`の`FROM`も上げて再buildする。現在のDB側のdata versionは次で確認できる。
 >
 > ```sh
 > agentsview --version   # push側のbinary
@@ -649,7 +718,7 @@ Cloud Runにはoperatorが作成・維持するECS cluster相当resourceがな�
 
 ecspressoとの対応は`verify`／`diff`／`deploy`／`rollback`がほぼそのまま対応する。deploy後はrevisionがReadyになるまで待ち、rollout失敗時はnon-zeroで終了するのでCIでも使える。
 
-mise taskは次を追加した。いずれもrepository rootでも、chezmoi適用後の`~/.config/agentsview`だけがある環境でも動作する。
+mise taskは次を追加した。いずれもrepository rootでも、mise dotfiles適用後の`~/.config/agentsview`だけがある環境でも動作する。
 
 | task                            | 内容                                                                     |
 | ------------------------------- | ------------------------------------------------------------------------ |
@@ -685,7 +754,7 @@ ARGS> []--projects resume
 
 #### 2.0.3 clrnd manifestの各設定
 
-`dot_config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
+`config/agentsview/cloudrun-service.yaml`の設定は、以前Terraformの`google_cloud_run_v2_service`が持っていた値と1対1で対応する。
 
 | manifestの位置                                                          | 値                                                                         | 意味／旧Terraform属性                                                                            |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -849,7 +918,7 @@ CockroachDB Cloud Basic
     ▼                                ▼
 Cloud Run上のagentsview pg serve     local CockroachDB（single-nodeのcontainer）
                                      │
-                                     │ agentsview pg serve（mise run agentsview:serve）
+                                     │ agentsview pg serve（mise run agentsview:serve:cockroach）
                                      ▼
                                      手元のviewer／SQL
 ```
@@ -878,7 +947,7 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | 別PCから同じsessionを閲覧する             | localへpullせず、Cloud Runのread-only viewerでCockroachDBを読む                                                                        |
 | 新しいPCのlocal AgentsViewへsessionを戻す | AgentsViewの`pg pull`ではできない。元のagent session directoryのbackup／同期機能で復元してから再indexする                              |
-| remoteのdataをlocalで参照する             | `agentsview:cockroach:merge`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve`で読む                                        |
+| remoteのdataをlocalで参照する             | `agentsview:cockroach:merge`でremoteのrowをlocal CockroachDBへmergeし、`agentsview:serve:cockroach`で読む                              |
 | CockroachDB障害に備える                   | `agentsview:cockroach:merge`でdataをlocal CockroachDBへmergeし、`agentsview:cockroach:dump:local`で保存する。自動replicaとはみなさない |
 | localでSQL分析する                        | `localdb.sh sql`でlocal CockroachDBへ接続する（taskは置いていない）。本番へ直接繋ぐ場合はread-only roleを使い、双方向同期はしない      |
 
@@ -886,7 +955,7 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 
 #### local CockroachDBの位置づけ
 
-local CockroachDB（`dot_config/agentsview/compose.yaml`の`cockroach` service）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。localを使うのは、remote dataの取り込み・backup・手元での閲覧のときだけである。
+local CockroachDB（`config/agentsview/compose.yaml`の`cockroach` service）はCockroachDBの自動pull先ではない。日常運用は、各PCのsession sourceからCockroachDBへ直接pushし、Cloud Runからreadする。localを使うのは、remote dataの取り込み・backup・手元での閲覧のときだけである。
 
 ```sh
 # remoteのdataをlocalへ取り込む（dump → merge）
@@ -899,7 +968,7 @@ mise run agentsview:cockroach:dump:local
 bash ~/.config/agentsview/scripts/localdb.sh restore
 
 # 取り込んだ内容をlocalのviewerで見る
-mise run agentsview:serve
+mise run agentsview:serve:cockroach
 ```
 
 CockroachDB側にだけ存在するrowはlocalへ追加するが、同じprimary keyがlocalにある場合は`ON CONFLICT DO NOTHING`でlocalを維持する。このdumpは完全な双方向同期やreplicaではなく、閲覧・disaster recovery用の統合snapshotである。
@@ -909,6 +978,36 @@ importはINSERTを一定件数ごとのtransactionへ分けて流す。Cockroach
 取り込みの前に、localのidentity列（`GENERATED ALWAYS AS IDENTITY`）を`ALTER COLUMN ... SET GENERATED BY DEFAULT`で緩める。そのままでは明示idのINSERTが`cannot insert into column "id"`で止まり、`OVERRIDING SYSTEM VALUE`はCockroachDBが解釈しないためである。緩めたまま戻さない。localは鏡であり、AgentsView自身のINSERTはidを指定しないので`BY DEFAULT`でも挙動は変わらない（remoteのschemaには触らない）。このALTERが通らないengine、またはidentity列を列挙できない場合は、1行も取り込まずに中止する。緩めるのはdumpを読み切って形を確認したあとなので、受け付けないdumpでschemaが変わることはない。
 
 取り込みの前に、同じfilterで読み切るだけのpassを1度走らせる。dumpが途中で切れている場合、filterの出力をそのままpsqlへ繋ぐと、切れていると分かる時点では手前のchunkが既にcommit済みになってしまうためである。この検証passはDBへ触らないので、壊れたdumpでは1行も書き込まれない。
+
+#### `agentsview:serve:cockroach`が`already locked`で止まる場合
+
+```text
+fatal: pg push --watch: already locked (~/.agentsview/pg-watch.lock)
+agentsview pg push --watch exited with status 1; stopping serve
+fatal: pg serve: schema migration failed: creating pg tables: context canceled
+```
+
+前回の`agentsview pg push --watch`がまだ生きている。lockは`flock`なのでprocessが終われば外れ、lock fileを消しても意味はない（最後の`context canceled`はwatcherの失敗でserveを止めた巻き添えで、原因ではない）。
+
+今すぐの対応は、残っているprocessを確認して止めることである。
+
+```sh
+ps -o pid,ppid,args -e | grep -E 'localdb.sh serve|agentsview pg' | grep -v grep
+```
+
+- PPIDが`1`の`localdb.sh serve`があれば、取り残された残骸である。そのPIDへ`kill <pid>`を送ると、scriptの後片付け（`cleanup_serve`）がwatcherと`pg serve`も止める。
+- `localdb.sh serve`が無く`agentsview pg push --watch`だけが残っている場合は、そのPIDへ`kill <pid>`を送る。
+- 親が生きている（別terminalやghostで動いている）場合は、そちらのserveを止める。
+
+止めたあと、もう一度psで何も出ないことを確かめてから`mise run agentsview:serve:cockroach`を実行する。
+
+**ghostで動かす場合。** `ghost run mise run agentsview:serve:cockroach`で起動し、`ghost stop`（TUIでは`s`）で止める。`mise run`はtaskを別process groupで起動するため、ghostのsignalはmiseにしか届かないが、次のように扱っている。
+
+| 止め方                                         | 挙動                                                                                                                                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ghost stop`／TUIの`s`（SIGTERM）              | miseがtaskのprocess groupへSIGTERMを転送し、`cleanup_serve`がwatcherと`pg serve`の終了を待つ。ghostは送った瞬間に停止扱いにするが、process自体はpushの区切りまで少し残る             |
+| `ghost stop --force`／TUIの`Ctrl-K`（SIGKILL） | miseだけが即死する。`serve`は親が消えたことを1秒以内に検知して、自分でwatcherと`pg serve`を止める                                                                                    |
+| 停止直後に再起動                               | `serve`は起動前に前回のwatcherを最大15秒待つ。PPIDが1の`localdb.sh serve`（親を失った残骸）はSIGTERMで片付ける。親が生きたままのwatcherは別のserveが使用中とみなし、触らずに中断する |
 
 #### dumpの作り方（`pg_dump`を使わない理由）
 
@@ -920,7 +1019,7 @@ WHERE n.nspname OPERATOR(pg_catalog.~) '^(agentsview)$' COLLATE pg_catalog.defau
 
 この`COLLATE pg_catalog.default`は、`pg_dump` 12以降がserver versionを12以上と見たときに必ず付ける（PostgreSQLの`src/fe_utils/string_utils.c`）。optionでは外せないため、remote／localのどちらのdumpでも`pg_dump`は使えない。
 
-代わりに、行の組み立てはserver側に任せる。`dot_config/agentsview/dump-inserts.sql`が`information_schema`と`quote_ident`／`quote_literal`から「INSERT文を返すSELECT」を作り、`psql`の`\gexec`で実行する。同じfileをremote（`agentsview:cockroach:dump:remote`）とlocal（`agentsview:cockroach:dump:local`）の両方が読むので、出力の形も一致する。
+代わりに、行の組み立てはserver側に任せる。`config/agentsview/dump-inserts.sql`が`information_schema`と`quote_ident`／`quote_literal`から「INSERT文を返すSELECT」を作り、`psql`の`\gexec`で実行する。同じfileをremote（`agentsview:cockroach:dump:remote`）とlocal（`agentsview:cockroach:dump:local`）の両方が読むので、出力の形も一致する。
 
 - 列名を明示するので、AgentsViewが列を増やしても古いdumpをそのまま取り込める。
 - 値は`col::text`を文字列literalにしたもので、挿入先の列型へcoerceされる（`pg_dump --column-inserts`と同じ往復）。
@@ -945,7 +1044,7 @@ dumpの最後には完了markerが付く。
 -- agentsview-dump-complete tables=2
 ```
 
-schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:dump:remote`とimport filter（`dot_config/agentsview/scripts/batch-insert-dump.py`）の両方がerrorにして、空のbackupを残さない。
+schema名を間違えた場合や、roleにtableのSELECT権限が無い場合、`information_schema`が権限でfilterされるため、生成側はerrorではなく「行が無い」という結果になる。markerが無い（途中で切れた）、あるいは`tables=0`のdumpは、`agentsview:cockroach:dump:remote`とimport filter（`config/agentsview/scripts/batch-insert-dump.py`）の両方がerrorにして、空のbackupを残さない。
 
 markerを持たないdumpのうち、`SET`や`setval`のような非INSERT statementを含むものは、以前のplain `pg_dump`形式のbackupとみなして取り込む（新しいdumpの出力はINSERTだけなので区別できる）。この経路ではtable数の確認ができないため、filterは注意書きを出す。
 
@@ -953,7 +1052,7 @@ markerを持たないdumpのうち、`SET`や`setval`のような非INSERT state
 
 markerより後にSQLがあるdump、markerが2つあるdumpはerrorにする。dumpを連結した場合に、どこまでが完全なdumpなのか分からないままrowを取り込んでしまうためである。markerの後のcommentと空行は許す。
 
-dump周りのregressionは`mise run test:agentsview`で走る（`dot_config/agentsview/tests/`）。取り込みの経路はfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある（`batch-insert-dump_test.py`）。remote URIをURLと`.pgpass`へ分ける側も、passwordがURLへ残らないこと・`sslrootcert`のpathを別fileへ出すこと・`system`を渡さないことを同じ形で確かめる（`prepare-dump-auth_test.py`）。
+dump周りのregressionは`mise run test:agentsview`で走る（`config/agentsview/tests/`）。取り込みの経路はfilter1つなので、statement分割・切り詰めの検出・marker・旧形式の受け入れを入力と期待のtableで押さえてある（`batch-insert-dump_test.py`）。remote URIをURLと`.pgpass`へ分ける側も、passwordがURLへ残らないこと・`sslrootcert`のpathを別fileへ出すこと・`system`を渡さないことを同じ形で確かめる（`prepare-dump-auth_test.py`）。
 
 `ON CONFLICT DO NOTHING`が付いていないINSERT（旧形式のbackupにありうる）は、filterが付け直してから流す。VALUESの閉じ括弧で終わるstatementにだけ付けるので、既にconflict句があるものは触らない。既存句の判定は改行やcommentを跨いで行う（`ON\nCONFLICT`や`ON /* c */ CONFLICT`もSQLとしては正しい）。付ける位置は最後の閉じ括弧の直後で、末尾のcommentはそのまま後ろに残す（末尾へ付けると句と`;`が行commentの中に入る）。形が読めずに付けられなかった場合は、件数を警告に出す（そのdumpは再実行でduplicate keyになりうる）。
 
@@ -991,7 +1090,7 @@ localのengineが変わるため、各PCで初回だけ次を順に確認する�
 2. `mise run agentsview:cockroach:status` — engine versionと、machineごとのsession数が出る
 3. `fnox exec -- mise run agentsview:cockroach:merge` — remoteのrowが取り込まれ、tableごとの増分が出る。続けてもう一度実行すると増分が`+0 rows`になる（冪等）
 4. `mise run agentsview:cockroach:dump:local` → `bash ~/.config/agentsview/scripts/localdb.sh restore` — 作ったdumpを選び直して取り込めること（`+0 rows`になる）
-5. `mise run agentsview:serve` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
+5. `mise run agentsview:serve:cockroach` — localのviewerでsession一覧とdetailが見える。semantic／hybrid searchは`501 Not Available`で正しい
 
 1でcontainerが即`exited (1)`になる場合は、taskが自動で出すcontainer logを読む。CockroachDB imageのentrypointは`start-single-node`に渡せるflagを制限しており、`--listen-addr`のhostが`127.0.0.1`／`localhost`以外だとそこで止まる。
 
@@ -1069,29 +1168,29 @@ Google Cloud Consoleで次も確認する。
 
 適用は変更したfileによって経路が違う。まず次で判断する。
 
-| 変更したfile                                  | 適用に必要なこと                                                                  |
-| --------------------------------------------- | --------------------------------------------------------------------------------- |
-| `dot_config/agentsview/cloudrun-service.yaml` | `chezmoi apply` → `agentsview:cloudrun:deploy`（新revisionが作られる）            |
-| `dot_config/agentsview/Dockerfile`            | 同上。image tagが変わるため**再buildが要る**（`AGENTSVIEW_SKIP_BUILD`は使えない） |
-| `dot_config/agentsview/clrnd.yml`             | `chezmoi apply` のみ（次回のclrnd実行から反映）                                   |
-| `dot_config/mise/tasks/agentsview.toml`       | `chezmoi apply` のみ                                                              |
-| `dot_config/mise/config.toml`（tool version） | `chezmoi apply` → `mise install`                                                  |
-| infraリポジトリの`*.tf`                       | infraリポジトリ側で`terraform plan` → 内容確認 → `terraform apply`                |
+| 変更したfile                              | 適用に必要なこと                                                                       |
+| ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| `config/agentsview/cloudrun-service.yaml` | `mise bootstrap dotfiles apply` → `agentsview:cloudrun:deploy`（新revisionが作られる） |
+| `config/agentsview/Dockerfile`            | 同上。image tagが変わるため**再buildが要る**（`AGENTSVIEW_SKIP_BUILD`は使えない）      |
+| `config/agentsview/clrnd.yml`             | `mise bootstrap dotfiles apply` のみ（次回のclrnd実行から反映）                        |
+| `config/mise/tasks/agentsview.toml`       | `mise bootstrap dotfiles apply` のみ                                                   |
+| `config/mise/config.toml`（tool version） | `mise bootstrap dotfiles apply` → `mise install`                                       |
+| infraリポジトリの`*.tf`                   | infraリポジトリ側で`terraform plan` → 内容確認 → `terraform apply`                     |
 
 ### 手順1. mainを取り込み、applyする
 
-Cloud Run関連のfileは`~/.config/agentsview`へchezmoiが配置したものが使われる。**source treeを更新しただけでは反映されない。**
+Cloud Run関連のfileは`~/.config/agentsview`へmiseの`[dotfiles]`が配置したものが使われる。**source treeを更新しただけでは反映されない。**
 
 ```sh
 git -C ~/dotfiles switch main
 git -C ~/dotfiles pull
-chezmoi apply
+mise bootstrap dotfiles apply
 ```
 
-`chezmoi apply`を忘れると古いmanifestがそのままdeployされる。`build`／`deploy`／`verify`／`render`／`diff`はchezmoi sourceとの差分があると停止するので気づけるが、`chezmoi status`で先に確認しておくとよい。
+`mise bootstrap dotfiles apply`を忘れると古いmanifestがそのままdeployされる。`build`／`deploy`／`verify`／`render`／`diff`はdotfiles sourceとの差分があると停止するので気づけるが、`mise bootstrap dotfiles diff`で先に確認しておくとよい。
 
 ```sh
-chezmoi status ~/.config/agentsview   # 何も出なければ最新
+mise bootstrap dotfiles diff ~/.config/agentsview   # 何も出なければ最新
 ```
 
 ### 手順2. Terraformの変更を適用する
@@ -1158,3 +1257,360 @@ rollback後はtrafficがrevision名にpinされる。最新revisionを追う状�
 ```sh
 mise run agentsview:cloudrun:clrnd -- traffic --to-latest
 ```
+
+### 複数PCで運用している場合
+
+Cloud Runへのdeployはどれか1台から行えばよい（serviceはGoogle Cloud上に1つしかない）。ただし`mise bootstrap dotfiles apply`と`mise install`は各PCで必要である。各PCから`agentsview:cockroach:push:remote`する構成のため、tool versionがPC間でずれるとpushするdata versionもずれる。
+
+---
+
+## 分析: token使用量・costの見方
+
+AgentsViewでtoken使用量・cost・作業傾向を分析するときの「どこを見て、何を読み取るか」をまとめる。構築・運用手順はこのdocumentの前半を参照。
+
+内容は`config/agentsview/Dockerfile`でpinしているAgentsView 0.39.0のupstream docs（[agentsview.io](https://agentsview.io/)）に基づく。versionを上げたら画面やflagが変わっていないか確認する。
+
+### まず「どのデータを見ているか」を決める
+
+同じ数字でも、見る入口によって集計対象の端末が変わる。最初にここを間違えると「PCごとの合計と合わない」状態になる。
+
+| 入口                                                       | 集計対象                                                       | 向いている用途                                    |
+| ---------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| Cloud Run上のWeb UI（`$AGENTSVIEW_CLOUD_RUN_URL`）         | CockroachDB Cloudへpush済みの**全端末**                        | 普段の分析。端末をまたいだ合計・比較              |
+| `mise run agentsview:serve:cockroach`（local CockroachDB） | local CockroachDBへmergeした端末（dumpを取り込んだ分）＋このPC | Cloud Runを使わずに全端末をまとめて見る           |
+| `mise run agentsview:serve`（local SQLite）                | **このPCのlocal SQLite archiveだけ**                           | このPCのsessionを手早く見る。Insights生成もできる |
+| `agentsview usage daily`／`stats`などのCLI                 | **このPCのlocal SQLite archiveだけ**                           | このPCの日次cost、scriptやstatuslineへの組込      |
+| REST API（`/api/v1/usage/summary`など、Cloud Run経由）     | Cloud Run UIと同じ（全端末）                                   | jqで加工したい、定期的に数値を取りたい            |
+
+- Web UIのPG-backed表示（`pg serve`）はread-onlyで、SSEによる自動更新がない。最新値は各画面の**refresh**ボタンか期間変更で取り直す。数字が古いときは、まず各PCから`agentsview pg push`（または`agentsview:cockroach:push:remote`）されているかを疑う。
+- CLIは`pg serve`を見ない。CLIの数字とCloud Run UIの数字が違うのは、CLIがこのPC分しか持っていないためで正常である。
+- 端末ごとに分けたいときは、Web UIの**Machine**フィルタを使う。machine名は`templates/zsh/.zshenv.tera`で`HOST_ENV`から作っている。
+
+### 画面の歩き方（Web UI）
+
+ヘッダーから4つの画面に入れる。目的別に入口が違う。
+
+| 知りたいこと                                     | 画面                       | URL                    |
+| ------------------------------------------------ | -------------------------- | ---------------------- |
+| いくら使ったか、何に使ったか（token・cost）      | **Usage**                  | `/usage`               |
+| いつ・どれだけ並行して動かしたか、時間あたりcost | **Activity**               | `/activity`            |
+| session数・tool利用・速度・健全性などの全体傾向  | **Dashboard**（Analytics） | `/`（session未選択時） |
+| 特定sessionのtoken・cost・step内訳               | session詳細のheader        | sessionを開く          |
+
+フィルタ状態はURLのquery parameterへ書き戻される。よく見る切り口はURLをbookmarkしておくと再現できる。**Settings > Date ranges > Link date ranges across pages**を有効にすると、Usage／Activity／Dashboardで期間が連動する。
+
+#### Usage画面: token使用量とcostの分析
+
+token分析の中心。既定は直近30日。上部toolbarで期間、Project／Agent／Model（複数選択可）、Machineを絞り込む。
+
+| panel                     | 見方                                                                                                                                                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Summary cards             | Total Cost、total tokens、daily burn（1日平均）、peak day、cache hit rate、project／model数、active days。まずここで規模感をつかむ                                                                       |
+| Cost Over Time            | 日別costの積み上げ。`Project`／`Model`／`Agent`で色分けを切り替える。急に跳ねた日を見つける                                                                                                              |
+| Cost Attribution          | 期間合計の内訳をtreemap（または`List`）で表示。**cellをclickするとその項目を上のchartから隠せる**。大きいprojectを隠していくと、残りの小さい支出の行き先が見える                                         |
+| Comparative Cost Analysis | 左右に`Project`か`Model`を1つずつ選び、total cost、session数、session当たりcost、token数、input／outputを差分付きで比較する。「projectAはBの何倍か」「modelを変えてsession当たりcostが下がったか」を見る |
+| Top Sessions by Cost      | 期間内で高かったsession順。clickでtranscriptへ飛べるので、高い理由（長時間・巨大context・retry連発など）を直接確認する                                                                                   |
+| Cache Efficiency          | cache read／cache write／cacheなしinput／outputの比率と、cacheなしの場合との差額（savings）。cache writeばかりでreadが少ない＝cacheを作っても再利用できていない                                          |
+
+##### token列の読み方
+
+| 列                        | 意味                                | 注意点                                                                    |
+| ------------------------- | ----------------------------------- | ------------------------------------------------------------------------- |
+| `INPUT`                   | cacheを使わずに送ったinput token    |                                                                           |
+| `OUTPUT`                  | modelが生成したtoken                | 単価が最も高い。cost増の主因になりやすい                                  |
+| `CACHE_CR`（cache write） | prompt cacheへ新しく書き込んだtoken | inputより割高。context compactionやprompt変更直後に増える                 |
+| `CACHE_RD`（cache read）  | cacheから再利用したtoken            | 量は桁違いに多くなるが単価は安い。token総量を見て驚かず、cost側で判断する |
+
+token「総量」はcache readが支配するので、**比較はcostかoutput tokenで行う**のが基本。costはLiteLLMの価格表（`model_pricing` table）から計算した推定値で、請求額そのものではない（subscription planでは実費と一致しない）。価格表にないmodelはcostが付かない。
+
+#### Activity画面: 時間と並行度の分析
+
+既定は当日。`Day`／`Week`／`Month`／`Custom`で範囲を変え、Project／Agent／Machine／Automation（Interactive／Automated）で絞る。
+
+- **Peak Concurrency**: 同時に動いていたagent数の最大値と、その時刻
+- **Active**／**Agent-minutes**: 実際に動いていた壁時計時間と、並行agentの稼働分を合計した時間。並行で回すほどAgent-minutesがActiveより大きくなる
+- **Concurrency chart**: 青がinteractive、橙がautomated。**Overlay**で`Tokens`か`Cost`を重ねると、どの時間帯に費用が出たかがわかる。bucketをclickするとその時間帯のsessionだけに絞れる
+- **Breakdown**: `Agent-min`と`Cost`を切り替えてProject／Model／Agent別に並べる。「時間はかかっているがcostは小さい」「短時間だが高い」projectを見分ける
+
+Total Costは、同じ日・timezone・集計対象（UIではMachine filter。CLIはこのPCのsessionだけ）にそろえた場合にUsage画面や`agentsview usage daily`と一致する（subagent・fork sessionも含めて重複除去済み）。
+
+#### Dashboard: 使い方の傾向
+
+session未選択時のトップ画面。tokenではなく「どう使っているか」を見る。
+
+| panel                      | 読み取れること                                                                         |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| Activity Heatmap           | 日別の利用量。cellをclickするとその日に全chartが絞られる                               |
+| Hour of Week Heatmap       | 曜日×時間帯の利用。作業時間帯の偏り                                                    |
+| Project Breakdown          | projectごとのsession／message数                                                        |
+| Session Shape Distribution | session長、所要時間、autonomy（turnあたりtool call数）の分布                           |
+| Tool Usage／Top Skills     | Read／Edit／Bash等のtool比率、skillの利用回数と推移                                    |
+| Velocity Metrics           | turn cycle time、first response timeのp50／p90                                         |
+| Agent Comparison           | agentごとのsession数・応答時間・tool利用                                               |
+| Session Health             | health score、completed／erroredの数、tool失敗率、compaction回数（特に作業途中のもの） |
+
+**Export CSV**でsummary／activity／projects／tools／velocityをまとめてCSV出力できる。ほかに**More → Trends**で任意の単語（例: `flaky`、`timeout`）の出現頻度の推移を描ける。
+
+> [!NOTE]
+> **More → Insights**（AIによる要約生成）はread-onlyの`pg serve`では無効。Cloud Run UIでは既存のinsightを見るだけになる。生成したい場合は、そのPCでlocalの`agentsview serve`を使う。
+
+#### session単位の分析
+
+sessionを開くとheaderにinput／output tokenと推定cost（subagentがある場合は合計）が出る。step数をclickすると、prompt／usage eventごとのmodel、context size（input＋cache read＋cache write）、output token、step costが展開される。context sizeが急に膨らむstepやcompaction直後のcache writeを探すのに使う。
+
+health gradeのbadgeをclickすると、score、outcome、tool失敗、context pressure、compactionの減点内訳が見られる。Session Vital Signs panelではtool種別ごとの所要時間と、遅かったtool callがわかる。
+
+### よくある問いと見る場所
+
+| 問い                        | 手順                                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| 今月いくら使ったか          | Usageで期間を月初〜今日にし、Total Costを見る                                                                 |
+| どのprojectが一番高いか     | Usage → Cost Attributionを`Project`に。上位を隠して残りも確認                                                 |
+| model別の比率は             | Usage → Cost Over Time／Cost Attributionを`Model`に                                                           |
+| PC別に分けたい              | Usage／ActivityのMachineフィルタで1台ずつ選ぶ                                                                 |
+| 急にcostが跳ねた日の原因    | Cost Over Timeで日を特定 → 期間をその日に絞る → Top Sessions by Cost → transcriptとstep内訳を確認             |
+| cacheが効いているか         | Usage → Cache Efficiencyのsavingsとcache hit rate。cache write比率が高いsessionはcompactionやprompt変更を疑う |
+| 並行で回しすぎていないか    | Activity → Peak ConcurrencyとAgent-minutes、OverlayでCost                                                     |
+| model変更・運用変更の効果   | Usage → Comparative Cost Analysisで`Model`同士、または期間を変えてsession当たりcostを比較                     |
+| 自動実行（automated）のcost | ActivityのAutomationを`Automated`にしてBreakdownを`Cost`で見る                                                |
+
+### CLIで見る（このPCの分だけ）
+
+CLIはlocal SQLite archiveを読むので、このPCのsessionだけが対象。実行前に未取り込みのsession fileを自動でsyncする（`--no-sync`で省略）。
+
+```sh
+# 直近30日の日次cost（input／output／cache write／cache read／cost／model）
+agentsview usage daily
+
+# model別の内訳行を付ける
+agentsview usage daily --breakdown
+
+# 期間・agentを指定
+agentsview usage daily --since 2026-10-01 --agent claude
+
+# 今日のcostを1行で（tmuxやstarshipのstatusline向け）
+agentsview usage statusline
+
+# 今月の合計cost
+agentsview usage daily --since "$(date +%Y-%m-01)" --json | jq '.totals.totalCost'
+
+# 特定sessionのtokenとcost（session IDはWeb UIのURLや`agentsview session list`で取得）
+agentsview session usage <session-id>
+
+# 直近28日の利用傾向（session数、tool／model mix、cache economics、outcomeなど。experimental）
+agentsview stats
+agentsview stats --since 2026-10-01 --agent claude --format json
+
+# 時間帯別の稼働・並行度・cost（Activity画面と同じreport）
+agentsview activity report --preset week --date 2026-10-10
+```
+
+`--offline`を付けるとLiteLLMの価格表を取りに行かず、組込みのfallback価格で計算する。
+
+### API で全端末の数字を取る
+
+Cloud Run上のAPIはWeb UIと同じく全端末分を返す。bearer tokenはfnox経由で渡し、shellやhistoryへ出さない。headerは`printf`（shell組み込み）からstdin経由で`curl -H @-`へ渡し、process一覧（`ps`）にtokenが出ないようにする（`-H @-`はcurl 7.55.0以降が必要。macOS同梱のcurlならCatalina以降）。
+
+```sh
+# 期間内のtotal（totalCost、各token数、cacheSavings）
+fnox exec -- sh -c 'printf "Authorization: Bearer %s\n" "$AGENTSVIEW_AUTH_TOKEN" \
+  | curl -fsS -H @- "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/usage/summary?from=2026-10-01&to=2026-10-10&timezone=Asia/Tokyo"' \
+  | jq '.totals'
+
+# model別cost（高い順）
+fnox exec -- sh -c 'printf "Authorization: Bearer %s\n" "$AGENTSVIEW_AUTH_TOKEN" \
+  | curl -fsS -H @- "'"$AGENTSVIEW_CLOUD_RUN_URL"'/api/v1/usage/summary?from=2026-10-01&to=2026-10-10&timezone=Asia/Tokyo"' \
+  | jq '.modelTotals | sort_by(-.cost) | .[] | {model, cost, outputTokens}'
+```
+
+`summary`は`agent`、`project`、`machine`、`model`などのquery parameterでUsage画面と同じ絞り込みができる。ほかに`/api/v1/usage/top-sessions`、`/api/v1/usage/pairwise-comparison`、`/api/v1/activity/report`、`/api/v1/analytics/*`、`/api/v1/trends/terms`がある。
+
+### tool・コマンド単位でtoken効率を分析する
+
+Usage画面とCLIはsession・model・project単位までで、「どのtool・どのBashコマンドがtokenを食ったか」は出ない。DashboardのTool Usageも呼び出し回数だけである。ただしAgentsViewのlocal SQLite（`~/.agentsview/sessions.db`）には、tool callごとに次の列が入っているので、SQLで直接集計できる。
+
+| table        | 使う列                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------- |
+| `tool_calls` | `tool_name`、`input_json`（Bashなら`$.command`）、`file_path`、`result_content_length`（結果の文字数）          |
+| `messages`   | `context_tokens`（input＋cache read＋cache write）、`output_tokens`、`claude_request_id`、`is_compact_boundary` |
+| `sessions`   | `project`、`agent`、`started_at`                                                                                |
+
+#### 考え方
+
+tool結果は次のAPI requestからinput（ほぼcache read）としてcontextに載り、compactionされるまで**毎requestで読み直される**。そのため効率の悪さは2つの量で見る。
+
+1. **一度に入れた量**: 結果の文字数（`result_content_length`）、または次のrequestで増えた`context_tokens`の差分（こちらが実token数に近い）
+2. **持ち越した回数**: 大きな結果を取り込んだあと、compactionまでに何回requestが続いたか。量×回数が実際に払ったcache readになる
+
+文字数からtokenへの換算は目安で、英語・コードは約4文字で1token、日本語は1〜2文字で1token程度。
+
+#### 実行方法
+
+このPCのsessionだけが対象（端末をまたいだ集計はできない）。daemonが動いていても`-readonly`で開けば安全に読める。下のSQLをfileに保存して流し込むか、`sqlite3`の対話画面に貼る。
+
+```sh
+sqlite3 -readonly -header -column ~/.agentsview/sessions.db < query.sql
+```
+
+期間を変えるときは`date('now', '-30 days')`を書き換える。AgentsViewのversionを上げたら列名が変わっていないか`sqlite3 ~/.agentsview/sessions.db '.schema tool_calls'`で確認する。
+
+#### 1. tool別の結果サイズ
+
+どのtoolが最もcontextを埋めているか。`calls`が多いのに`avg_chars`が小さいtoolは問題になりにくく、`total_chars`と`max_chars`が大きいtoolを疑う。
+
+```sql
+-- tool別: 呼び出し回数と結果サイズ（contextへ入った文字数）
+SELECT tc.tool_name,
+       COUNT(*)                                   AS calls,
+       SUM(tc.result_content_length)              AS total_chars,
+       CAST(AVG(tc.result_content_length) AS INT) AS avg_chars,
+       MAX(tc.result_content_length)              AS max_chars
+FROM tool_calls tc
+JOIN sessions s ON s.id = tc.session_id
+WHERE s.started_at >= date('now', '-30 days')
+GROUP BY tc.tool_name
+ORDER BY total_chars DESC
+LIMIT 20;
+```
+
+#### 2. Bashコマンド別の結果サイズ
+
+`git log`、`mise run`、test runner、`cat`など、どのコマンドの出力が重いか。先頭2語でまとめているので、`mise run lint:md`まで分けたい場合は`instr`をもう1段増やすか、`substr(cmd, 1, 40)`でまとめる。
+
+```sql
+-- Bashコマンド別（先頭2語でまとめる）
+WITH b AS (
+  SELECT trim(json_extract(tc.input_json, '$.command')) || ' ' AS cmd,
+         tc.result_content_length AS len
+  FROM tool_calls tc
+  JOIN sessions s ON s.id = tc.session_id
+  WHERE tc.tool_name = 'Bash'
+    AND s.started_at >= date('now', '-30 days')
+), w AS (
+  SELECT substr(cmd, 1, instr(cmd, ' ') - 1) AS w1,
+         ltrim(substr(cmd, instr(cmd, ' ') + 1)) AS rest,
+         len
+  FROM b
+)
+SELECT w1 || ' ' || substr(rest, 1, instr(rest || ' ', ' ') - 1) AS command,
+       COUNT(*)                     AS calls,
+       SUM(len)                     AS total_chars,
+       CAST(AVG(len) AS INT)        AS avg_chars,
+       MAX(len)                     AS max_chars
+FROM w
+GROUP BY command
+ORDER BY total_chars DESC
+LIMIT 30;
+```
+
+#### 3. tool callごとの実token増分
+
+`claude_request_id`でAPI requestの境界を判定するため、**Claude Codeのsessionだけ**が対象になる（他のagentはこの列が空）。tool callを発行したassistant messageと、次のAPI requestの`context_tokens`の差から、そのtool結果で増えたtokenを出す。同じmessageで並列に呼んだtoolはまとめて1行になる。user入力が挟まった場合はその分も含むので、上位を見て個別にtranscriptで確認する。
+
+```sql
+-- tool callごとの実token増分（次のAPI requestでcontextがどれだけ増えたか）
+WITH calls AS (
+  SELECT m.session_id, m.ordinal, m.context_tokens, m.output_tokens,
+         m.claude_request_id,
+         GROUP_CONCAT(tc.tool_name || ':' ||
+           substr(COALESCE(json_extract(tc.input_json, '$.command'),
+                           tc.file_path, json_extract(tc.input_json, '$.pattern'), ''), 1, 60),
+           ' | ') AS tools
+  FROM messages m
+  JOIN tool_calls tc ON tc.message_id = m.id
+  WHERE m.role = 'assistant' AND m.has_context_tokens = 1
+  GROUP BY m.id
+)
+SELECT c.session_id,
+       c.tools,
+       (SELECT n.context_tokens FROM messages n
+         WHERE n.session_id = c.session_id AND n.ordinal > c.ordinal
+           AND n.role = 'assistant' AND n.has_context_tokens = 1
+           AND n.claude_request_id <> c.claude_request_id
+         ORDER BY n.ordinal LIMIT 1)
+         - c.context_tokens - c.output_tokens AS added_tokens
+FROM calls c
+WHERE added_tokens > 0
+ORDER BY added_tokens DESC
+LIMIT 30;
+```
+
+#### 4. 同じfileの繰り返しRead
+
+同じsessionで同じfileを3回以上Readしている箇所。compaction後の読み直しや、全体Readの繰り返しが多い場合は、`offset`／`limit`指定やGrepで済ませる指示をCLAUDE.mdに書く候補になる。
+
+```sql
+-- 同じsessionで同じfileを何度もReadしている箇所
+SELECT tc.session_id, tc.file_path,
+       COUNT(*) AS reads, SUM(tc.result_content_length) AS total_chars
+FROM tool_calls tc
+WHERE tc.tool_name = 'Read' AND tc.file_path IS NOT NULL
+GROUP BY tc.session_id, tc.file_path
+HAVING COUNT(*) >= 3
+ORDER BY total_chars DESC
+LIMIT 30;
+```
+
+#### 5. 大きい結果を何回持ち越したか
+
+3と同じく`claude_request_id`でrequestを数えるので、**Claude Codeのsessionだけ**が対象になる。10,000文字以上の結果について、次のcompaction（`is_compact_boundary`）までに続いたAPI request数を掛ける。`reread_chars`が大きいものほど、早めに捨てる（subagentに任せる、出力を絞る、`/compact`する）価値がある。
+
+```sql
+-- 大きいtool結果が、次のcompactionまでに何回API requestへ載り直したか
+WITH big AS (
+  SELECT tc.session_id, tc.tool_name, m.ordinal,
+         substr(COALESCE(json_extract(tc.input_json, '$.command'), tc.file_path, ''), 1, 60) AS target,
+         tc.result_content_length AS chars,
+         COALESCE((SELECT MIN(b.ordinal) FROM messages b
+                    WHERE b.session_id = m.session_id AND b.ordinal > m.ordinal
+                      AND b.is_compact_boundary = 1), 1e9) AS until_ordinal
+  FROM tool_calls tc
+  JOIN messages m ON m.id = tc.message_id
+  WHERE tc.result_content_length >= 10000
+)
+SELECT big.session_id, big.tool_name, big.target, big.chars,
+       COUNT(DISTINCT n.claude_request_id)             AS later_requests,
+       big.chars * COUNT(DISTINCT n.claude_request_id) AS reread_chars
+FROM big
+JOIN messages n ON n.session_id = big.session_id
+ AND n.ordinal > big.ordinal AND n.ordinal < big.until_ordinal
+ AND n.role = 'assistant' AND n.claude_request_id <> ''
+GROUP BY big.session_id, big.ordinal, big.tool_name, big.target, big.chars
+ORDER BY reread_chars DESC
+LIMIT 30;
+```
+
+#### 結果からわかる改善の例
+
+| 見つかったもの                             | 対策の例                                                                                                  |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| test・lint・buildの出力が大きい            | 失敗だけを出すflag、`tail -n 50`へのpipe、quiet modeを使う指示をCLAUDE.mdやskillに書く。rtkで自動圧縮する |
+| `git log`／`git diff`が大きい              | `--stat`、`-n`、path指定を使う                                                                            |
+| 巨大fileの全体Read、同じfileの繰り返しRead | Grepで位置を特定してから範囲指定でReadする                                                                |
+| 大きい結果のあとsessionが長く続いている    | 調査はsubagentに任せて要約だけを戻す。区切りで`/compact`か新しいsessionにする                             |
+| MCP toolの結果が大きい                     | 使わないMCP serverを外す。ページングや件数指定のある呼び方にする                                          |
+
+#### 外部ツール
+
+AgentsView以外にもtool・コマンド単位の分析をうたうツールがある。いずれも個人開発で、削減率などの数字は各READMEの自己申告である（2026年10月時点で調査、未検証）。多くは`~/.claude/projects/`のJSONLを直接読むので、Claude Code以外のagentや他端末の分は見えない。
+
+| ツール                                                                              | 分かること                                                                                                                                | 形態                        |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| [CodeBurn](https://github.com/getagentseal/codeburn)                                | task種別（debug、refactor、testなど）・tool・model・MCP server・project別のspend、作業種別ごとの一発成功率（Edit→Bash→Editのretryを検出） | CLI／TUI／web（`codeburn`） |
+| [claude-usage-analyzer](https://github.com/SingggggYee/claude-usage-analyzer)       | tool別の呼び出し回数と推定token影響、token sinkのranking、異常に高いsession                                                               | Rust CLI                    |
+| [claude-token-analyzer](https://github.com/li195111/claude-token-analyzer)          | ExcessiveToolUse、LowCacheHitRateなど6種類の異常検知                                                                                      | Claude Code plugin          |
+| [claude-context-optimizer](https://github.com/egorfedorov/claude-context-optimizer) | Readしたが使われなかったfile、CLAUDE.mdや固定overheadの監査                                                                               | Claude Code plugin          |
+| [context-analyzer](https://github.com/manavgup/context-analyzer)                    | hookでcontextの中身を記録し、call当たりcostとcontext sizeの関係を可視化                                                                   | hook＋SQLite＋dashboard     |
+| [rtk](https://github.com/rtk-ai/rtk)                                                | `rtk discover`で過去のsessionから出力を圧縮できたBashコマンドを洗い出す。hookで実際に圧縮し、`rtk gain`で削減量を見る                     | Bash hook／CLI              |
+| [claude-trace](https://github.com/badlogic/lemmy/tree/main/apps/claude-trace)       | API request／responseを丸ごと記録。1 requestに何が載っていたか（system prompt、tool定義、tool結果）を直接見られる                         | Claude Code wrapper         |
+
+公式の方法として、Claude CodeのOpenTelemetryも使える。`claude_code.tool_result` eventに`tool_name`、`tool_input_size_bytes`、`tool_result_size_bytes`、`duration_ms`が載り、`OTEL_LOG_TOOL_DETAILS=1`を付けるとBashの`bash_command`も入る。`claude_code.api_request` eventにはrequestごとのtoken数とcostがある。ただしcollectorとbackend（Grafana＋Lokiなど）を別途用意する必要があり、記録は有効にした後のsessionからである（[Monitoring](https://code.claude.com/docs/en/monitoring-usage)）。
+
+CodeBurn、context-analyzer、rtkはこのdotfilesで導入済みである。使い方は[`codeburn.md`](codeburn.md)、[`context-analyzer.md`](context-analyzer.md)、[`rtk.md`](rtk.md)を参照。まずは既存のAgentsView DBへの上記SQLかCodeBurnで傾向をつかみ、1つのsessionのどのturn・どのtool結果がcontextを膨らませたかはcontext-analyzerで掘り下げ、Bash出力が重いと分かったらrtkで削る。claude-traceは、普段使うnative binary版のClaude Code（2.1.113以降）では動かないため導入していない。
+
+### 数字が合わない・出ないとき
+
+- **Cloud Run UIに最近のsessionがない**: そのPCからpushされていない。`fnox exec -- sh -c 'AGENTSVIEW_PG_URL="$AGENTSVIEW_COCKROACH_PUSH_PG_URL" AGENTSVIEW_PG_SCHEMA=agentsview agentsview pg status'`でremote（CockroachDB Cloud）のwatermarkを確認し、`mise run agentsview:cockroach:push:remote`を実行する（「4. local dataとCockroachDBのpush／pull」）。
+- **costが付かないsession／model**: そのmodelがLiteLLM価格表にない、またはagentがtokenをlocal logへ書いていない。AgentsViewはagentが書き出したtokenしか集計できない。
+- **dashboardが`request timed out`になる**: 期間が長く、CockroachDBへの集計が重なっている。期間を短くして切り分ける。恒常的なら「`HealthCheckContainerError`で初回revisionが起動しない場合」内の`request timed out`の項（`--write-timeout`）を参照。
+- **CLIとUIの合計が違う**: CLIはこのPCだけ、UIは全端末。UIでMachineをこのPCに絞ると近い値になる。

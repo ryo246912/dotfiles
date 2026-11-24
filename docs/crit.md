@@ -3,19 +3,24 @@
 [crit](https://github.com/tomasz-tomczyk/crit) は、プラン・diff・フロントエンドをブラウザ上でレビューし、
 コメントをそのままエージェントへフィードバックできる CLI ツールです。
 **AIエージェントは devcontainer 内で実行する前提**で統合しています（devcontainer 定義は
-`dot_config/devcontainer/` を参照）。
+`config/devcontainer/` を参照）。
+Docker Sandboxes (`sbx`) で動かす場合は `appPort` の代わりに
+`sbx ports <sandbox> --publish 7842` でレビュー UI を公開し、割り当てられた host port は
+`sbx ports <sandbox>` で確認します（host port を固定すると sandbox を複数起動したときに衝突する。
+`sbx-agent` は起動時にこの公開と host port の記録まで自動で行う。
+[docs/docker-sandboxes.md](./docker-sandboxes.md) 参照）。
 
 ## 構成
 
-| 項目         | 設定                                                                  | 場所                                                                                  |
-| ------------ | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入                           | `dot_config/devcontainer/mise.toml`                                                   |
-| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）            | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                | `dot_config/devcontainer/devcontainer.json` (`remoteEnv`)                             |
-| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番） | `dot_config/devcontainer/devcontainer.json`                                           |
-| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                              | `dot_config/devcontainer/devcontainer.json`                                           |
-| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）               | `dot_config/devcontainer/scripts/post-create.sh`                                      |
-| ポート記録   | 割り当てられた host port を `~/.crit-host-port` に記録                | `dot_config/devcontainer/scripts/executable_post-start.sh`（適用後: `post-start.sh`） |
+| 項目         | 設定                                                                  | 場所                                                        |
+| ------------ | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| バイナリ     | `github:tomasz-tomczyk/crit` を mise で導入（host も同じ version）    | `config/devcontainer/mise.toml` / `config/mise/config.toml` |
+| バインド先   | `CRIT_HOST=0.0.0.0` / `CRIT_PORT=7842`（コンテナ内は固定）            | `config/devcontainer/devcontainer.json` (`remoteEnv`)       |
+| 非認証許可   | `CRIT_ALLOW_UNAUTHENTICATED_NETWORK=1`                                | `config/devcontainer/devcontainer.json` (`remoteEnv`)       |
+| ポート公開   | `appPort: 127.0.0.1::7842` でホストへ publish（host port は自動採番） | `config/devcontainer/devcontainer.json`                     |
+| 自動起動抑止 | `CRIT_NO_UPDATE_CHECK=1`                                              | `config/devcontainer/devcontainer.json`                     |
+| 動作設定     | `~/.crit.config.json` を生成（`no_open` / `agent_cmd`）               | `config/devcontainer/scripts/post-create.sh`                |
+| ポート記録   | 割り当てられた host port を `~/.crit-host-port` に記録                | `config/devcontainer/scripts/post-start.sh`                 |
 
 `~/.crit.config.json` の内容:
 
@@ -69,7 +74,7 @@ Docker がコンテナのポートをホストの `127.0.0.1` にだけ publish 
    `mac-host` へ SSH して `docker port "$HOSTNAME" 7842/tcp` を実行し、割り当てられた host port を取得
 2. 取得できたら `~/.crit-host-port` に書き込む
 
-`multi-worktree` に限らず、この base template (`dot_config/devcontainer/devcontainer.json`) から
+`multi-worktree` に限らず、この base template (`config/devcontainer/devcontainer.json`) から
 起動する devcontainer であればどの経路（devcontainer CLI 直接、VS Code など）でも同じ仕組みが働く。
 devcontainer 外（`mac-host` に SSH できない環境）では静かにスキップされる。
 
@@ -80,8 +85,8 @@ devcontainer 外（`mac-host` に SSH できない環境）では静かにスキ
 ## `/crit` skill（APM で upstream 依存として配布）
 
 crit@crit プラグインが提供する 2 つの skill を、**APM の外部依存として upstream から取得**しています。
-`dot_apm/apm.yml` の `dependencies.apm` に `tomasz-tomczyk/crit/integrations/claude-code/skills/{crit,crit-cli}`
-をコミット SHA 付きで宣言しており、`chezmoi apply` → `mise run apm:install`（= `apm install -g`）で各エージェント
+`apm/apm.yml` の `dependencies.apm` に `tomasz-tomczyk/crit/integrations/claude-code/skills/{crit,crit-cli}`
+をコミット SHA 付きで宣言しており、`mise bootstrap` → `mise run apm:install`（= `apm install -g`）で各エージェント
 向けに配置されます（`docs/apm.md` 参照）。skill 本文はこのリポジトリに vendor せず、pristine な upstream を使います。
 
 | skill      | 役割                                                               | 配布先                       |
@@ -106,7 +111,7 @@ crit@crit プラグインが提供する 2 つの skill を、**APM の外部依
 
 ## GitHub PRとreview commentを同期する
 
-このrepositoryでpinしているcrit v0.18.2では、`crit pull` / `crit push`でGitHub PRとlocal review fileを同期できます。
+このrepositoryでpinしているcrit v0.19.1では、`crit pull` / `crit push`でGitHub PRとlocal review fileを同期できます。
 どちらも内部でGitHub CLI (`gh`)を使います。最初にdevcontainer内で認証状態と対象PRを確認してください。
 
 ```bash
@@ -196,13 +201,104 @@ crit push --event request-changes -m "未対応の指摘があります"
 
 複数のcrit reviewがある場合は`crit status`で現在のreview fileを確認します。default以外の保存先を同期する場合は、同じ
 `--output <directory>`（短縮形`-o`）をpullとpushの両方へ指定します。たとえば`crit pull -o .crit 123`で取り込んだ後は、
-`crit push -o .crit --dry-run 123`で同じreview fileの投稿内容を確認します。`--session`はreview UIへの再接続用であり、
-v0.18.2の`pull` / `push` optionではありません。
+`crit push -o .crit --dry-run 123`で同じreview fileの投稿内容を確認します。同じdirectory・branchに複数のsessionが
+ある場合、`pull` / `push`は推測せずに失敗するので、`crit status`で確認したIDを`--session <id>`で指定します。
 
 > [!NOTE]
-> upstream v0.18.4ではGitLab MR syncも追加されていますが、このrepositoryは現在v0.18.2へpinしています。GitLab運用を
-> 始める場合は、crit本体とAPM skillsを同じreleaseへ更新し、`glab auth status`、`crit pull --forge gitlab`、
-> `crit push --forge gitlab --dry-run`を検証してから利用してください。
+> pin中のv0.19.1はGitLab MR sync（v0.18.4で追加）にも対応しています。GitLab運用を始める場合は、
+> `glab auth status`、`crit pull --forge gitlab`、`crit push --forge gitlab --dry-run`を検証してから利用してください。
+
+## 他人のPRをcritでreviewする（壁打ち → 選んだ指摘を投稿）
+
+前節の「推奨するPR review loop」は**自分のPR**についた指摘をagentに直させる流れです。ここでは**reviewerとして**
+他人のPRを読む流れを扱います。PRへcheckoutし、agentが裏取りした指摘候補をcritのUIに並べ、UI上で壁打ちしてから、
+通常は選んだ指摘を**未submit（PENDING）のdraft review**として投稿し、GitHubの画面からsubmitできます。
+「submitして」または `--submit` を明示すると、選んだ指摘と確認済みのレビュー本文を直接公開します。既定の種別はCommentです。
+
+この流れは`pr-crit` skill（`config/rulesync/.rulesync/skills/pr-crit/SKILL.md`、rulesyncでglobal配布）にまとめています。
+agentに`/pr-crit 123`（Codexでは`$pr-crit 123`）のように頼むと、以下を順に進めます。指摘の区分（must / should / imo /
+nit / Q）、本PRとの関係（◯ / △ / ☓）、投稿コメントやsubmit本文の書式は、critを使わない`pr-reviewer-all-review` skillと共通です。
+
+### 手順
+
+```bash
+# 1. PRの情報を集めてcheckout（agentがcodeを読み、testを実行して根拠を確かめるため）
+gh pr view 123 --json number,title,author,body,headRefOid,files
+gh pr checkout 123
+git rev-parse HEAD   # headRefOidと一致すること（critのcomment行番号は手元のfileの行番号）
+
+# 2. agentが指摘候補を裏取りし、動作確認手順を書く
+
+# 3. PRの差分（merge-base..head、GitHubと同じ範囲）をcritで開き、指摘候補をline commentとして並べる
+crit pr 123
+# 本文1行目は「**以下、AIでの返信**」、2行目は「No.1 [should] 一言」
+crit comment --json --file comments.json --author 'Claude Code'
+
+# 4. UIで各指摘にreplyして壁打ち → Finish Review → agentがreplyで回答 → 再度crit pr 123 … を繰り返す
+
+# 5. 投稿するNoを決めたら、pr-reviewer-all-review skillのscriptでreviewを作る（通常はPENDING）
+python3 <skills>/pr-reviewer-all-review/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json --dry-run
+python3 <skills>/pr-reviewer-all-review/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json
+```
+
+公開を指定された場合は、入力JSONに確認済みのレビュー本文を `body` として追加し、検査と投稿の両方のコマンドに `--submit` を付けます。
+詳細は共通手順の[公開指定がある場合](../config/rulesync/.rulesync/skills/pr-reviewer-all-review/references/draft-review.md#公開指定がある場合)を参照してください。
+
+壁打ちは**Finish Reviewの往復**で行います。Finish Reviewを押すたびに、未resolveのcommentとreplyがまとめて起動元の
+agentへ渡り、agentが各threadへreplyしてから次のFinish Reviewを待ちます。何往復でもできます。
+
+devcontainerの`agent_cmd`による**Send now**も使えますが、補助に留めます。Send nowで呼ばれるのは
+`claude --dangerously-skip-permissions -p`の別processで、会話の調査結果や指摘の表を知りません。また、critが渡す指示は
+「commentに対応し、必要ならcodeを編集する」なので、PRのcodeを手元で書き換えることがあります。使うときはcommentに
+「codeは変更せず回答だけ」と書きます。
+
+### pr-reviewer-all-reviewとの共通化
+
+指摘の区分・本PRとの関係・動作確認手順・投稿書式・submit本文例は、critを使わない`pr-reviewer-all-review` skillと共通です。重複を避けるため、
+共通部分は`pr-reviewer-all-review`の`references/`（`pr-info.md` / `findings.md` / `manual-test.md` / `draft-review.md`）に置き、
+両方のskillがそこを読みます。`pr-crit`にはcrit固有の手順だけを書いています。投稿scriptも`pr-reviewer-all-review`の
+`scripts/post_draft_review.py`を使うため、2つのskillは一緒に配布しておきます。
+
+### 投稿に`crit push`を使わない理由
+
+`crit push`は投稿のたびにreviewを**submitまで**行い（`--event`の既定は`comment`）、PENDINGのdraftを作るoptionがありません。
+また、投稿対象を選ぶoptionも無く、review fileの状態で決まります（v0.19.1のsourceで確認）。
+
+| review fileの状態                                   | `crit push`                                            |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| 未resolve・`github_id`なしのline comment            | **投稿される**（1つのPR reviewのinline commentとして） |
+| resolve済みのline comment                           | 投稿されない                                           |
+| review-level comment（file / line指定なし）         | 投稿されない（local only）                             |
+| GitHub由来 / 投稿済みthreadへの`github_id`なしreply | **resolve状態に関係なく投稿される**                    |
+| 投稿済みcommentの本文をlocalで編集                  | 次のpushでGitHub側も編集される                         |
+| PRのheadが進んだ後の古いcomment                     | 投稿されず、staleとしてexport markdownへ退避される     |
+
+さらに`crit push --dry-run`は新規line commentだけを表示し、reply・編集・削除は表示しません。壁打ちのreplyや
+agentが付けた候補がそのまま投稿されやすいため、`pr-crit`ではcritを「調査と壁打ちの場」に限定し、投稿は
+`post_draft_review.py`で選んだ指摘だけを投稿します。明示指定があれば公開し、通常はdraftを作ります。
+
+自分のPRのthreadへ返信するなど、`crit push`を直接使う場合は上の表に注意し、必ず`--dry-run`に加えてreview fileも確認します。
+
+```bash
+review_file=$(crit status --json | jq -r '.review_file')
+jq -r '
+  def preview:
+    split("\n")
+    | if .[0] == "**以下、AIでの返信**" then
+        (.[1:] | map(select(test("\\S"))) | first // "")
+      else .[0] end;
+  (.files // {} | to_entries[] | .key as $p | .value.comments[]? |
+    ( select((.resolved | not) and .github_id == null and .dom_anchor == null)
+      | "NEW-COMMENT  \($p):\(.start_line)-\(.end_line) [\(.id)] replies=\(.replies // [] | length) \(.body | preview)" ),
+    ( select(.github_id != null) | .id as $root | .replies[]? | select(.github_id == null)
+      | "NEW-REPLY    \($p) [\($root)] \(.body | preview)" )),
+  (.review_comments[]? | select(.resolved | not) | "LOCAL-ONLY   (review) [\(.id)] \(.body | preview)")
+' "$review_file"
+```
+
+- `NEW-COMMENT`: 新しく投稿されるline comment。壁打ちのreplyが付いている場合、投稿後の次のpushでreplyまで投稿される
+- `NEW-REPLY`: 既存のGitHub threadへ投稿されるreply。意図しないものはUIから削除する
+- `LOCAL-ONLY`: 投稿されないreview-level comment
 
 ## difit・crit・Plannotator比較レポート
 

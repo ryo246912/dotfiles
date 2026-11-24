@@ -1,0 +1,12 @@
+[tools]
+# git credential.helper (templates/git/config.tera) 用。WSL2/Linux 専用（macOS は osxkeychain）。
+"github:git-ecosystem/git-credential-manager" = "3.0.2"
+
+[bootstrap.packages]
+"apt:colordiff" = "latest"
+"apt:ffmpeg"    = "latest"
+"apt:goaccess"  = "latest"
+"apt:pass"      = "latest"
+"apt:tig"       = "latest"
+"apt:tree"      = "latest"
+"apt:ugrep"     = "latest"

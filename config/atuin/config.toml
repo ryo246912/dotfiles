@@ -1,0 +1,22 @@
+style = "compact"
+
+filter_mode_shell_up_key_binding = "host"
+
+search_mode = "fuzzy"
+
+sync_address = "https://ryo-shellhistory.fly.dev"
+
+show_preview = true
+
+timezone = "+9"
+
+common_subcommands = ["git", "npm", "gh", "docker", "docker-compose", "make"]
+
+# 既定の同期はコマンド実行時にしか走らない（sync_frequency 経過判定も実行契機）。
+# コマンドをあまり叩かなくても同期するよう daemon を使い、シェル起動時に自動起動させる。
+# autostart（18.13.0 以降）で、daemon が必要になった時点で自動起動される。
+# daemon が独自タイマー（sync_frequency 秒、既定 300）で定期同期する。
+[daemon]
+autostart      = true
+enabled        = true
+sync_frequency = 300

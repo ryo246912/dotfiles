@@ -1,14 +1,18 @@
 {
   "$schema": "https://oxc.rs/schemas/formatter/schema.json",
   "ignorePatterns": [
-    "dot_apm/apm.lock.yaml",
-    "dot_config/ghui/modify_config.json",
-    "dot_config/sidebery/**",
-    "dot_config/obsidian/**",
-    "dot_config/navi/**",
-    "dot_config/rectangle/**",
-    "dot_config/vicinae/**",
+    "apm/apm.lock.yaml",
+    ".mise/locks/**",
+    "config/mise/.mise/locks/**",
+    "unmanaged/sidebery/**",
+    "config/obsidian/**",
+    "config/navi/**",
+    "unmanaged/rectangle/**",
+    "unmanaged/thaw/**",
+    "config-mac/vicinae/**",
     "**/bun.lock",
+    ".claude/skills/**",
+    ".agents/skills/**",
     "**/*.toml"
   ]
 }

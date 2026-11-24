@@ -5,10 +5,18 @@
   "prConcurrentLimit": 0,
   "minimumReleaseAge": "3 days",
   "mise": {
-    "managerFilePatterns": ["dot_config/mise/**/*.toml"]
+    "managerFilePatterns": ["mise*.toml", "config/mise/**/*.toml", "config-mac/mise/**/*.toml"]
   },
   "devcontainer": {
-    "managerFilePatterns": ["dot_config/devcontainer/**/devcontainer.json"]
+    "managerFilePatterns": ["config/devcontainer/**/devcontainer.json"]
+  },
+  "constraints": {
+    "apm": "0.33.0"
+  },
+  "apm": {
+    "lockFileMaintenance": {
+      "enabled": true
+    }
   },
   "customDatasources": {
     "brew-formula": {
@@ -24,6 +32,14 @@
         "{ \"releases\": [ { \"version\": version, \"isDeprecated\": deprecated, \"digest\": sha256 } ], \"homepage\": homepage, \"sourceUrl\": homepage, \"changelogUrl\": ($contains($string(homepage), 'github.com') ? $join([$replace((homepage), /\\.git$/, ''), '/releases'], '') : '') }"
       ],
       "format": "json"
+    },
+    "opencode-deepseek-flash-free": {
+      "description": "models.dev の OpenCode Zen 無料モデル deepseek-v<version>-flash-free の version を返す",
+      "defaultRegistryUrlTemplate": "https://models.dev/api.json",
+      "transformTemplates": [
+        "{ \"releases\": [ $each(opencode.models, function($v, $k) { $contains($k, /^deepseek-v[0-9.]+-flash-free$/) ? { \"version\": $replace($k, /^deepseek-v([0-9.]+)-flash-free$/, \"$1\"), \"releaseTimestamp\": $v.release_date } }) ], \"homepage\": \"https://opencode.ai/docs/zen\" }"
+      ],
+      "format": "json"
     }
   },
   "packageRules": [
@@ -37,9 +53,27 @@
         "/(^|\\/)aws-cli$/",
         "/(^|\\/)cosign$/",
         "/(^|\\/)rust$/",
-        "/(^|\\/)pdm$/"
+        "/(^|\\/)pdm$/",
+        "/(^|\\/)cspell$/"
       ],
       "matchUpdateTypes": ["minor", "patch"],
+      "enabled": false
+    },
+    {
+      "description": "mergiraf は Codeberg 配布で mise manager の aqua 解決（GitHub 前提）では追えないため、customManager（gitea-releases）側で更新する",
+      "matchManagers": ["mise"],
+      "matchDepNames": ["aqua:codeberg.org/mergiraf/mergiraf"],
+      "enabled": false
+    },
+    {
+      "matchPackageNames": ["docker/cli", "aqua:docker/cli"],
+      "matchUpdateTypes": ["patch"],
+      "enabled": false
+    },
+    {
+      "description": "mise lock が生成する .mise/locks 配下は mise の更新 PR で一緒に更新されるため npm manager では更新しない",
+      "matchManagers": ["npm"],
+      "matchFileNames": [".mise/locks/**"],
       "enabled": false
     },
     {
@@ -85,19 +119,16 @@
     },
     {
       "matchPackageNames": [
-        "github:vorojar/md-preview",
-        "https://github.com/vorojar/md-preview",
-        "cargo:https://github.com/vorojar/md-preview"
-      ],
-      "groupName": "md-preview"
-    },
-    {
-      "matchPackageNames": [
         "github:backnotprop/plannotator",
         "backnotprop/plannotator",
         "https://github.com/backnotprop/plannotator"
       ],
       "groupName": "plannotator"
+    },
+    {
+      "description": "desloppify の skill（apm/apm.yml の ref）と CLI（mise の pipx:desloppify）を同じPRで更新する",
+      "matchPackageNames": ["desloppify", "peteromallet/desloppify"],
+      "groupName": "desloppify"
     },
     {
       "matchPackageNames": [
@@ -108,19 +139,83 @@
       "groupName": "terminal-browser"
     },
     {
-      "matchPackageNames": ["https://github.com/zenbu-labs/terminal-browser"],
-      "matchDatasources": ["git-refs"],
-      "enabled": false
+      "description": "mise の APM CLI、Renovate が apm install に使う constraints.apm、apm.lock.yaml の apm_version を同じPRで揃えて更新する（apm:validate-lock-version が一致を要求するため）",
+      "matchPackageNames": ["microsoft/apm"],
+      "groupName": "apm"
     },
     {
-      "matchPackageNames": ["classmethod/tsumiki", "https://github.com/classmethod/tsumiki"],
-      "groupName": "tsumiki"
+      "matchPackageNames": ["mattpocock/skills"],
+      "groupName": "mattpocock/skills"
+    },
+    {
+      "matchManagers": ["apm"],
+      "matchPackageNames": ["DietrichGebert/ponytail"],
+      "groupName": "ponytail/skills"
     }
   ],
   "customManagers": [
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/atuin/fly.toml"],
+      "managerFilePatterns": ["config/mise/config.toml"],
+      "matchStrings": [
+        "\"pipx:git\\+https://github\\.com/(?<depName>[^/]+/[^\"]+)\\.git\"\\s*=\\s*\\{\\s*version\\s*=\\s*\"(?<currentValue>v[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-tags",
+      "versioningTemplate": "semver-coerced"
+    },
+    {
+      "customType": "regex",
+      "description": "Pullfrog の無料モデル opencode/deepseek-v<version>-flash-free を新しい version に上げる",
+      "managerFilePatterns": [".github/workflows/pullfrog.yml"],
+      "matchStrings": ["model:\\s*opencode/deepseek-v(?<currentValue>[0-9.]+)-flash-free"],
+      "depNameTemplate": "opencode/deepseek-flash-free",
+      "datasourceTemplate": "custom.opencode-deepseek-flash-free",
+      "versioningTemplate": "loose"
+    },
+    {
+      "customType": "regex",
+      "description": "object 形式（git:/path:/ref:）の apm 依存は組み込みの apm manager が読めないため、desloppify の ref だけを扱う",
+      "managerFilePatterns": ["apm/apm.yml"],
+      "matchStrings": [
+        "git:\\s*(?<depName>peteromallet/desloppify)\\s*\\n\\s*path:[^\\n]*\\n\\s*ref:\\s*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "github-tags"
+    },
+    {
+      "customType": "regex",
+      "description": "constraints.apm は組み込みの renovate-config manager が microsoft/apm として抽出するため、ここでは lockfile の apm_version だけを扱う",
+      "managerFilePatterns": ["apm/apm.lock.yaml"],
+      "matchStrings": ["(?:^|\\n)apm_version:\\s*'?(?<currentValue>[^'\\s]+)'?"],
+      "depNameTemplate": "microsoft/apm",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/sbx/mcp.yml"],
+      "matchStrings": [
+        "command:\\s*npx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>(?:@[^/\"\\s]+/)?[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
+      ],
+      "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/sbx/mcp.yml"],
+      "matchStrings": [
+        "command:\\s*uvx\\s*\\n\\s*args:\\s*\\[[^\\]]*?\"(?<depName>[^@\"\\s]+)@(?<currentValue>[^\"\\s]+)\""
+      ],
+      "datasourceTemplate": "pypi"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/devcontainer/Dockerfile*"],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s*\\nARG\\s+\\w+=(?<currentValue>\\S+)"
+      ]
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/atuin/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/atuinsh/atuin):(?<currentValue>v?[^\"]+)\""
       ],
@@ -128,7 +223,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/agentsview/fly.toml"],
+      "managerFilePatterns": ["config/agentsview/fly.toml"],
       "matchStrings": [
         "image\\s*=\\s*\"(?<depName>ghcr\\.io/kenn-io/agentsview):(?<currentValue>v?[^\"]+)\""
       ],
@@ -136,14 +231,14 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": ["npm:@devcontainers/cli\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "devcontainers/cli",
       "datasourceTemplate": "github-tags"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["mise*.toml", "config/mise/**/*.toml"],
       "matchStrings": ["min_version\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "jdx/mise",
       "packageNameTemplate": "jdx/mise",
@@ -152,7 +247,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": [
         "\"go:github\\.com/atotto/clipboard/cmd/(?:gocopy|gopaste)\"\\s*=\\s*\"(?<currentValue>.*?)\""
       ],
@@ -161,14 +256,24 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config/devcontainer/mise.toml"],
+      "matchStrings": [
+        "\"aqua:codeberg\\.org/mergiraf/mergiraf\"\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "depNameTemplate": "mergiraf/mergiraf",
+      "datasourceTemplate": "gitea-releases",
+      "registryUrlTemplate": "https://codeberg.org"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": ["pipx:awslogs\\s*=\\s*\"(?<currentValue>.*?)\""],
       "depNameTemplate": "awslogs",
       "datasourceTemplate": "pypi"
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/config.mac.toml"],
+      "managerFilePatterns": ["config-mac/mise/config.mac.toml"],
       "matchStrings": [
         "\"http:terminal-browser\"\\s*=\\s*\\{\\s*version = \"(?<currentValue>[^\"]+)\""
       ],
@@ -179,7 +284,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": [
         "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentValue>[^\"]+)\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/refs/tags/"
       ],
@@ -188,7 +293,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml"],
       "matchStrings": [
         "\"http:[^\"]+\"\\s*=\\s*\\{[^}]*?version = \"(?<currentDigest>[0-9a-f]{40})\"[^}]*?url = \"https://github\\.com/(?<depName>[^/]+/[^/]+)/archive/[^\n#]+[ \t]*#[ \t]*renovate: branch=(?<currentValue>main|master)"
       ],
@@ -197,7 +302,7 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config-mac/mise/**/*.toml"],
       "matchStrings": [
         "\"brew:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
       ],
@@ -205,42 +310,12 @@
     },
     {
       "customType": "regex",
-      "managerFilePatterns": ["dot_config/mise/**/*.toml"],
+      "managerFilePatterns": ["config/mise/**/*.toml", "config-mac/mise/**/*.toml"],
       "matchStrings": [
         "\"brew-cask:(?<depName>[^\"]+)\"[ \\t]*=[ \\t]*\"latest\"[ \\t]*#[ \\t]*(?<currentValue>\\S+)"
       ],
       "datasourceTemplate": "custom.brew-cask",
       "versioningTemplate": "loose"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_config/sheldon/**/*.toml"],
-      "matchStrings": [
-        "\\[plugins\\.(?<depName>[^\\]]+)\\]\\s+github\\s*=\\s*\"(?<packageName>[^\"]+)\"\\s+tag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
-      ],
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_apm/apm.yml"],
-      "matchStrings": [
-        "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#(?<currentDigest>[0-9a-f]{40})",
-        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s(?<currentDigest>[0-9a-f]{40})"
-      ],
-      "packageNameTemplate": "https://github.com/{{{depName}}}",
-      "currentValueTemplate": "main",
-      "datasourceTemplate": "git-refs"
-    },
-    {
-      "customType": "regex",
-      "managerFilePatterns": ["dot_apm/apm.yml"],
-      "matchStrings": [
-        "-\\s(?<depName>[^/\\s]+/[^/\\s]+)/\\S*?#v?(?<currentValue>[^\\s]+)",
-        "git:\\s(?<depName>[^/\\s]+/[^/\\s]+)(?:\\s+(?:path|alias):[^\\n]*)*\\s+ref:\\s+v?(?<currentValue>[^\\s]+)"
-      ],
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v(?<version>.*)$"
     }
   ]
 }

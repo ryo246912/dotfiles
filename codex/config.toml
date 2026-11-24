@@ -1,0 +1,34 @@
+approval_policy     = "on-request"
+approvals_reviewer  = "user"
+default_permissions = "rulesync"
+
+[shell_environment_policy.set]
+AI_AGENT = "1"
+
+[permissions.rulesync]
+extends = ":workspace"
+
+[permissions.rulesync.filesystem]
+":minimal"          = "read"
+":root"             = "read"
+":slash_tmp"        = "write"
+":tmpdir"           = "write"
+glob_scan_max_depth = 8
+"~/.ssh/id_ed25519" = "deny"
+"~/.ssh/id_rsa"     = "deny"
+
+[permissions.rulesync.filesystem.":workspace_roots"]
+".env"               = "deny"
+".env.*"             = "deny"
+".env*"              = "deny"
+".envrc"             = "deny"
+".git/**"            = "write"
+"*.secret"           = "deny"
+"**/.env"            = "deny"
+"**/.env.*"          = "deny"
+"**/.env*"           = "deny"
+"**/.envrc"          = "deny"
+"**/*.secret"        = "deny"
+"**/fnox.local.toml" = "deny"
+"**/secrets/**"      = "deny"
+"fnox.local.toml"    = "deny"

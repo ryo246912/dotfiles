@@ -1,0 +1,61 @@
+exclude        = ["unmanaged"]
+line-length    = 100
+target-version = "py311"
+
+[lint]
+ignore = [
+    "COM812", # Conflicts with the formatter.
+    # 日本語のコメントと CLI スクリプトを書く前提で合わない規則。
+    "RUF001",  # 全角記号は日本語の文章に必要。
+    "RUF002",
+    "RUF003",
+    "E501",    # ruff format は長い日本語のコメントや文字列を折り返さず、100 桁に収めると読みにくくなる。
+    "D",       # docstring は Why not だけを書く方針で、網羅を求めない。
+    "ANN",     # 小さなスクリプトに型注釈を網羅させない。
+    "T201",    # CLI の出力は print で行う。
+    "S603",    # 固定のコマンドを subprocess で呼ぶのが用途。
+    "S607",
+    "INP001",  # スクリプトはパッケージにしない。
+    "EXE001",
+    "CPY001",  # 個人の dotfiles に著作権表記は要らない。
+    "TRY003",
+    "EM",
+    "C901",    # 複雑さの指標は機械的な閾値で、分割の根拠にならない。
+    "PLR0911",
+    "PLR0912",
+    "PLR0913",
+    "PLR0915",
+    "PLR2004",
+    # 挙動を変えずに書き換えるだけで、既存のスクリプトに差分を広げる割に得るものが少ない規則。
+    "N812",    # lessonlib を L として読む慣習。
+    "DTZ",     # 日付はローカルの暦日で扱う。
+    "S105",    # token は変数名で、秘密の値ではない。
+    "S324",    # sha1 は識別子の生成で、暗号用途ではない。
+    "FBT",
+    "PLW2901",
+    "PERF401",
+    "RUF005",
+    "PIE810",
+    "SIM105",
+    "TRY301",
+    "PLC0415",
+    "PLR1714",
+    "TC003",
+    "E731",
+    "E741",
+    "RUF059",
+    "PTH",
+    "PT009",   # unittest 形式のテストを pytest 形式に書き換えない。
+]
+select = ["ALL"]
+
+[lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+# pty.fork() した子プロセスで claude を exec する。read_output は 1 回の反復の中で使い切る。
+"**/sandbox-claude-token.py" = ["B023", "S606"]
+
+[format]
+docstring-code-format = true
+indent-style          = "space"
+line-ending           = "lf"
+quote-style           = "double"

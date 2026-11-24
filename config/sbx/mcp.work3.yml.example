@@ -1,0 +1,87 @@
+# work3 でだけ sandbox から使う MCP サーバ。
+# `cp mcp.work3.yml.example mcp.work3.yml` で .example を外してコピーし、xxx を実際の値に置き換える。
+# mcp.<name>.yml は gitignore 済みで、mise run sandbox:mcp-add が mcp.yml と一緒に読んで登録する
+# （sandbox へは自動で読み込まない。--static-mcp か mise run sandbox:mcp-load で指定する）。
+# 書式は mcp.yml と同じ（APM の dependencies.mcp + sbx_options）。Renovate の更新対象外。
+dependencies:
+  mcp:
+    # OAuth。初回のみブラウザで認可する
+    - name: notion
+      registry: false
+      transport: http
+      url: https://mcp.notion.com/mcp
+    # AWS の remote MCP をホストの AWS プロファイルで proxy する。
+    # --project は相対パスなので、sbx_options の --dir に work3 のリポジトリ（tools/aws-mcp-proxy がある所）を指定する
+    - name: aws-mcp
+      registry: false
+      transport: stdio
+      command: uv
+      args:
+        - run
+        - --project
+        - tools/aws-mcp-proxy
+        - --frozen
+        - mcp-proxy-for-aws
+        - https://aws-mcp.us-east-1.api.aws/mcp
+        - --profile
+        - xxx
+        - --metadata
+        - AWS_REGION=ap-northeast-1
+      sbx_options: ["--dir", "/Users/xxx/work3/xxx"]
+    # Datadog は toolsets / omit_tools をクエリでしか指定できないが、sbx の OAuth 検出は
+    # サーバが返す resource（クエリ無しの .../v1/mcp）と登録 URL の完全一致を要求するため、
+    # クエリ付き URL を --url で登録すると「discovery failed」になる。
+    # そこでホスト側で mcp-remote を stdio として起動し、OAuth は mcp-remote に任せる
+    # （初回接続時にホストのブラウザで認可。トークンはホストの ~/.mcp-auth に保存される）。
+    # sbx の --args は `,` 区切りなので、クエリ中の `,` は %2C にエンコードしておく。
+    - name: datadog
+      registry: false
+      transport: stdio
+      command: npx
+      args:
+        - -y
+        - mcp-remote@0.14.3
+        - https://mcp.ap1.datadoghq.com/v1/mcp?toolsets=core%2Capm%2Cdbm%2Cerror-tracking%2Cddsql&omit_tools=create_datadog_notebook%2Cedit_datadog_notebook%2Cupsert_datadog_dashboard%2Cupdate_datadog_error_tracking_issue%2Cmanage_datadog_error_tracking_issue_comments%2Cddsql_upsert_saved_query
+    - name: metabase
+      registry: false
+      transport: http
+      url: https://metabase.xxx.com/api/mcp
+    # ホストで起動している Figma デスクトップアプリの MCP。gateway はホストから接続するので
+    # 127.0.0.1 はホストを指す。ループバック宛ては sbx の SSRF チェックで拒否されるため外す
+    - name: figma-desktop
+      registry: false
+      transport: http
+      url: http://127.0.0.1:3845/mcp
+      sbx_options: ["--skip-ssrf-check"]
+    # ホストの Docker で起動している PostgreSQL（ポートをホストに公開しておく）。gateway がホストで
+    # 起動するので localhost はホストを指す。
+    # 読み取り専用（restricted）と書き込み可（unrestricted）を分け、普段は postgres-read だけ読み込む。
+    # DATABASE_URI は postgresql://<user>@<host>:<port>/<dbname>、パスワードは PGPASSWORD に分ける
+    # （libpq が読む。URI に含めないので URL エンコードが要らず、secretlint にも検出されない）
+    # - <user>: DB のユーザー（docker compose の POSTGRES_USER）
+    # - <password>: DB のパスワード（compose の POSTGRES_PASSWORD）
+    # - <host>: ホストから見た DB の場所。ホストに公開した Docker のポートなら localhost
+    # - <port>: ホストに公開したポート（compose の ports: "5432:5432" の左側）
+    # - <dbname>: 接続するデータベース名（compose の POSTGRES_DB）
+    # 値に , を含むと sbx に渡せない（mise run sandbox:mcp-add がエラーにする）
+    # postgres-mcp 0.3.0 はそのままでは依存を解決できないので、dotfiles の postgres-mcp-overrides.txt を
+    # --overrides で渡す。相対パスなので、sbx_options の --dir に dotfiles のリポジトリを指定する
+    # （先頭の ~ は mise run sandbox:mcp-add が $HOME に展開する）
+    - name: postgres-read
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=restricted"]
+      env:
+        DATABASE_URI: postgresql://postgres@localhost:15432/postgres
+        PGPASSWORD: postgres
+      sbx_options: ["--dir", "~/dotfiles"]
+    - name: postgres-write
+      registry: false
+      transport: stdio
+      command: uvx
+      args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=unrestricted"]
+      env:
+        DATABASE_URI: postgresql://postgres@localhost:15432/postgres
+        PGPASSWORD: postgres
+      sbx_options: ["--dir", "~/dotfiles"]

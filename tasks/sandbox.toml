@@ -1,0 +1,787 @@
+["sandbox:build-template"]
+description = "Build the Docker Sandboxes template with the devcontainer toolchain and load it into sbx"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+
+# devcontainer と同じツール群（~/.config/devcontainer/mise.toml）を入れた sandbox template を
+# ビルドして sbx の image store へ読み込む。詳細は docs/docker-sandboxes.md 参照。
+#
+# sbx が使う Docker daemon はホストの daemon と image store を共有しないため、
+# ローカルビルドした image は tar 経由で `sbx template load` する必要がある。
+
+# ビルドコンテキストは「配置先（~/.config/devcontainer）」ではなく dotfiles リポジトリ側を使う。
+# 配置先は mise の [dotfiles] が symlink-each で配置するため中身が symlink であり、
+# BuildKit はコンテキスト外を指す symlink を辿らないため COPY が "not found" で失敗する。
+#
+# リポジトリの場所は MISE_PROJECT_ROOT（このリポジトリ内で実行した場合）→ DOTFILES_DIR →
+# ~/.config/git/gitignore の symlink から逆算 → 既定の ~/dotfiles の順で解決する。
+# 別のプロジェクトから実行しても、dotfiles が適用済みなら動くようにしている。
+# mise.toml と .git があるだけでは、同じ構成の別プロジェクトを誤認する。
+# ここで欲しいのは「このビルドに必要なファイルを持つツリー」なので、それ自体を目印にする。
+looks_like_dotfiles() {
+  [ -f "$1/mise.toml" ] && [ -e "$1/.git" ] && [ -f "$1/config/devcontainer/Dockerfile.sandbox" ]
+}
+
+repo_root=""
+for candidate in "${MISE_PROJECT_ROOT:-}" "${DOTFILES_DIR:-}"; do
+  [ -n "$candidate" ] || continue
+  # DOTFILES_DIR はクォート付きで export されている（例: DOTFILES_DIR="~/foo"）ことが
+  # あり、その場合 ~ が展開されないため自前で展開する
+  case "$candidate" in
+    "~") candidate="$HOME" ;;
+    "~/"*) candidate="${HOME}/${candidate#"~/"}" ;;
+  esac
+  if looks_like_dotfiles "$candidate"; then repo_root="$candidate"; break; fi
+done
+if [ -z "$repo_root" ] && [ -L "$HOME/.config/git/gitignore" ]; then
+  # 配置済み symlink のリンク先からルートを逆算する（config/devcontainer のように
+  # mise.toml を持つサブディレクトリを誤検出しないよう .git も確認する）
+  link=$(readlink "$HOME/.config/git/gitignore")
+  case "$link" in /*) ;; *) link="$HOME/.config/git/$link" ;; esac
+  dir=$(dirname "$link")
+  while [ "$dir" != "/" ] && [ "$dir" != "." ]; do
+    if looks_like_dotfiles "$dir"; then repo_root="$dir"; break; fi
+    dir=$(dirname "$dir")
+  done
+fi
+if [ -z "$repo_root" ] && looks_like_dotfiles "$HOME/dotfiles"; then
+  repo_root="$HOME/dotfiles"
+fi
+if [ -z "$repo_root" ]; then
+  echo "error: dotfiles リポジトリが見つかりません" >&2
+  echo "       リポジトリ内で実行するか、DOTFILES_DIR を export してください" >&2
+  exit 1
+fi
+context="${repo_root}/config/devcontainer"
+dockerfile="${context}/Dockerfile.sandbox"
+# agent ごとに公開 v3 workload をベースに template (sbx-agent:<agent>) を作る。
+# workload の認証・network capability は sbx が合成し、Dockerfile はツール群だけを追加する。
+# エージェントを含まない別の image に置き換えず、対応する公開 image を使う。
+#
+# 作る agent は 引数 → SBX_TEMPLATE_AGENTS → fzf で複数選択（claude を選択済み）の順で決める。
+# template は 1 つ数 GB になるため、使う agent だけ作る。fzf が無い・端末でないときは claude だけ。
+#   mise run sandbox:build-template                # fzf で選ぶ
+#   mise run sandbox:build-template codex copilot  # 指定した agent だけ
+agents="$*"
+[ -n "$agents" ] || agents="${SBX_TEMPLATE_AGENTS:-}"
+if [ -z "$agents" ]; then
+  if command -v fzf >/dev/null 2>&1 && [ -t 0 ] && [ -t 1 ]; then
+    # 先頭の claude を load 時に選択しておく（Tab で切り替え、Enter で確定）
+    agents=$(printf '%s\n' claude codex copilot \
+      | fzf --multi --bind 'load:toggle' --prompt="agent> " \
+          --header="template を作る agent を選択（Tab で切り替え、Enter で確定）" \
+      | tr '\n' ' ') || exit 130
+    [ -n "${agents% }" ] || exit 130
+  else
+    agents=claude
+  fi
+fi
+variant_for() {
+  case "$1" in
+    claude) echo claude ;;
+    codex) echo codex ;;
+    copilot) echo copilot ;;
+    *) return 1 ;;
+  esac
+}
+for agent in $agents; do
+  variant_for "$agent" >/dev/null || {
+    echo "error: 未対応の agent です: $agent（claude / codex / copilot）" >&2
+    exit 2
+  }
+done
+
+for cmd in docker sbx; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です" >&2; exit 127; }
+done
+
+# COPY する対象が実体として読めることを先に確かめる（symlink 切れ・未配置をここで検出する）
+missing=""
+for required in Dockerfile.sandbox mise.toml tasks lint scripts lefthook.local.yml; do
+  [ -e "${context}/${required}" ] || missing="${missing}${missing:+, }${required}"
+done
+if [ -n "$missing" ]; then
+  echo "error: ビルドコンテキストに必要なものがありません: ${missing}" >&2
+  echo "       context=${context}" >&2
+  echo "       mise bootstrap dotfiles apply でリポジトリを最新にしてください" >&2
+  exit 1
+fi
+
+# aqua:/github: backend の API レート制限を避けるため GH_TOKEN を build secret で渡す。
+# 取得できなかった場合は --secret を付けない（空の env を渡すと BuildKit が失敗するため）。
+gh_token=""
+command -v gh >/dev/null 2>&1 && gh_token=$(gh auth token 2>/dev/null || true)
+secret_args=""
+if [ -n "$gh_token" ]; then
+  secret_args="--secret id=github_token,env=GH_TOKEN"
+else
+  echo "warn: gh のトークンが取得できないため build secret なしで続行します（API レート制限に注意）" >&2
+fi
+
+tar_path=""
+trap 'rm -f "${tar_path:-}"' EXIT
+
+# provenance / SBOM の attestation を切る。付いていると出力が単一イメージではなく
+# attestation manifest を含む OCI index（manifest list）になり、`docker image save` した
+# tar も index 形式になるため `sbx template load` が意図したイメージを選べない可能性がある。
+# ここで欲しいのはローカル専用の単一イメージなので、attestation は不要。
+# buildx を使わない docker では未対応のフラグなので、使えるときだけ付ける。
+attest_args=""
+if docker build --help 2>/dev/null | grep -q -- '--provenance'; then
+  attest_args="--provenance=false --sbom=false"
+fi
+
+for agent in $agents; do
+  variant=$(variant_for "$agent")
+  tag="sbx-agent:${agent}"
+  echo "==> docker build ($tag, variant=$variant)"
+  # shellcheck disable=SC2086 # secret_args / attest_args は意図的に分割させる
+  if ! GH_TOKEN="$gh_token" DOCKER_BUILDKIT=1 docker build \
+    $secret_args \
+    $attest_args \
+    --build-arg "VARIANT=${variant}" \
+    -f "$dockerfile" \
+    -t "$tag" \
+    "$context"; then
+    echo >&2
+    echo "error: docker build が失敗しました" >&2
+    # このイメージはツールチェイン一式（go / node / python / bun 他）で数 GB になるため、
+    # 全ステップ成功したあと "exporting to image" で input/output error になる場合は
+    # ほぼ Docker Desktop のディスク不足。ビルド内容の問題と紛れやすいので明示する。
+    cat >&2 <<'HINT'
+  ヒント: 各ステップは成功したのに "exporting to image" で
+  "input/output error" になった場合は Docker Desktop のディスク不足がほぼ原因です。
+    1. docker system df で使用量を確認する
+    2. docker image prune -a / docker container prune で空ける
+    3. Docker Desktop の Settings > Resources > Disk usage limit を増やす
+    4. それでも直らなければ仮想ディスクの破損を疑う（Troubleshoot > Clean / Purge data）
+  docker builder prune でも空きますが、mise のインストール済みツールの cache mount も
+  消えるため、次回のビルドは初回と同じフルインストールになります。
+HINT
+    exit 1
+  fi
+
+  echo "==> docker image save -> sbx template load"
+  # 数 GB の tar を書くため、一時ディレクトリにも同等の空きが必要。
+  # set -u 下で TMPDIR 未設定の環境（Linux では珍しくない）だと、メッセージ自体が
+  # "TMPDIR: unbound variable" で落ちて診断が出ないため既定値を入れる
+  # （mktemp -t 側は未設定でもシステムの一時ディレクトリへフォールバックする）。
+  tar_path=$(mktemp -t sbx-template-XXXXXX.tar)
+  if ! docker image save "$tag" -o "$tar_path"; then
+    echo "error: docker image save が失敗しました（${TMPDIR:-/tmp} の空き容量を確認してください）" >&2
+    exit 1
+  fi
+  sbx template load "$tar_path"
+  rm -f "$tar_path"
+  # sbx の image store へコピー済みなので、ホスト側の image は消してディスクを空ける
+  # （agent の数だけ数 GB ずつ増えるため）。mise のインストール済みツールは cache mount に
+  # 残るので、次回のビルドも差分だけで済む。
+  docker image rm "$tag" >/dev/null 2>&1 || true
+done
+
+echo "==> 完了。利用可能な template:"
+sbx template ls
+echo
+echo "sbx-agent / multi-worktree dev は agent に合わせて sbx-agent:<agent> を自動で使います"
+echo "別名を使う場合は SBX_AGENT_TEMPLATE か [settings.sandbox].template を設定してください"
+}
+
+main "$@"
+'''
+
+["sandbox:coderabbit-login"]
+description = "Select a sandbox with fzf, forward its callback and open CodeRabbit browser login"
+run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-coderabbit-login.py"'
+
+["sandbox:sbx-settings"]
+description = "Apply recommended sbx 0.53.0 host settings and restart the daemon"
+run = '''
+set -eu
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+version=$(sbx --version | sed -nE 's/^sbx version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')
+printf '%s\n' "$version" | awk -F. 'NF == 3 && ($1 > 0 || $2 >= 53) { ok=1 } END { exit !ok }' || {
+  echo "error: sbx 0.53.0 以上が必要です（mise install github:docker/sbx-releases）" >&2
+  exit 1
+}
+echo "==> ホスト設定を反映"
+# ホストのクリップボードの画像（スクリーンショット等）を agent へ Ctrl+V で貼り付けられるようにする。
+sbx settings set clipboard.imagePaste true
+# 0.53.0 のホスト連携と、クラウドモデルを使う開発環境向けの既定値。
+# 失敗時は不完全な設定を成功扱いにしない。再実行しても同じ値に収束する。
+sbx settings set clipboard.textCopy true
+sbx settings set claude.chrome true
+sbx settings set claude.remoteControl true
+sbx settings set env.rememberHostCommands true
+sbx settings set telemetry.disabled true
+sbx settings set model.server.enabled false
+sbx daemon restart
+
+'''
+
+["sandbox:setup"]
+description = "One-time host-side setup for Docker Sandboxes (SSH, skills, Claude accounts)"
+run = '''
+set -eu
+
+command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+
+# devcontainer と同じ初期化（マウント元の作成と mac-host 用 SSH 鍵の生成）を流用する。
+# 鍵をホストの authorized_keys へ登録する手順は docs/devcontainer.md 参照。
+initialize="${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/scripts/initialize.sh"
+# ここが無い＝dotfiles が未適用。ホスト連携（通知・crit・plannotator）に必要な SSH 鍵と
+# マウント元が用意されないため、不完全なセットアップを成功と誤認させないように止める。
+[ -f "$initialize" ] || {
+  echo "error: $initialize が見つかりません（mise bootstrap dotfiles apply を実行してください）" >&2
+  exit 1
+}
+echo "==> マウント元と SSH 鍵を準備"
+bash "$initialize" || { echo "error: initialize.sh が失敗しました" >&2; exit 1; }
+
+# 共通の secret と network policy は sbxenv.yaml / kits/common が管理する。
+# 個人用の追加許可だけは、既存のローカルファイルを引き続き読み込む。
+for allow_file in "$MISE_PROJECT_ROOT"/config/sbx/allow-domains.*.txt; do
+  [ -f "$allow_file" ] || continue
+  allow_domains=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$allow_file" | grep -v '^$' | paste -sd, -) || true
+  if [ -n "$allow_domains" ]; then
+    sbx policy allow network "$allow_domains" || echo "warn: $(basename "$allow_file") のドメインの許可に失敗しました" >&2
+  fi
+done
+
+echo "==> ホストの agent skills を共有 store へ取り込む"
+# --force で skill ごとの Overwrite 確認（[y/N]）を飛ばす。プロンプトは sbx 自身の行入力で
+# 1 文字では受け付けられないため、付けないと skill の数だけ y + Enter を打つことになる。
+#
+# ホスト側（~/.claude/skills 等）が正で、共有 store はそこから作る派生物なので、
+# 上書きして揃えるのが期待する動作になる。sandbox は store を既定で read-only で
+# マウントする（sbx-agent の --skills 既定が readonly）ため、store 側だけにある編集が
+# 失われる心配も実質ない。
+#
+# 1 つずつ確認したい場合は --force 無しで手で流す:
+#   sbx skills import              # skill ごとに確認する
+#   sbx skills import --dry-run    # 何が入れ替わるか見るだけ
+sbx skills import --force || echo "warn: skills の取り込みに失敗しました" >&2
+
+echo "==> Claude account / binding / workspace sandbox を準備"
+mise -C "$MISE_PROJECT_ROOT" run sandbox:claude-setup --workspace "${MISE_ORIGINAL_CWD:-$PWD}"
+
+echo "==> 現在の設定"
+sbx secret ls || true
+sbx policy ls || true
+'''
+
+["sandbox:mcp-add"]
+description = "Register the MCP servers in config/sbx/mcp*.yml on the host so sandboxes can reuse host-side auth"
+run = '''
+set -eu
+
+# sandbox から使う MCP サーバをホストの sbx mcp に登録する。
+# OAuth トークンと API キーはホストの OS キーチェーンに入り、ホスト側プロキシが送信時に
+# 注入するため、sandbox 内の agent は生の認証情報を読めない。
+#
+# sandbox 内の agent は自身の MCP 設定（~/.claude.json など）を読まない（template の
+# managed settings で止めている）ため、sandbox で使う MCP はすべてここで登録する。
+# MCP の定義とバージョンは config/sbx/mcp.yml（共通）と mcp.<name>.yml（work3 / private など
+# 環境ごと。gitignore 済み）に APM の dependencies.mcp と同じ書式で書いており、
+# self-defined（registry: false）のエントリを sbx mcp add の引数に変換する。
+
+for cmd in sbx yq jq; do
+  command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+done
+
+# 登録した定義（sbx mcp add の引数）をサーバごとに記録し、version などの変更を検出する
+state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-mcp"
+mkdir -p "$state_dir"
+
+# 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+registered_names=$(sbx mcp ls -q 2>/dev/null) || registered_names=""
+is_registered() { printf '%s\n' "$registered_names" | grep -qxF -- "$1"; }
+
+# dependencies.mcp の各サーバを「name <TAB> url|command <TAB> sh クォート済みの sbx mcp add 引数」
+# の 1 行にする。
+# - remote: --url と、headers を --header 'Name: value' で渡す
+# - stdio: sbx mcp add に env を渡すオプションが無いため、env があれば `env K=V ... <command>` で包む
+#   （sbx の --args は `,` 区切りなので、`,` を含む引数はエラーにする）
+# - sbx_options（APM の書式には無い独自キー）は sbx mcp add の末尾にそのまま足す
+#   （sbx はシェルを通さないので、先頭の ~ だけここで $HOME に展開する。--dir ~/dotfiles など）
+# - registry 参照（文字列形式や registry: false 以外）は解決後のコマンドが manifest に無いため対象外
+to_specs() {
+  # パイプにすると yq の失敗（YAML の構文エラーなど）が jq の終了コードに隠れるため分ける
+  json=$(yq -o=json '.dependencies.mcp // []' "$1") || return 1
+  printf '%s\n' "$json" | jq -r --arg home "$HOME" '
+    .[]
+    | if (type != "object") or (.registry != false) then
+        "skip\t\(if type == "object" then .name else . end)\t"
+      else
+        .name as $name
+        | ((.sbx_options // []) | map(sub("^~(?=/|$)"; $home))) as $sbx_options
+        | if (.transport // "") == "stdio" then
+            ([(.env // {}) | to_entries[] | "\(.key)=\(.value)"]) as $env
+            | (if ($env | length) > 0 then ["env"] + $env + [.command] else [.command] end) as $argv
+            | ($argv[1:] + (.args // [])) as $cmd_args
+            | if ($cmd_args | map(select(contains(","))) | length) > 0 then
+                error("\($name): args / env に , を含む値は sbx に渡せません")
+              else . end
+            | ["command", (["--command", $argv[0]]
+                + (if ($cmd_args | length) > 0 then ["--args", ($cmd_args | join(","))] else [] end))]
+          elif .url then
+            ["url", (["--url", .url]
+              + ([(.headers // {}) | to_entries[] | ["--header", "\(.key): \(.value)"]] | add // []))]
+          else
+            error("\($name): transport が stdio なら command、それ以外は url が必要です")
+          end
+        | .[0] as $type | .[1] as $add_args
+        | "\($name)\t\($type)\t\([$name] + $add_args + $sbx_options | @sh)"
+      end'
+}
+
+failed=""
+declared=" "
+note_failure() { failed="${failed}${failed:+, }$1"; echo "warn: $1 の登録に失敗" >&2; }
+
+register() {
+  if sbx mcp add "$@"; then
+    printf '%s\n' "$spec" >"$state_dir/$name"
+  else
+    note_failure "$name"
+  fi
+}
+
+for manifest in "$MISE_PROJECT_ROOT"/config/sbx/mcp.yml "$MISE_PROJECT_ROOT"/config/sbx/mcp.*.yml; do
+  # mcp.*.yml が 1 つも無いとき glob がそのまま残るため存在確認する
+  [ -f "$manifest" ] || continue
+  echo "==> $(basename "$manifest")"
+  specs=$(to_specs "$manifest") || { note_failure "$(basename "$manifest")"; continue; }
+  # 一覧は fd 3 から読み、stdin は OAuth の認可などで sbx mcp add が使えるよう端末のまま残す
+  while IFS="$(printf '\t')" read -r name type spec <&3; do
+    [ -n "$name" ] || continue
+    if [ "$name" = skip ]; then
+      echo "ℹ️ $type は registry 参照のため sandbox には登録しません（registry: false で定義してください）"
+      continue
+    fi
+    case "$declared" in
+      *" $name "*)
+        echo "warn: $name は先に読んだファイルで定義済みのため、$(basename "$manifest") の定義は使いません" >&2
+        continue
+        ;;
+    esac
+    declared="${declared}${name} "
+    # spec は jq の @sh でクォート済みなので eval で安全に引数へ戻せる
+    eval "set -- $spec"
+    recorded=$(cat "$state_dir/$name" 2>/dev/null || true)
+    if ! is_registered "$name"; then
+      echo "==> $name を登録"
+      register "$@"
+    elif [ "$recorded" = "$spec" ]; then
+      echo "ℹ️ $name は登録済み（定義に変更なし）"
+    elif [ -z "$recorded" ] && [ "$type" = url ]; then
+      # この仕組みより前に登録した remote サーバ。登録し直すと OAuth の認可もやり直しになるため、
+      # 今の定義を記録するだけにする（以降に定義を変えたときは下の分岐で登録し直す）。
+      # sbx mcp ls からは登録済みの URL を確かめられないため、違う場合に気付けるよう案内を出す
+      printf '%s\n' "$spec" >"$state_dir/$name"
+      echo "ℹ️ $name は登録済み（今の定義を記録しました）"
+      echo "   登録済みの URL は確かめられないため、mcp*.yml と違う場合は sbx mcp rm $name してから再実行してください"
+    else
+      echo "==> $name の定義が変わったため登録し直します"
+      [ "$type" = url ] && echo "   （remote サーバのため OAuth の認可をやり直す場合があります）"
+      if sbx mcp rm "$name"; then
+        register "$@"
+      else
+        note_failure "$name"
+      fi
+    fi
+  done 3<<SPECS
+$specs
+SPECS
+done
+
+# 一覧から消したサーバは自動では消さない（OAuth トークンなども消えるため）。気付けるよう表示だけする
+for name in $registered_names; do
+  case "$declared" in *" $name "*) ;; *) echo "ℹ️ $name は mcp*.yml に無い登録です（不要なら sbx mcp rm $name）" ;; esac
+done
+
+echo
+echo "==> 登録済みの MCP サーバ"
+sbx mcp ls || true
+echo
+echo "sbx-agent は既定では MCP を読み込みません。--static-mcp / SBX_AGENT_STATIC_MCP で指定するか、起動後に mise run sandbox:mcp-load で足してください。"
+
+# 未登録のサーバを使えると誤認させないよう、全部試したうえで失敗を返す
+if [ -n "$failed" ]; then
+  echo >&2
+  echo "error: 登録できなかった MCP サーバ: ${failed}" >&2
+  exit 1
+fi
+'''
+
+["sandbox:mcp-load"]
+description = "Reset loaded MCP servers in a running sandbox, then load only those selected with fzf (none selected = unload all)"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:mcp-load [sandbox-name]
+  # sbx-agent の --static-mcp で読み込まなかった MCP を、起動済みの sandbox へ後から足す。
+  # sandbox を省略すると fzf で選び、MCP は fzf で複数選択する（Tab で選択）。
+  # 最初に登録済みの MCP を全て unload してから、選択したものだけを load し直す（sbx 0.48.0 以降）。
+  # MCP を何も選ばずに終了（Esc など）すると、全て unload するだけで終わる（unload 専用コマンドは無い）。
+  # 選べるのは sbx mcp ls に登録済みのサーバ（登録は mise run sandbox:mcp-add）。
+  for cmd in sbx fzf; do
+    command -v "$cmd" >/dev/null 2>&1 || { echo "error: $cmd が必要です（mise install）" >&2; exit 127; }
+  done
+
+  sandbox="${1:-}"
+  if [ -z "$sandbox" ]; then
+    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
+    sandbox=$(printf '%s\n' "$sandboxes" \
+      | fzf --header-lines=1 --prompt="sandbox> " --header="読み込み先の sandbox を選択" \
+      | awk '{ print $1 }') || exit 130
+    [ -n "$sandbox" ] || exit 130
+  fi
+
+  # 表形式は gateway ごとにまとめて出るため、名前だけ出す -q を使う
+  servers=$(sbx mcp ls -q 2>/dev/null) || { echo "error: sbx mcp ls に失敗しました" >&2; exit 1; }
+  [ -n "$servers" ] \
+    || { echo "error: 登録済みの MCP サーバがありません（mise run sandbox:mcp-add）" >&2; exit 1; }
+  # 何も選ばなかった（Esc / Ctrl-C = 130）場合だけ空選択とみなし、全て unload するだけにする。
+  # それ以外の終了コード（fzf の起動失敗など）は既存の MCP を外さずに中止する
+  rc=0
+  names=$(printf '%s\n' "$servers" \
+    | fzf --multi --prompt="mcp> " \
+        --header="${sandbox} へ読み込む MCP を選択（Tab で複数選択。何も選ばず Esc で全て unload）") || rc=$?
+  if [ "$rc" -eq 130 ]; then
+    names=""
+  elif [ "$rc" -ne 0 ]; then
+    echo "error: fzf が失敗しました（終了コード ${rc}）。MCP は変更していません" >&2
+    exit "$rc"
+  fi
+
+  sbx mcp unload --help >/dev/null 2>&1 \
+    || { echo "error: sbx mcp unload がありません（sbx 0.48.0 以降が必要です。mise install）" >&2; exit 1; }
+  # 引数で渡された sandbox が無いと全ての unload が失敗してしまうため、先に存在を確かめる
+  sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -Fxq -- "$sandbox" \
+    || { echo "error: sandbox $sandbox がありません（sbx ls）" >&2; exit 1; }
+
+  # 読み込み済みのものだけを列挙する手段が sbx に無いため、登録済みの全サーバを unload する。
+  # 読み込んでいないものは失敗するのが正常なので、失敗は止めずにエラー内容を表示して後で一覧する
+  unload_failed=""
+  for name in $servers; do
+    if err=$(sbx mcp unload "$name" --sandbox "$sandbox" 2>&1); then
+      echo "✅ $name を $sandbox から外しました"
+    else
+      unload_failed="${unload_failed}${unload_failed:+, }$name"
+      echo "ℹ️ $name は外れませんでした（読み込んでいない場合は問題ありません）: $(printf '%s' "$err" | tail -n 1)"
+    fi
+  done
+  [ -z "$unload_failed" ] || echo "ℹ️ unload できなかったもの: ${unload_failed}（上のエラーが「未ロード」以外なら、sandbox に残っている可能性があります）"
+  [ -n "$names" ] || exit 0
+
+  failed=""
+  for name in $names; do
+    if sbx mcp load "$name" --sandbox "$sandbox"; then
+      echo "✅ $name を $sandbox に読み込みました"
+    else
+      failed="${failed}${failed:+, }$name"
+      echo "warn: $name の読み込みに失敗しました" >&2
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 読み込めなかった MCP サーバ: ${failed}" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
+["sandbox:recreate"]
+description = "Recreate sandboxes (selected with fzf) with the sbx-agent arguments they were created with"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:recreate [--yes] [sandbox-name...]
+  # マウント・template・ホストの設定ファイルの変更は作成時に固定されるため、既存の sandbox には
+  # 作り直さないと反映されない。sbx-agent が作成時に記録した呼び出し
+  # （${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<name>.sh）に --new --setup-only を付けて再実行し、
+  # 同じ指定で作り直す。アタッチはしないので、続けて使うときは multi-worktree dev 等で入る。
+  # sandbox を省略すると sbx ls から fzf で複数選択する（Tab で選択）。
+  # 作り直すと workspace（ホストと共有するディレクトリ）以外の sandbox 内のデータ（$HOME の中身や
+  # 後から入れたパッケージなど）は消えるため、実行前に確認する（--yes で省略）。
+  assume_yes=false
+  names=""
+  for arg in "$@"; do
+    case "$arg" in
+      -y | --yes) assume_yes=true ;;
+      -*) echo "error: 不明なオプション: $arg（usage: mise run sandbox:recreate [--yes] [sandbox-name...]）" >&2; exit 2 ;;
+      *) names="${names}${names:+ }$arg" ;;
+    esac
+  done
+  command -v sbx >/dev/null 2>&1 || { echo "error: sbx が必要です（mise install）" >&2; exit 127; }
+  state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-agent"
+
+  if [ -z "$names" ]; then
+    command -v fzf >/dev/null 2>&1 \
+      || { echo "usage: mise run sandbox:recreate <sandbox-name>...（fzf があれば省略可）" >&2; exit 2; }
+    sandboxes=$(sbx ls 2>/dev/null) || { echo "error: sbx ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$sandboxes" | wc -l)" -gt 1 ] || { echo "error: sandbox がありません" >&2; exit 1; }
+    names=$(printf '%s\n' "$sandboxes" \
+      | fzf --multi --header-lines=1 --prompt="sandbox> " \
+          --header="作り直す sandbox を選択（Tab で複数選択。セッションは終了し、workspace 外のデータは消えます）" \
+      | awk '{ print $1 }') || exit 130
+    [ -n "$names" ] || exit 130
+  fi
+
+  if [ "$assume_yes" != true ]; then
+    echo "次の sandbox を削除して作り直します:"
+    for name in $names; do echo "  - $name"; done
+    echo "実行中のセッションは終了し、workspace 以外の sandbox 内のデータ（\$HOME の中身や後から入れたパッケージなど）は消えます。"
+    printf '続けますか? [y/N] '
+    read -r answer || answer=""
+    case "$answer" in
+      y | Y | yes) ;;
+      *) echo "中止しました" >&2; exit 130 ;;
+    esac
+  fi
+
+  failed=""
+  for name in $names; do
+    record="${state_dir}/${name}.sh"
+    if [ ! -f "$record" ]; then
+      # 記録は sbx-agent が sandbox を作成したときに書く。記録を始める前に作った sandbox は、
+      # 一度だけ元のコマンドで作り直せば以降はここで作り直せる。
+      echo "warn: ${name} の作成時の記録がありません。元のコマンドに --new を付けて作り直してください" \
+        "（例: multi-worktree dev <task> --new / sbx-agent <agent> --new）" >&2
+      failed="${failed}${failed:+, }$name"
+      continue
+    fi
+    echo "==> ${name} を作り直します"
+    if bash "$record" --new --setup-only; then
+      echo "✅ ${name} を作り直しました"
+    else
+      failed="${failed}${failed:+, }$name"
+      echo "warn: ${name} の作り直しに失敗しました" >&2
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 作り直せなかった sandbox: ${failed}" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
+["sandbox:template-rm"]
+description = "Remove a saved Docker Sandboxes template"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方: mise run sandbox:template-rm [tag...]
+  # tag を省略すると sbx template ls の一覧を fzf で複数選択（Tab）して削除する。
+  if [ $# -eq 0 ]; then
+    command -v fzf >/dev/null 2>&1 || { echo "usage: mise run sandbox:template-rm <tag>...（fzf があれば省略可）" >&2; exit 2; }
+    templates=$(sbx template ls) || { echo "error: sbx template ls に失敗しました" >&2; exit 1; }
+    [ "$(printf '%s\n' "$templates" | wc -l)" -gt 1 ] || { echo "error: template がありません" >&2; exit 1; }
+    # 1 列目が REPOSITORY、2 列目が TAG の場合は repo:tag にする（1 列目に : を含めばそのまま使う）
+    selected=$(printf '%s\n' "$templates" \
+      | fzf --multi --header-lines=1 --prompt="template> " --header="削除する template を選択（Tab で複数選択）" \
+      | awk '{ if (index($1, ":") || NF < 2) print $1; else print $1 ":" $2 }') || exit 130
+    [ -n "$selected" ] || exit 130
+    # shellcheck disable=SC2086 # 改行区切りの tag を引数に分割する
+    set -- $selected
+  fi
+
+  failed=""
+  for tag in "$@"; do
+    if sbx template rm "$tag"; then
+      echo "✅ $tag を削除しました"
+    else
+      failed="${failed}${failed:+, }$tag"
+    fi
+  done
+  [ -z "$failed" ] || { echo "error: 削除できなかった template: ${failed}" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
+["sandbox:disk"]
+description = "Show where Docker Sandboxes disk usage is going (read-only)"
+run = '''
+set -eu
+
+# 読み取り専用。回収は mise run sandbox:prune。
+# ディスクは「ホストの Docker（template をビルドする側）」と「sbx の image store /
+# sandbox 本体」の 2 箇所に分かれて増える。sbx は sandbox 間で layer を共有しないため
+# （docs/docker-sandboxes.md の「リソース使用量」参照）、sandbox の数だけ増える。
+
+# Docker Desktop が止まっていても sbx 側の情報は出したいので、docker 側は失敗を許す
+# （Resource Saver で VM が落ちているときは df が接続エラーになる）。
+if command -v docker >/dev/null 2>&1; then
+  echo "==> ホストの Docker（template のビルド元・build cache）"
+  if docker system df; then
+    echo
+    echo "--- image ごとの内訳（SHARED SIZE が layer の共有分）"
+    docker system df -v 2>/dev/null | sed -n '/^Images space usage:/,/^$/p'
+  else
+    echo "warn: docker に接続できませんでした（Docker Desktop が停止中？）" >&2
+  fi
+  echo
+else
+  echo "warn: docker が無いためホスト側は省略します" >&2
+fi
+
+if command -v sbx >/dev/null 2>&1; then
+  echo "==> sbx の template（sandbox 作成元の image）"
+  sbx template ls || true
+  echo
+  echo "==> sandbox 本体（それぞれが root 20GB + docker data 10GB の上限を持つ）"
+  sbx ls || true
+else
+  echo "warn: sbx が無いため sandbox 側は省略します" >&2
+fi
+'''
+
+["sandbox:prune"]
+description = "Reclaim Docker Sandboxes disk space (dry-run unless --yes)"
+run = '''
+set -eu
+
+# mise は追加引数を "$@" ではなくスクリプト末尾の行に文字列として連結する。
+# 本体を関数にして最終行を `main "$@"` にしておけば、連結された引数がそのまま main に渡る。
+main() {
+  # 使い方:
+  #   mise run sandbox:prune                          # 何が消えるか出すだけ（既定）
+  #   mise run sandbox:prune --yes                    # 停止済み sandbox + dangling image
+  #   mise run sandbox:prune --yes --template         # + ホストの template image
+  #   mise run sandbox:prune --yes --build-cache      # + build cache（cache mount は残す）
+  #   mise run sandbox:prune --yes --build-cache-all  # + build cache（cache mount も消す）
+  #   mise run sandbox:prune --yes --all              # --template + --build-cache
+  #
+  # 既定を dry-run にしているのは、消すと取り返せないものが混ざるため
+  # （--build-cache-all は mise のインストール済みツールの cache mount も消す）。
+
+  apply=false
+  do_template=false
+  do_cache=false
+  cache_all=false
+  failed=0
+  # build-template が agent ごとに作る template（旧名の sbx-agent:local も掃除対象にする）
+  tags="sbx-agent:claude sbx-agent:codex sbx-agent:copilot sbx-agent:local"
+
+  # cache mount（mise のインストール済みツール）を残して build cache を掃除するための filter。
+  # docker buildx prune の filter に type があり、exec.cachemount がこれに当たる
+  # （buildx の docs が `--filter "type!=exec.cachemount"` をそのまま例示している）。
+  cache_keep_filter='type!=exec.cachemount'
+
+  for arg in "$@"; do
+    case "$arg" in
+      -y | --yes) apply=true ;;
+      --template) do_template=true ;;
+      --build-cache) do_cache=true ;;
+      --build-cache-all) do_cache=true; cache_all=true ;;
+      --all) do_template=true; do_cache=true ;;
+      -h | --help)
+        echo "usage: mise run sandbox:prune [--yes] [--template] [--build-cache|--build-cache-all] [--all]"
+        exit 0
+        ;;
+      *) echo "error: 不明な引数: $arg" >&2; exit 2 ;;
+    esac
+  done
+
+  # dry-run では「消える候補」を実際に並べる（コマンド名だけ出しても判断材料にならない）。
+  # 実行時は失敗しても後続を続けるが、最後に非ゼロで終わるよう failed に記録する。
+  run_or_show() {
+    if [ "$apply" = true ]; then
+      echo "+ $*"
+      "$@" || { echo "warn: 失敗しました: $*" >&2; failed=1; }
+    else
+      echo "  (dry-run) $*"
+    fi
+  }
+
+  [ "$apply" = true ] || echo "== dry-run（実行するには --yes を付ける）=="
+
+  # 1) 停止済み sandbox。sbx prune は停止済みしか対象にしないので動いているものは残る。
+  if command -v sbx >/dev/null 2>&1; then
+    echo "==> 停止済み sandbox"
+    sbx prune --dry-run || true
+    run_or_show sbx prune --force
+    echo
+  fi
+
+  if command -v docker >/dev/null 2>&1; then
+    # 2) dangling image。タグの付いていない層だけなので安全。
+    echo "==> ホストの dangling image"
+    docker image ls --filter dangling=true || true
+    run_or_show docker image prune --force
+    echo
+
+    # 3) ホストに残る template image。sbx template load で sbx 側の image store に
+    #    コピー済みなので、ホストのこれは次回ビルドの layer cache としてしか使わない。
+    if [ "$do_template" = true ]; then
+      for tag in $tags; do
+        echo "==> ホストの template image ($tag)"
+        if docker image inspect "$tag" >/dev/null 2>&1; then
+          docker image ls "$tag" || true
+          run_or_show docker image rm "$tag"
+        else
+          echo "  (無し)"
+        fi
+      done
+      echo
+    fi
+
+    # 4) build cache。既定では cache mount を残す filter 付きで掃除する
+    #    （--build-cache-all で cache mount も消す = 次回ビルドがフルインストールになる）。
+    if [ "$do_cache" = true ]; then
+      if [ "$cache_all" = true ]; then
+        echo "==> ホストの build cache（cache mount も消す / 次回ビルドがフルインストール）"
+        docker buildx du || true
+        run_or_show docker builder prune --force
+      else
+        echo "==> ホストの build cache（cache mount は残す）"
+        docker buildx du --filter "$cache_keep_filter" || true
+        run_or_show docker builder prune --force --filter "$cache_keep_filter"
+      fi
+      echo
+    fi
+  fi
+
+  echo "==> 残り"
+  command -v docker >/dev/null 2>&1 && docker system df || true
+
+  [ "$failed" -eq 0 ] || { echo "error: 一部の削除に失敗しました（上の warn を確認してください）" >&2; exit 1; }
+}
+
+main "$@"
+'''
+
+["sandbox:claude-setup"]
+description = "Configure Claude tokens, credential binding and confirmed workspace sandbox recreation"
+run         = 'SBX_DOTFILES_ROOT="$MISE_PROJECT_ROOT" python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-setup.py"'
+
+["sandbox:claude-token"]
+description = "Generate and save Claude setup-tokens with per-account y/n confirmation"
+run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-token.py"'
+
+["sandbox:secret-rm"]
+description = "Remove a named sbx secret (global by default; --sandbox scopes removal)"
+run = '''
+set -eu
+main() {
+  [ $# -gt 0 ] || { echo "usage: mise run sandbox:secret-rm <service> [--sandbox NAME] [--force]" >&2; exit 2; }
+  sbx secret rm "$@"
+}
+main "$@"
+'''
+
+["sandbox:claude-auth-check"]
+description = "Look up and cache the observed organization ID once per account/token"
+run         = 'python3 "$MISE_PROJECT_ROOT/config/devcontainer/scripts/sandbox-claude-auth-check.py"'

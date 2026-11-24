@@ -1,0 +1,15 @@
+{
+  "targets": {
+    "claudecode": ["rules", "skills", "commands", "hooks", "permissions"],
+    "codexcli": ["rules", "skills", "hooks", "permissions"],
+    "copilot": ["rules"],
+    "copilotcli": ["rules", "hooks"],
+  },
+  "delete": false,
+  "verbose": false,
+  "silent": false,
+  "global": true,
+  "simulateCommands": true,
+  // generate 時に、手動設定などで追加した rulesync 管理外の hooks を保持する。
+  "preserveUnownedHooks": true,
+}

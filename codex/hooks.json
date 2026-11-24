@@ -1,0 +1,57 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
+            "timeout": 40
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "statusMessage": "Checking rule update suggestions",
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "statusMessage": "Reviewing recent transcript for rule updates",
+            "type": "command",
+            "command": "\"$HOME/.config/devcontainer/scripts/ai-rule-hook.sh\" --tool codex",
+            "timeout": 30
+          },
+          {
+            "statusMessage": "Opening plan in Plannotator",
+            "type": "command",
+            "command": "if command -v plannotator >/dev/null 2>&1; then plannotator; fi",
+            "timeout": 345600
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|exec_command|shell_command|shell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$HOME/.config/devcontainer/scripts/coderabbit-review.py\"; [ -x \"$f\" ] || exit 0; \"$f\"",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}

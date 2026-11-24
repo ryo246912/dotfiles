@@ -1,0 +1,1270 @@
+#!/usr/bin/env bash
+#
+# sbx-agent: Docker Sandboxes (sbx) 経由で AI Agent を起動するラッパー
+#
+# devcontainer で行っていた「ホストの設定をマウントし、git / agent を設定した隔離環境で
+# AI エージェントを動かす」を Docker Sandboxes で再現する。
+# devcontainer 側の対応表と再現できていない項目は docs/docker-sandboxes.md を参照。
+#
+# Usage:
+#   sbx-agent <agent> [options] [-- <agent-args>...]
+#
+#   agent   : claude | codex | copilot | shell など sbx が対応する agent 名
+#
+# Options:
+#   --name NAME        sandbox 名（既定: <repo>-[<prefix>-]<branch>-<agent>）
+#   --name-prefix PFX  既定の sandbox 名で branch の前に付ける識別子（--config-dir と併用する）
+#   --workspace DIR    primary workspace（既定: カレントディレクトリ）
+#   --claude-account ID Claude サブスクを sandbox ごとに固定（account1/account2/work3 など）
+#   --claude-oauth      通常の OAuth 用。ホストの Claude 設定・認証を共有しない
+#   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
+#   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
+#   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
+#   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
+#   --no-template      template を指定せず sbx の既定 template で起動する
+#   --env-file FILE    環境定義（既定: ~/.config/sbx/sbxenv.yaml）
+#   --env-plan         環境ファイル方式の plan だけ表示する（作成・削除しない）
+#   --env-force        環境ファイルの plan を今回だけ非対話で承認する
+#   --publish SPEC     ポート公開（host:sandbox、複数指定可）
+#   --skills MODE      共有 skills store の扱い（off|readonly|readwrite、既定: readonly）
+#   --static-mcp NAMES ホストに登録済みの MCP サーバを読み込む（`,` 区切り、複数指定可）
+#                      既定は読み込まない（後から `mise run sandbox:mcp-load`）。登録は `mise run sandbox:mcp-add`
+#                      （認証はホスト側で一度だけ）
+#   --cpus N           CPU 数
+#   --memory SIZE      メモリ上限（例: 8g）
+#   --rm               agent セッション終了時に sandbox を削除する
+#   --setup-only       sandbox の作成・初期化だけ行い、Claude の TUI は起動しない
+#   --new              既存 sandbox を削除してから新規作成する
+#   --no-config        ホスト設定の自動マウント・自動 git 設定を行わない
+#   --no-host-bridge   ホスト連携（mac-host への SSH 経路・crit ポート公開）を設定しない
+#   -h, --help         このヘルプを表示
+#
+# Environment:
+#   SBX_AGENT_MOUNTS    追加 workspace を `,` 区切りで指定（--mount と併用可）
+#   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
+#   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら読み込まない）
+#   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
+#   CLAUDE_CODE_ENABLE_CFC  明示された値だけ Claude sandbox へ転送（既定値なし）
+#
+# sandbox を作成したときの呼び出しを ${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh に
+# 記録する。`mise run sandbox:recreate` はこれに --new --setup-only を付けて再実行し、
+# マウントや template の変更を既存の sandbox に反映する。
+#
+# 参考: https://docs.docker.com/reference/cli/sbx/
+set -uo pipefail
+
+log_info() { printf '\033[0;34m[INFO]\033[0m %s\n' "$1" >&2; }
+log_warn() { printf '\033[1;33m[WARN]\033[0m %s\n' "$1" >&2; }
+log_error() { printf '\033[0;31m[ERROR]\033[0m %s\n' "$1" >&2; }
+
+# ファイル先頭のコメントブロックをそのままヘルプとして出す。
+# 行番号を決め打ちするとヘッダを増やすたびにずれるため、最初の非コメント行までを出力する。
+show_usage() {
+    awk 'NR == 1 { next }
+         /^#/ { sub(/^# ?/, ""); print; next }
+         { exit }' "$0"
+}
+
+if [[ $# -eq 0 ]]; then
+    show_usage
+    exit 1
+fi
+
+case "$1" in
+    -h | --help)
+        show_usage
+        exit 0
+        ;;
+    -*)
+        log_error "最初の引数には agent 名を指定してください (例: sbx-agent claude)"
+        exit 1
+        ;;
+esac
+
+AGENT="$1"
+shift
+
+SANDBOX_NAME=""
+NAME_PREFIX=""
+WORKSPACE="$PWD"
+CONFIG_DIR=""
+CLAUDE_ACCOUNT=""
+CLAUDE_OAUTH=false
+BRANCH=""
+TEMPLATE=""
+NO_TEMPLATE=false
+SKILLS="readonly"
+CPUS=""
+MEMORY=""
+SETUP_ONLY=false
+FORCE_NEW=false
+REMOVE_ON_EXIT=false
+MOUNT_CONFIG=true
+HOST_BRIDGE=true
+ENV_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/sbx/sbxenv.yaml"
+ENV_PLAN=false
+ENV_FORCE=false
+EXTRA_MOUNTS=()
+PUBLISH_PORTS=()
+STATIC_MCP=()
+AGENT_ARGS=()
+
+expand_tilde() {
+    local path="$1"
+    path="${path/#\~/$HOME}"
+    printf '%s' "${path//\$HOME/$HOME}"
+}
+
+# symlink を 1 段だけ解決する。
+# macOS の readlink には -f が無い環境があるため、GNU coreutils に依存しない形で辿る。
+resolve_symlink() {
+    local path="$1" target
+    target=$(readlink "$path" 2>/dev/null) || return 1
+    [[ "$target" != /* ]] && target="$(cd "$(dirname "$path")" 2>/dev/null && pwd)/$target"
+    printf '%s' "$target"
+}
+
+# 候補が「この dotfiles リポジトリ」かどうかを判定する。
+# mise.toml と .git があるだけでは、同じ構成の別プロジェクトを誤認する
+# （config/devcontainer のように mise.toml を持つサブディレクトリも引っかかる）。
+# このリポジトリは mise.toml の [dotfiles] で配置先を宣言しているので、それを目印にする。
+looks_like_dotfiles_repo() {
+    [[ -f "$1/mise.toml" && -e "$1/.git" ]] || return 1
+    # [dotfiles] と [dotfiles."~/.config"] の両方に当てる
+    grep -q '^\[dotfiles[].]' "$1/mise.toml" 2>/dev/null
+}
+
+# dotfiles リポジトリのチェックアウト先を特定する。
+# mise の [dotfiles] は ~/.config・~/.claude・~/.codex を symlink-each で配置するため、
+# それらをマウントしても中身はリポジトリを指す symlink のままになる。sbx はホストと同じ
+# 絶対パスへマウントするので、リポジトリ自体も同じパスで渡せば全ての symlink が解決する。
+find_dotfiles_repo() {
+    local candidate probe target dir
+    # 配置済み symlink のリンク先から逆算するのが最も確実（「実際にリンク先になっている
+    # ツリー」が分かるため）なので、環境変数や既定パスより先に試す。
+    for probe in "${HOME}/.config/zsh/main.zsh" "${HOME}/.config/git/gitignore" "${HOME}/.claude/settings.json"; do
+        [[ -L "$probe" ]] || continue
+        target=$(resolve_symlink "$probe") || continue
+        dir=$(dirname "$target")
+        while [[ "$dir" != "/" && "$dir" != "." ]]; do
+            if looks_like_dotfiles_repo "$dir"; then
+                printf '%s' "$dir"
+                return 0
+            fi
+            dir=$(dirname "$dir")
+        done
+    done
+    # symlink が 1 つも見つからない（dotfiles 未適用など）場合のフォールバック。
+    # DOTFILES_DIR はクォート付きで export されている（例: DOTFILES_DIR="~/foo"）ことが
+    # あるため、expand_tilde で ~ を展開してから判定する。
+    for candidate in "${DOTFILES_DIR:-}" "${HOME}/dotfiles"; do
+        [[ -n "$candidate" ]] || continue
+        candidate=$(expand_tilde "$candidate")
+        if looks_like_dotfiles_repo "$candidate"; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
+    return 1
+}
+
+require_value() {
+    [[ $2 -gt 0 ]] || {
+        log_error "$1 には値が必要です"
+        exit 1
+    }
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --name)
+            shift && require_value --name $#
+            SANDBOX_NAME="$1"
+            ;;
+        --name=*) SANDBOX_NAME="${1#*=}" ;;
+        --name-prefix)
+            shift && require_value --name-prefix $#
+            NAME_PREFIX="$1"
+            ;;
+        --name-prefix=*) NAME_PREFIX="${1#*=}" ;;
+        --workspace)
+            shift && require_value --workspace $#
+            WORKSPACE="$1"
+            ;;
+        --workspace=*) WORKSPACE="${1#*=}" ;;
+        --claude-account)
+            shift && require_value --claude-account $#
+            CLAUDE_ACCOUNT="$1"
+            ;;
+        --claude-account=*) CLAUDE_ACCOUNT="${1#*=}" ;;
+        --claude-oauth) CLAUDE_OAUTH=true ;;
+        --config-dir)
+            shift && require_value --config-dir $#
+            CONFIG_DIR="$1"
+            ;;
+        --config-dir=*) CONFIG_DIR="${1#*=}" ;;
+        --branch)
+            shift && require_value --branch $#
+            BRANCH="$1"
+            ;;
+        --branch=*) BRANCH="${1#*=}" ;;
+        --template)
+            shift && require_value --template $#
+            TEMPLATE="$1"
+            ;;
+        --template=*) TEMPLATE="${1#*=}" ;;
+        --no-template) NO_TEMPLATE=true ;;
+        --env-file)
+            shift && require_value --env-file $#
+            ENV_FILE="$1"
+            ;;
+        --env-file=*) ENV_FILE="${1#*=}" ;;
+        --env-plan) ENV_PLAN=true ;;
+        --env-force) ENV_FORCE=true ;;
+        --mount)
+            shift && require_value --mount $#
+            EXTRA_MOUNTS+=("$1")
+            ;;
+        --mount=*) EXTRA_MOUNTS+=("${1#*=}") ;;
+        --publish)
+            shift && require_value --publish $#
+            PUBLISH_PORTS+=("$1")
+            ;;
+        --publish=*) PUBLISH_PORTS+=("${1#*=}") ;;
+        --skills)
+            shift && require_value --skills $#
+            SKILLS="$1"
+            ;;
+        --skills=*) SKILLS="${1#*=}" ;;
+        --static-mcp)
+            shift && require_value --static-mcp $#
+            STATIC_MCP+=("$1")
+            ;;
+        --static-mcp=*) STATIC_MCP+=("${1#*=}") ;;
+        --cpus)
+            shift && require_value --cpus $#
+            CPUS="$1"
+            ;;
+        --cpus=*) CPUS="${1#*=}" ;;
+        --memory)
+            shift && require_value --memory $#
+            MEMORY="$1"
+            ;;
+        --memory=*) MEMORY="${1#*=}" ;;
+        --rm) REMOVE_ON_EXIT=true ;;
+        --new) FORCE_NEW=true ;;
+        --setup-only) SETUP_ONLY=true ;;
+        --no-config) MOUNT_CONFIG=false ;;
+        --no-host-bridge) HOST_BRIDGE=false ;;
+        -h | --help)
+            show_usage
+            exit 0
+            ;;
+        --)
+            shift
+            AGENT_ARGS+=("$@")
+            break
+            ;;
+        *) AGENT_ARGS+=("$1") ;;
+    esac
+    shift
+done
+
+log_info "sbx-agent の準備を開始します"
+
+# sandbox:recreate が作成時と同じ指定で作り直せるよう、解釈した引数を記録用に控えておく
+# （下で既定値が埋まる前の、呼び出し側が明示した値だけにする）。--name / --workspace は
+# 解決後の値を記録時に足す。--new / --rm / --setup-only / --env-plan / --env-force はその回だけの指定なので含めない。
+REPLAY_ARGS=("$AGENT" --skills "$SKILLS")
+[[ -n "$CONFIG_DIR" ]] && REPLAY_ARGS+=(--config-dir "$CONFIG_DIR")
+[[ -n "$CLAUDE_ACCOUNT" ]] && REPLAY_ARGS+=(--claude-account "$CLAUDE_ACCOUNT")
+[[ "$CLAUDE_OAUTH" == true ]] && REPLAY_ARGS+=(--claude-oauth)
+REPLAY_ARGS+=(--env-file "$ENV_FILE")
+[[ -n "$BRANCH" ]] && REPLAY_ARGS+=(--branch "$BRANCH")
+[[ -n "$TEMPLATE" ]] && REPLAY_ARGS+=(--template "$TEMPLATE")
+[[ "$NO_TEMPLATE" == true ]] && REPLAY_ARGS+=(--no-template)
+for _spec in ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"}; do REPLAY_ARGS+=(--mount "$_spec"); done
+for _spec in ${PUBLISH_PORTS[@]+"${PUBLISH_PORTS[@]}"}; do REPLAY_ARGS+=(--publish "$_spec"); done
+for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do REPLAY_ARGS+=(--static-mcp "$_spec"); done
+[[ -n "$CPUS" ]] && REPLAY_ARGS+=(--cpus "$CPUS")
+[[ -n "$MEMORY" ]] && REPLAY_ARGS+=(--memory "$MEMORY")
+[[ "$MOUNT_CONFIG" == false ]] && REPLAY_ARGS+=(--no-config)
+[[ "$HOST_BRIDGE" == false ]] && REPLAY_ARGS+=(--no-host-bridge)
+
+# sandbox 内の固定パス・固定ポート
+# scripts は Dockerfile.sandbox が image 内の agent ホーム配下へ COPY している
+readonly SANDBOX_SCRIPTS_DIR="/home/agent/.config/devcontainer/scripts"
+readonly SANDBOX_POST_CREATE="${SANDBOX_SCRIPTS_DIR}/sandbox-post-create.sh"
+# crit / plannotator は sandbox 内では固定ポートで待ち受け、host port は sbx に自動採番させる
+readonly CRIT_SANDBOX_PORT=7842
+readonly PLANNOTATOR_SANDBOX_PORT=19433
+# mise run sandbox:build-template が agent ごとに作るローカル template の既定名。
+# 中身は同じで base image（FLAVOR）だけが agent に合わせてある。sbx は FLAVOR に合った
+# agent の kit（認証など）しか当てられないため、agent ごとに template を選ぶ。
+# build-template が作らない agent（shell など）は template を渡さず sbx の既定に任せる。
+case "$AGENT" in
+    claude | codex | copilot) readonly DEFAULT_TEMPLATE="sbx-agent:${AGENT}" ;;
+    *) readonly DEFAULT_TEMPLATE="" ;;
+esac
+
+if ! command -v sbx >/dev/null 2>&1; then
+    log_error "sbx コマンドが見つかりません。'mise install' で導入してください（docs/docker-sandboxes.md 参照）"
+    exit 1
+fi
+
+if [[ ${#STATIC_MCP[@]} -eq 0 ]] && [[ -n "${SBX_AGENT_STATIC_MCP:-}" ]]; then
+    STATIC_MCP+=("$SBX_AGENT_STATIC_MCP")
+fi
+# どちらも無ければ何も読み込まない。読み込んだ MCP のツール定義は agent のコンテキストを使うため、
+# 必要なものだけ --static-mcp / SBX_AGENT_STATIC_MCP で指定するか、起動後に
+# mise run sandbox:mcp-load で足す（登録だけしたサーバは sandbox から見えない）。
+# `,` 区切りを展開して重複を除く
+MCP_SERVERS=()
+for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do
+    IFS=',' read -ra _names <<< "$_spec"
+    for _name in "${_names[@]}"; do
+        [[ -z "$_name" ]] && continue
+        _seen=false
+        for _existing in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
+            [[ "$_existing" == "$_name" ]] && _seen=true && break
+        done
+        [[ "$_seen" == false ]] && MCP_SERVERS+=("$_name")
+    done
+done
+
+# template は常に DEFAULT_TEMPLATE を使う。--template / SBX_AGENT_TEMPLATE で上書きでき、
+# --no-template で sbx の既定 template に戻せる。未ビルドなら環境の作成が失敗し、
+# そこで原因と build 手順を出す。
+if [[ "$NO_TEMPLATE" == true ]]; then
+    [[ -n "$TEMPLATE" ]] && log_warn "--no-template が指定されたため --template を無視します"
+    TEMPLATE=""
+elif [[ -z "$TEMPLATE" ]]; then
+    TEMPLATE="${SBX_AGENT_TEMPLATE:-$DEFAULT_TEMPLATE}"
+fi
+
+case "$SKILLS" in
+    off | readonly | readwrite) ;;
+    *)
+        log_error "--skills には off / readonly / readwrite のいずれかを指定してください: $SKILLS"
+        exit 1
+        ;;
+esac
+
+# agent ごとの設定ディレクトリ（devcontainer.json で bind mount していたもの）と、
+# sandbox 内でそれを参照させる環境変数。sbx はホストと同じ絶対パスに workspace を
+# マウントするため、sandbox 内の $HOME はホストとは別物になる。
+AGENT_CONFIG_ENV=""
+if [[ "$CLAUDE_OAUTH" == true ]] && [[ "$AGENT" != claude || -n "$CLAUDE_ACCOUNT" || -n "$CONFIG_DIR" ]]; then
+    log_error "--claude-oauth は claude 専用で、--claude-account / --config-dir と併用できません"
+    exit 1
+fi
+case "$AGENT" in
+    claude)
+        if [[ "$CLAUDE_OAUTH" != true ]]; then
+            if [[ -z "$CONFIG_DIR" ]]; then
+                case "$CLAUDE_ACCOUNT" in
+                    "" | account1) CONFIG_DIR="${HOME}/.claude" ;;
+                    account2) CONFIG_DIR="${HOME}/.claude-account2" ;;
+                    work3) CONFIG_DIR="${HOME}/.claude-work3" ;;
+                    *)
+                        log_error "このアカウントでは --config-dir を指定してください: $CLAUDE_ACCOUNT"
+                        exit 1
+                        ;;
+                esac
+            fi
+            AGENT_CONFIG_ENV="CLAUDE_CONFIG_DIR"
+        fi
+        ;;
+    codex)
+        : "${CONFIG_DIR:=${HOME}/.codex}"
+        AGENT_CONFIG_ENV="CODEX_HOME"
+        ;;
+    copilot) : "${CONFIG_DIR:=${HOME}/.copilot}" ;;
+esac
+[[ -n "$CONFIG_DIR" ]] && CONFIG_DIR=$(expand_tilde "$CONFIG_DIR")
+
+# workspace を絶対パス化する（sbx はホストの絶対パスをそのまま sandbox 内にマウントする）
+WORKSPACE=$(cd "$(expand_tilde "$WORKSPACE")" 2>/dev/null && pwd) || {
+    log_error "workspace が見つかりません: $WORKSPACE"
+    exit 1
+}
+
+# sandbox 名: <repo>-[<prefix>-]<branch>-<agent>
+# sbx の sandbox 名は hostname 相当のため、英数字とハイフンのみに正規化する
+sanitize_name() {
+    printf '%s' "$1" \
+        | tr -d '\n' \
+        | tr '[:upper:]' '[:lower:]' \
+        | sed -E 's#[^a-z0-9]+#-#g; s#-+#-#g; s#^-+##; s#-+$##'
+}
+
+if [[ -z "$SANDBOX_NAME" ]]; then
+    repo=$(git -C "$WORKSPACE" rev-parse --show-toplevel 2>/dev/null) || repo="$WORKSPACE"
+    branch=$(git -C "$WORKSPACE" rev-parse --abbrev-ref HEAD 2>/dev/null) || branch=""
+    # commit の無いリポジトリでは --abbrev-ref HEAD が "HEAD" を返す
+    [[ -z "$branch" || "$branch" == "HEAD" ]] && branch="main"
+    SANDBOX_NAME=$(sanitize_name "$(basename "$repo")-${NAME_PREFIX:+$NAME_PREFIX-}${branch}-${AGENT}")
+    [[ -z "$SANDBOX_NAME" ]] && SANDBOX_NAME="sbx-${AGENT}"
+fi
+# sandbox 名は 63 文字以内で、末尾がハイフン・ピリオドでないことが要求される
+if ((${#SANDBOX_NAME} > 63)); then
+    SANDBOX_NAME="${SANDBOX_NAME:0:63}"
+    SANDBOX_NAME="${SANDBOX_NAME%%[-.]}"
+fi
+
+# Subscription kit uses scoped secrets with Bearer injection, not built-in OAuth.
+SUBSCRIPTION_KIT=""
+SUBSCRIPTION_TOKEN=""
+SUBSCRIPTION_MARKER=""
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    if [[ "$AGENT" != claude || ! "$CLAUDE_ACCOUNT" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
+        log_error "--claude-account は claude 専用です。ID は小文字英数字とハイフンで指定してください"
+        exit 1
+    fi
+    if [[ "$MOUNT_CONFIG" != true ]]; then
+        log_error "--claude-account と --no-config は併用できません"
+        exit 1
+    fi
+    subscription_repo=$(find_dotfiles_repo) || {
+        log_error "subscription kit のため dotfiles の配置が必要です（DOTFILES_DIR）"
+        exit 1
+    }
+    SUBSCRIPTION_KIT="${subscription_repo}/config/sbx/kits/claude-subscription"
+    [[ -f "$SUBSCRIPTION_KIT/claude-subscription.yaml" ]] || { log_error "subscription kit が見つかりません"; exit 1; }
+    SUBSCRIPTION_TOKEN="${HOME}/.local/state/sbx-agent-credentials/${CLAUDE_ACCOUNT}.token"
+    SUBSCRIPTION_MARKER="${HOME}/.local/state/sbx-agent-credentials/sandboxes/${SANDBOX_NAME}"
+    if [[ ! -s "$SUBSCRIPTION_TOKEN" || -L "$SUBSCRIPTION_TOKEN" ]]; then
+        log_error "サブスク用 token が未登録です: $SUBSCRIPTION_TOKEN（docs/docker-sandboxes.md 参照）"
+        exit 1
+    fi
+fi
+
+# ---------------------------------------------------------------------------
+# 追加 workspace の組み立て
+#   - 環境変数 SBX_AGENT_MOUNTS（`,` 区切り）→ --mount → ホスト設定 → agent 設定 の順
+#   - `<path>:ro` は sbx の read-only マウント指定なので接尾辞として温存する
+# ---------------------------------------------------------------------------
+log_info "ホスト設定と共有 mount を確認します"
+MOUNTS=()
+# 会話ログは選択したホストアカウントの projects に残す。
+CLAUDE_PROJECTS_HOST=""
+if [[ "$AGENT" == claude ]] && ! [[ "$MOUNT_CONFIG" == true && -n "$AGENT_CONFIG_ENV" && -n "$CONFIG_DIR" ]]; then
+    CLAUDE_PROJECTS_HOST="${CONFIG_DIR:-${HOME}/.claude}/projects"
+    if ! mkdir -p "$CLAUDE_PROJECTS_HOST"; then
+        log_error "会話ログの保存先を作成できません: $CLAUDE_PROJECTS_HOST"
+        exit 1
+    fi
+fi
+add_mount() {
+    local spec="$1"
+    local path="$spec"
+    local suffix=""
+
+    if [[ "$spec" == *:ro ]]; then
+        path="${spec%:ro}"
+        suffix=":ro"
+    fi
+
+    path=$(expand_tilde "$path")
+    if [[ ! -e "$path" ]]; then
+        log_warn "存在しないためマウントをスキップします: $path"
+        return
+    fi
+
+    # 同じパスが既にあれば足さない。ただし read-only の指定は書き込み可より優先する
+    # （先に --mount などで書き込み可が渡されても、ホスト設定の保護を無効にさせない）。
+    # 親ディレクトリのマウントより後ろに積むため、既存の指定は外して末尾に足し直す。
+    local existing
+    local -a kept=()
+    for existing in ${MOUNTS[@]+"${MOUNTS[@]}"}; do
+        if [[ "${existing%:ro}" == "$path" ]]; then
+            [[ -z "$suffix" || "$existing" == *:ro ]] && return
+            continue
+        fi
+        kept+=("$existing")
+    done
+    MOUNTS=(${kept[@]+"${kept[@]}"})
+
+    MOUNTS+=("${path}${suffix}")
+}
+
+if [[ -n "${SBX_AGENT_MOUNTS:-}" ]]; then
+    # `:` は read-only 指定の `:ro` と衝突するため `,` 区切りにしている
+    IFS=',' read -ra _env_mounts <<< "$SBX_AGENT_MOUNTS"
+    for spec in "${_env_mounts[@]}"; do
+        [[ -n "$spec" ]] && add_mount "$spec"
+    done
+fi
+
+for spec in ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"}; do
+    add_mount "$spec"
+done
+
+if [[ "$MOUNT_CONFIG" == true ]]; then
+    # devcontainer.json の mounts に対応するホスト設定
+    # ファイル単位では checkout や設定再生成による inode の置換に追従できない。
+    add_mount "${HOME}/.config/git:ro"
+    add_mount "${HOME}/.aws/config:ro"
+    add_mount "${HOME}/.agents:ro"
+    add_mount "${HOME}/.ssh/known_hosts:ro"
+    [[ "$CLAUDE_OAUTH" != true ]] && add_mount "${HOME}/.claude.json:ro"
+    # nvim 設定は read-only。書き込み可にすると agent がホストの init.lua を書き換えられてしまう。
+    # lazy.nvim の lockfile は AI_AGENT が立っているとき stdpath("state") 側へ逃がしている
+    # （config/nvim/init.lua 参照）ため、read-only でもプラグイン管理は動く。
+    add_mount "${HOME}/.config/nvim:ro"
+    # agent-lessons（教訓の private リポジトリ）。skill / hook は ~/.local/share/agent-lessons 固定で
+    # 読み書きするため、sandbox 内の $HOME から symlink を張る（sandbox-post-create.sh）。
+    # lessons-record の観察記録と lessons-harvest の週次収集（pull / branch / commit / push）を
+    # sandbox 内で実行できるよう、.git を含めて書き込み可で渡す。
+    # ホストの clone を直接共有するため、Git 設定や hooks の変更もホストへ反映される。
+    # 後続のホスト側 Git 操作でコードを実行しうるため、ホスト実行を許容できる信頼済み agent 向け。
+    # この共有 clone では sandbox をホスト実行の信頼境界の内側として扱う（docs/agent-lessons.md）。
+    if [[ -d "${HOME}/.local/share/agent-lessons" ]]; then
+        add_mount "${HOME}/.local/share/agent-lessons"
+    fi
+    # gh の設定（~/.config/gh）はマウントしない。hosts.yml に OAuth トークンが平文で入っており、
+    # sandbox 内の agent がそれを読めてしまう。GitHub 認証は sbx secret（ホスト側プロキシが
+    # 送信時に注入する）で行う。
+    [[ -n "$CONFIG_DIR" ]] && add_mount "$CONFIG_DIR"
+    # 上のホスト設定は mise の [dotfiles] が symlink-each で配置しているため、中身は
+    # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
+    # read-only で渡さないと、sandbox 内では全てリンク切れになる。
+    if dotfiles_repo=$(find_dotfiles_repo); then
+        # 省略するのは workspace がリポジトリ root そのもののときだけ（既に rw でマウント
+        # 済み）。サブディレクトリを workspace にした場合は root が見えないため、
+        # ~/.config 配下の symlink を解決するにはリポジトリの追加マウントが必要になる。
+        if [[ "$WORKSPACE" != "$dotfiles_repo" ]]; then
+            add_mount "${dotfiles_repo}:ro"
+        fi
+    else
+        log_warn "dotfiles リポジトリが見つからないため、ホスト設定の symlink が sandbox 内で解決できません"
+        log_warn "  既定の ~/dotfiles 以外に clone している場合は DOTFILES_DIR を export してください"
+    fi
+
+    # ~/.claude-account2 などは skills / agents / plugins / projects を ../.claude/<entry> への
+    # symlink で共有している（claude-share-config が作る）。sandbox 内では
+    # CLAUDE_CONFIG_DIR がこのホストのパスを指し、sbx の共有 skills store
+    # （/home/agent/.claude/skills）は読まれないため、リンク先もマウントしないと
+    # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
+    # 対象は claude-share-config が共有する entry に限る（任意の symlink を辿ると、認証情報など
+    # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
+    # 最終的に dotfiles リポジトリ内を指すディレクトリは read-only にする。書き込み可で渡すと、
+    # 上の `${dotfiles_repo}:ro` より子のマウントが優先され、sandbox からホストの dotfiles を
+    # 書き換えられてしまう。
+    if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
+        config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
+        dotfiles_repo_real=""
+        [[ -n "${dotfiles_repo:-}" ]] && dotfiles_repo_real=$(cd "$dotfiles_repo" && pwd -P)
+        # settings.json などのファイルを先に処理する。下で親ディレクトリ（~/.claude）を read-only で
+        # 足すため、その中の skills / projects などの書き込み可マウントより前に積んでおく
+        # （claude-share-config --list-entries はファイル群を先、ディレクトリを後に返す）。
+        shared_entries=()
+        share_config_cmd="$(dirname "${BASH_SOURCE[0]}")/claude-share-config"
+        [[ -x "$share_config_cmd" ]] || share_config_cmd=$(command -v claude-share-config || true)
+        if [[ -n "$share_config_cmd" ]]; then
+            while IFS= read -r shared_entry; do
+                shared_entries+=("$shared_entry")
+            done < <("$share_config_cmd" --list-entries)
+        else
+            log_warn "claude-share-config が見つからないため、共有設定のリンク先をマウントしません"
+        fi
+        for shared_entry in ${shared_entries[@]+"${shared_entries[@]}"}; do
+            entry="${CONFIG_DIR}/${shared_entry}"
+            [[ -L "$entry" && -e "$entry" ]] || continue
+            target=$(resolve_symlink "$entry") || continue
+            # 親ディレクトリだけ正規化し、最後の要素は symlink のまま渡す
+            # （リンク先がさらに symlink でも、その経路ごと sandbox 内で解決させるため）
+            target_parent=$(cd "$(dirname "$target")" 2>/dev/null && pwd -P) || continue
+            target="${target_parent}/$(basename "$target")"
+            [[ "$target" == "$config_dir_real"/* ]] && continue
+            # sbx がマウントできるのはディレクトリと通常ファイルだけで、ファイルへの symlink
+            # （~/.claude/settings.json など）は "exists but is not a directory" で作成ごと失敗する。
+            # ファイル（settings.json）はリンク先のあるディレクトリ（~/.claude）を read-only で
+            # 足して、symlink の連鎖ごと sandbox 内で解決させる。dotfiles リポジトリ内なら
+            # 上の `${dotfiles_repo}:ro` で既に解決するので足さない。
+            if [[ ! -d "$target" ]]; then
+                [[ -n "$dotfiles_repo_real" && ("$target_parent" == "$dotfiles_repo_real" || "$target_parent" == "$dotfiles_repo_real"/*) ]] \
+                    || add_mount "${target_parent}:ro"
+                continue
+            fi
+
+            # symlink の連鎖を辿りきった実体の場所で read-only にするか決める
+            final=$(cd "$target" 2>/dev/null && pwd -P) || continue
+            if [[ -n "$dotfiles_repo_real" && ("$final" == "$dotfiles_repo_real" || "$final" == "$dotfiles_repo_real"/*) ]]; then
+                add_mount "${target}:ro"
+            else
+                add_mount "$target"
+            fi
+        done
+    fi
+
+    # codex は信頼したディレクトリなどを $CODEX_HOME/config.toml に書き込む。~/.codex/config.toml は
+    # dotfiles リポジトリへの symlink で、リポジトリは上で read-only マウントしているため、そのままだと
+    # "failed to persist config.toml" で信頼設定を保存できない。ホストと同じく dotfiles 側へ書けるよう、
+    # 実体のあるディレクトリ（リポジトリの codex/）だけを書き込み可で重ねる。codex は一時ファイル +
+    # rename で書くため、ファイル単体ではなくディレクトリでマウントする必要がある。
+    # 注意: sandbox 内の agent が config.toml / hooks.json を書き換えると、次にホストで codex を
+    # 起動したときにその hooks や MCP の起動コマンドが実行される（sandbox の外へ影響が出る）。
+    if [[ "$AGENT" == codex && -n "$CONFIG_DIR" && -L "${CONFIG_DIR}/config.toml" ]]; then
+        codex_config="${CONFIG_DIR}/config.toml"
+        for _ in 1 2 3 4 5 6 7 8; do
+            [[ -L "$codex_config" ]] || break
+            codex_config=$(resolve_symlink "$codex_config") || break
+        done
+        if [[ -f "$codex_config" ]] && codex_config_dir=$(cd "$(dirname "$codex_config")" 2>/dev/null && pwd -P); then
+            log_warn "codex の設定ディレクトリを書き込み可でマウントします: ${codex_config_dir}"
+            log_warn "  sandbox 内での config.toml / hooks.json の変更はホストの codex にも反映されます"
+            add_mount "$codex_config_dir"
+        fi
+    fi
+fi
+
+# ホスト連携: mac-host への SSH に使う devcontainer 専用鍵
+# （個人鍵は渡さない。署名はこれとは別に ssh-agent forwarding を使う）
+HOST_SSH_KEY="${HOME}/.ssh/id_docker_devcontainer"
+if [[ "$HOST_BRIDGE" == true ]] && [[ -f "$HOST_SSH_KEY" ]]; then
+    add_mount "${HOST_SSH_KEY}:ro"
+else
+    HOST_SSH_KEY=""
+fi
+
+# workspace が linked worktree の場合、.git file は common git dir を絶対パスで参照する。
+# sbx はホストと同じ絶対パスにマウントするため、これも渡さないと sandbox 内で git が壊れる
+# （公式ドキュメントの "Host worktree" の制限を回避する方法。docs/docker-sandboxes.md 参照）。
+if grep -q '^gitdir: [^/]' "${WORKSPACE}/.git" 2>/dev/null; then
+    log_warn "workspace が relative-paths 形式の worktree のため、sandbox 内で git が使えません"
+elif common_git_dir=$(git -C "$WORKSPACE" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+    [[ "$common_git_dir" != "${WORKSPACE}/.git" ]] && add_mount "$common_git_dir"
+fi
+
+# ---------------------------------------------------------------------------
+# sandbox の環境変数
+#   devcontainer.json の remoteEnv と post-create.sh の git 設定に対応する。
+#   git 設定は GIT_CONFIG_COUNT/KEY/VALUE で注入する（sandbox 内の $HOME は別物なので
+#   ホストの ~/.config/git/config は自動では読まれない）。
+# ---------------------------------------------------------------------------
+ENV_ARGS=()
+add_env() { ENV_ARGS+=(--env "$1=$2"); }
+
+GIT_CONFIG_PAIRS=()
+add_git_config() { GIT_CONFIG_PAIRS+=("$1" "$2"); }
+
+add_env HOST_USER "${USER:-}"
+CLAUDE_AUTH_METHOD=""
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    CLAUDE_AUTH_METHOD=setup-token
+elif [[ "$CLAUDE_OAUTH" == true ]]; then
+    CLAUDE_AUTH_METHOD=oauth
+fi
+[[ -n "$CLAUDE_AUTH_METHOD" ]] && add_env SBX_CLAUDE_AUTH_METHOD "$CLAUDE_AUTH_METHOD"
+if [[ "$AGENT" == claude && -n "${CLAUDE_CODE_ENABLE_CFC+x}" ]]; then
+    # Chrome の有効化は呼び出し元（ccmanager の OAuth preset など）が選ぶ。
+    # 明示された値だけ sandbox の環境へ渡し、daemon / worker にも継承させる。
+    add_env CLAUDE_CODE_ENABLE_CFC "$CLAUDE_CODE_ENABLE_CFC"
+fi
+# workspace の mise 設定を信頼し、非対話実行で trust prompt が出ないようにする
+add_env MISE_TRUSTED_CONFIG_PATHS "/mise:$WORKSPACE"
+if [[ "$HOST_BRIDGE" == true ]]; then
+    # crit: ホストのブラウザから参照できるよう 0.0.0.0 にバインドし、固定ポートで待ち受ける
+    add_env CRIT_HOST 0.0.0.0
+    add_env CRIT_PORT "$CRIT_SANDBOX_PORT"
+    # 非 loopback bind を許可する（sbx 側はホストの loopback にだけ publish する）
+    add_env CRIT_ALLOW_UNAUTHENTICATED_NETWORK 1
+    # sandbox 内では更新チェック不要
+    add_env CRIT_NO_UPDATE_CHECK 1
+    # plannotator: local mode の live annotation を有効にし、UI は mac-host への
+    # SSH reverse tunnel でホストへ公開する
+    add_env PLANNOTATOR_REMOTE 0
+    add_env PLANNOTATOR_PORT "$PLANNOTATOR_SANDBOX_PORT"
+    add_env PLANNOTATOR_BROWSER "${SANDBOX_SCRIPTS_DIR}/plannotator-browser"
+    [[ -n "$HOST_SSH_KEY" ]] && add_env SBX_HOST_SSH_KEY "$HOST_SSH_KEY"
+fi
+
+# nvim / .claude.json はホスト設定のマウント（--no-config で止まる側）に属するため、
+# ホスト連携の有無ではなく MOUNT_CONFIG で判定する。
+if [[ "$MOUNT_CONFIG" == true ]]; then
+    [[ -d "${HOME}/.config/nvim" ]] && add_env SBX_HOST_NVIM_CONFIG "${HOME}/.config/nvim"
+    [[ "$CLAUDE_OAUTH" != true && -f "${HOME}/.claude.json" ]] && add_env SBX_HOST_CLAUDE_JSON "${HOME}/.claude.json"
+    [[ -d "${HOME}/.local/share/agent-lessons" ]] && add_env SBX_HOST_AGENT_LESSONS "${HOME}/.local/share/agent-lessons"
+    # SessionStart hook（agent-lessons-context）は image に入っていないため、マウント済みの
+    # dotfiles リポジトリにある実体を sandbox 内の ~/.local/bin から参照させる
+    [[ -n "${dotfiles_repo:-}" && -x "${dotfiles_repo}/local/bin/agent-lessons-context" ]] \
+        && add_env SBX_HOST_AGENT_LESSONS_CONTEXT "${dotfiles_repo}/local/bin/agent-lessons-context"
+fi
+
+# 設定ディレクトリをマウントしていない場合は env を設定しない。
+# マウントしていないホストのパスを指すと、sandbox 内に空ディレクトリを作らせるだけで
+# ホストには永続化されず、agent の起動や設定の保存に失敗しうる。
+# --no-config のときは下のマウント処理ごとスキップされるので、ここも併せて見る。
+[[ "$MOUNT_CONFIG" == true && -n "$AGENT_CONFIG_ENV" && -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]] \
+    && add_env "$AGENT_CONFIG_ENV" "$CONFIG_DIR"
+
+if [[ "$MOUNT_CONFIG" == true ]]; then
+    # ホストの gitconfig の url."git@github.com:".pushInsteadOf（push を SSH に寄せる）を打ち消し、
+    # push も HTTPS のままにする。sandbox からは SSH で GitHub に出られず、gh の認証も
+    # HTTPS にしか効かないため。下の insteadOf は push URL には適用されない（書き換えは連鎖しない）。
+    # マッチ長が同じ pushInsteadOf は先に読まれた方が勝つため、必ず include.path より前に追加する。
+    add_git_config 'url.https://github.com/.pushInsteadOf' 'https://github.com/'
+    # ホストの gitconfig を include する（post-create.sh の include.path 相当）
+    [[ -f "${HOME}/.config/git/config" ]] && add_git_config include.path "${HOME}/.config/git/config"
+    [[ -f "${HOME}/.config/git/gitignore" ]] && add_git_config core.excludesfile "${HOME}/.config/git/gitignore"
+    # mergiraf を適用するファイルの指定。sandbox の HOME はホストと違い既定パスでは読まれないため明示する
+    [[ -f "${HOME}/.config/git/attributes" ]] && add_git_config core.attributesfile "${HOME}/.config/git/attributes"
+    # ホストの gitconfig は pager と interactive.diffFilter に delta を指定しているが、
+    # delta は sandbox のツールチェインに無いため、そのままだと git log / diff / show が
+    # "cannot run delta" で失敗する。エージェント環境では pager は不要なので無効化する。
+    #
+    # pager.<cmd> は core.pager や PAGER より強いため、それらでは上書きできない。
+    # GIT_PAGER は pager.<cmd> も上書きできる（実測で確認）ので env で渡す。
+    # ホスト側が pager.blame 等を増やしても追従不要という利点もある。
+    add_env GIT_PAGER cat
+    add_git_config interactive.diffFilter cat
+
+    # gh の認証情報を git の credential helper として使う。
+    # URL 限定の helper は generic な credential.helper に「追加」されるだけなので、
+    # 先に空文字でリストをリセットする。これをしないとホスト設定の
+    # credential.helper = osxkeychain が先に試され、sandbox には無いため
+    # "git: 'credential-osxkeychain' is not a git command" が毎回出る。
+    # （GIT_CONFIG_VALUE が欠けても git は fatal にならないので、空値が
+    #   環境変数として渡らない環境でも現状より悪化はしない）
+    add_git_config 'credential.https://github.com.helper' ''
+    add_git_config 'credential.https://github.com.helper' '!gh auth git-credential'
+    add_git_config 'url.https://github.com/.insteadOf' 'git@github.com:'
+    # 同じリポジトリの他 worktree は sandbox から見えないため、git gc の自動 prune が
+    # それらを「消えた worktree」とみなしてホスト側の worktree を壊すのを防ぐ
+    add_git_config gc.worktreePruneExpire never
+
+    # コミット署名: 共通 v3 kit が SSH agent forwarding を runtime 用に要求し、ホストの秘密鍵を
+    # sandbox に渡さずに署名できる。ホストのパスは sandbox 内に無いため、鍵ファイルでは
+    # なく forwarded agent の公開鍵（key:: 形式）を指定する。
+    #
+    # 署名に使う鍵は SBX_AGENT_SIGNING_KEY（既定 ~/.ssh/id_ed25519）に固定する。
+    # 以前は `ssh-add -L | head -n 1` で agent の先頭の鍵を使っていたが、再起動後は
+    # agent への鍵の登録順が変わりうる（他の SSH 接続で AddKeysToAgent が別の鍵を先に
+    # 入れる等）。GitHub に Signing key として登録していない鍵で署名すると Unverified に
+    # なり、そのたびに `gh ssh-key add` し直す羽目になるため、登録済みの鍵だけを使う。
+    #
+    # macOS の ssh-agent は再起動直後は空で、~/.ssh/config の AddKeysToAgent は「SSH で
+    # 鍵を使った時点」でしか登録しない。ホストの git が GPG 署名・HTTPS push だと SSH 鍵を
+    # 使う機会が無く、ずっと空のままになる。そこで鍵が agent に無ければここで登録する。
+    # - パスフレーズ無しの鍵: ssh-add がそのまま読み込める（Keychain には何も保存されない
+    #   ため、--apple-load-keychain だけでは再起動のたびに空のままになっていた）
+    # - パスフレーズ付きの鍵: --apple-use-keychain により Keychain に保存済みなら非対話で、
+    #   未保存なら端末で一度だけパスフレーズを聞いて Keychain に保存する
+    # ssh-add -L の終了コード: 0=鍵あり / 1=鍵なし / 2=agent に接続できない
+    log_info "SSH 署名鍵を確認します"
+    if [[ "$(sbx settings get ssh.agentForwardingEnabled 2>/dev/null)" == false ]]; then
+        log_error "sbx の SSH agent forwarding が無効です。ホストで次を実行してから再試行してください"
+        log_error "  sbx settings set ssh.agentForwardingEnabled true"
+        log_error "  sbx daemon restart"
+        log_error "作業中の sandbox は保存してから sbx stop <name> で停止してください（削除は不要です）"
+        exit 1
+    fi
+    signing_key="${SBX_AGENT_SIGNING_KEY:-${HOME}/.ssh/id_ed25519}"
+    signing_key="${signing_key%.pub}"
+    # agent 内の鍵との照合は「鍵種別 + 鍵本体」で行う（comment は agent 側と異なりうる）
+    signing_key_id=""
+    [[ -f "${signing_key}.pub" ]] && signing_key_id=$(awk '{ print $1 " " $2; exit }' "${signing_key}.pub")
+    agent_has_signing_key() {
+        ssh-add -L 2>/dev/null | awk '{ print $1 " " $2 }' | grep -qxF "$signing_key_id"
+    }
+
+    agent_rc=0
+    ssh-add -L >/dev/null 2>&1 || agent_rc=$?
+    if [[ $agent_rc -ne 2 && -n "$signing_key_id" ]] && ! agent_has_signing_key; then
+        log_info "SSH 鍵を agent に登録します（パスフレーズや Keychain の確認待ちになる場合があります）"
+        if [[ "$(uname -s)" == Darwin ]]; then
+            ssh-add -q --apple-load-keychain >/dev/null 2>&1 || true
+            agent_has_signing_key || ssh-add -q --apple-use-keychain "$signing_key" 2>/dev/null || true
+        else
+            ssh-add -q "$signing_key" 2>/dev/null || true
+        fi
+    fi
+    signing_pubkey=""
+    if [[ $agent_rc -ne 2 ]]; then
+        if [[ -n "$signing_key_id" ]]; then
+            agent_has_signing_key && signing_pubkey="$signing_key_id"
+        else
+            log_error "署名鍵を固定するため ${signing_key}.pub が必要です（SBX_AGENT_SIGNING_KEY で変更可）"
+        fi
+    fi
+    if [[ -n "$signing_pubkey" ]]; then
+        add_git_config gpg.format ssh
+        add_git_config user.signingkey "key::${signing_pubkey}"
+        add_git_config commit.gpgsign true
+
+        # 署名の検証（git log --show-signature 等）には allowed_signers が要る。無いと
+        # "gpg.ssh.allowedSignersFile needs to be configured" になる。ホストの
+        # ~/.config/git/allowed_signers に「email + 署名鍵」を冪等に追記し、同じ絶対パスで
+        # read-only マウントして sandbox からも参照する（ホスト側の gitconfig も同じファイルを
+        # 指しているので、sandbox で作った SSH 署名の commit をホストでも検証できる）。
+        # email は workspace で有効な user.email（includeIf の work 用設定も反映される）。
+        allowed_signers="${HOME}/.config/git/allowed_signers"
+        signer_email=$(git -C "$WORKSPACE" config user.email 2>/dev/null) || signer_email=""
+        if [[ -n "$signer_email" ]]; then
+            signer_line="${signer_email} namespaces=\"git\" ${signing_pubkey}"
+            mkdir -p "$(dirname "$allowed_signers")"
+            touch "$allowed_signers"
+            grep -qxF "$signer_line" "$allowed_signers" || printf '%s\n' "$signer_line" >>"$allowed_signers"
+        fi
+        if [[ -s "$allowed_signers" ]]; then
+            add_mount "${HOME}/.config/git:ro"
+            add_git_config gpg.ssh.allowedSignersFile "$allowed_signers"
+        fi
+    else
+        log_error "署名用の鍵を利用できないため起動を中止します（署名は無効化しません）"
+        if [[ $agent_rc -eq 2 ]]; then
+            log_error "ホストの SSH_AUTH_SOCK を確認し、ssh-add -l が成功するシェルから再実行してください"
+            log_error "tmux の古いセッションでは古いソケットを指していることがあります"
+        else
+            log_error "署名鍵の公開鍵ファイルと agent への登録を確認してください: ${signing_key}.pub"
+            if [[ "$(uname -s)" == Darwin ]]; then
+                log_error "  ssh-add --apple-use-keychain \"${signing_key}\""
+            else
+                log_error "  ssh-add \"${signing_key}\""
+            fi
+        fi
+        exit 1
+    fi
+
+    if [[ ${#GIT_CONFIG_PAIRS[@]} -gt 0 ]]; then
+        add_env GIT_CONFIG_COUNT "$((${#GIT_CONFIG_PAIRS[@]} / 2))"
+        idx=0
+        while [[ $idx -lt ${#GIT_CONFIG_PAIRS[@]} ]]; do
+            add_env "GIT_CONFIG_KEY_$((idx / 2))" "${GIT_CONFIG_PAIRS[idx]}"
+            add_env "GIT_CONFIG_VALUE_$((idx / 2))" "${GIT_CONFIG_PAIRS[idx + 1]}"
+            idx=$((idx + 2))
+        done
+    fi
+fi
+
+sandbox_exists() {
+    sbx ls 2>/dev/null | awk 'NR > 1 { print $1 }' | grep -qx "$SANDBOX_NAME"
+}
+
+# 停止・再起動で公開ポートは消えるため、アタッチ前に張り直す（sbx run の --publish は
+# 既存 sandbox に対しては無視されるため、sbx ports を使う）
+republish_ports() {
+    [[ "$HOST_BRIDGE" != true ]] && return 0
+    local port
+    for port in "$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT"; do
+        [[ -n "$(sandbox_host_port "$port")" ]] && continue
+        sbx ports "$SANDBOX_NAME" --publish "$port" >/dev/null 2>&1 || true
+    done
+}
+
+# 登録済みの MCP サーバを稼働中の sandbox へ読み込む（認証はホスト側で済んでいる）
+load_static_mcp() {
+    local name
+    for name in ${MCP_SERVERS[@]+"${MCP_SERVERS[@]}"}; do
+        sbx mcp load "$name" --sandbox "$SANDBOX_NAME" >/dev/null 2>&1 \
+            || log_warn "MCP サーバ '$name' の読み込みに失敗しました（sbx mcp add で登録済みか確認してください）"
+    done
+}
+
+# sandbox 内の指定ポートに割り当てられた host port を調べる
+sandbox_host_port() {
+    local sandbox_port="$1"
+    sbx ports "$SANDBOX_NAME" 2>/dev/null \
+        | awk -v p="$sandbox_port" 'NR > 1 && $3 == p { print $2; exit }'
+}
+
+# アタッチ時の port / mount 復旧も必要なので、作成時 lifecycle だけに任せず毎回実行する
+# （sbx exec -d は 0.45.0 で非対応になったので前景で実行する）
+#
+# --no-host-bridge でもスキップしない。初期化スクリプトの中身は nvim 設定の共有・生成物の
+# 分離といったホスト連携と無関係な処理も含んでおり、mac-host 関連は
+# SBX_HOST_SSH_KEY が無ければスクリプト側で自動的にスキップされる。
+run_post_create() {
+    local -a env_args=()
+    local crit_host_port
+    if [[ "$HOST_BRIDGE" == true ]]; then
+        crit_host_port=$(sandbox_host_port "$CRIT_SANDBOX_PORT")
+        [[ -n "$crit_host_port" ]] && env_args+=(--env "SBX_CRIT_HOST_PORT=${crit_host_port}")
+    fi
+
+    log_info "sandbox の初期化を実行します"
+    # `if ! cmd; then` の中で $? を読むと `! cmd` の結果（常に 0）になるため、先に保存する
+    local rc=0
+    sbx exec ${env_args[@]+"${env_args[@]}"} "$SANDBOX_NAME" \
+        bash -lc "[ -x '$SANDBOX_POST_CREATE' ] || exit 97; '$SANDBOX_POST_CREATE'" || rc=$?
+    if [[ $rc -ne 0 ]]; then
+        if [[ $rc -eq 97 ]]; then
+            log_warn "初期化スクリプトが sandbox 内に見つかりません。カスタム template を使っていない可能性があります"
+            log_warn "  mise run sandbox:build-template でツールチェイン入りの template を作成してください"
+        else
+            log_warn "sandbox の初期化に失敗しました（終了コード: $rc）。セッションは続行します"
+        fi
+    fi
+}
+
+# 作成したときの呼び出しを、そのまま実行できる bash スクリプトとして記録する。
+# 追加の引数（"$@"）は agent 引数の `--` より前に入るので、--new --setup-only を後から足せる。
+# 記録に失敗しても sandbox 自体は使えるため warning 止まりにする。
+readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY)
+record_invocation() {
+    local dir="${XDG_STATE_HOME:-${HOME}/.local/state}/sbx-agent" file var
+    file="${dir}/${SANDBOX_NAME}.sh"
+    if ! mkdir -p "$dir" || ! {
+        printf '#!/usr/bin/env bash\n'
+        printf '# %s を作成した sbx-agent の呼び出し（mise run sandbox:recreate が使う）\n' "$SANDBOX_NAME"
+        printf 'cd %q || exit 1\n' "$PWD"
+        printf 'exec env'
+        # 作成時に未設定だった変数は -u で外す。外さないと、作り直しを実行したシェルの値を
+        # 引き継ぎ、元の sandbox に無かったマウント（SBX_AGENT_MOUNTS）などが足されてしまう。
+        # env は最初の NAME=VALUE 以降をコマンドとして扱うため、-u は代入より前にまとめて書く。
+        for var in "${REPLAY_ENV_VARS[@]}"; do
+            [[ -z "${!var:-}" ]] && printf ' -u %s' "$var"
+        done
+        for var in "${REPLAY_ENV_VARS[@]}"; do
+            [[ -n "${!var:-}" ]] && printf ' %q' "${var}=${!var}"
+        done
+        printf ' sbx-agent'
+        printf ' %q' "${REPLAY_ARGS[@]}" --name "$SANDBOX_NAME" --workspace "$WORKSPACE"
+        printf ' "$@"'
+        if [[ ${#AGENT_ARGS[@]} -gt 0 ]]; then
+            printf ' --'
+            printf ' %q' "${AGENT_ARGS[@]}"
+        fi
+        printf '\n'
+    } >"${file}.tmp" || ! mv -f "${file}.tmp" "$file"; then
+        rm -f "${file}.tmp"
+        log_warn "sandbox の作成時の引数を記録できませんでした（mise run sandbox:recreate で作り直せません）: $file"
+    fi
+}
+
+# 環境ファイル方式でも既存の worktree / 設定 / port の組み立てを再利用する。
+# JSON は YAML のサブセットなので、jq で安全に値を符号化した overlay を sbx に渡す。
+# resolver / overlay を sandbox から変更できる配置で使わない。
+assert_env_path_unmounted() {
+    local item="$1" spec path
+    for spec in "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"}; do
+        [[ "$spec" == *:ro ]] && continue
+        path="$spec"
+        if [[ -d "$path" ]]; then path=$(cd "$path" && pwd -P); fi
+        path="${path%/}"
+        if [[ "$item" == "$path" || "$item" == "$path/"* ]]; then
+            log_error "環境ファイルと state は書き込み可能な mount の外に置いてください: $item"
+            log_error "該当する mount: $spec"
+            log_error "state が含まれる場合は XDG_STATE_HOME を共有領域の外へ変更してください"
+            exit 1
+        fi
+    done
+}
+
+prepare_env_files() {
+    command -v jq >/dev/null 2>&1 || {
+        log_error "--env-file には jq が必要です"
+        exit 127
+    }
+    local version major minor patch state_dir spec path item key value env_dir env_repo snapshot hops=0
+    log_info "sbx のバージョンと環境ファイルを確認します"
+    version=$(sbx version | sed -nE 's/^sbx version v?([0-9]+\.[0-9]+\.[0-9]+).*/\1/p')
+    IFS=. read -r major minor patch <<<"$version"
+    if [[ -z "$version" ]] || ((major == 0 && minor < 53)); then
+        log_error "v3 kit と Chrome 連携には sbx 0.53.0 以上が必要です"
+        exit 1
+    fi
+    ENV_FILE=$(expand_tilde "$ENV_FILE")
+    [[ -f "$ENV_FILE" ]] || {
+        log_error "環境ファイルがありません: $ENV_FILE"
+        exit 1
+    }
+    while [[ -L "$ENV_FILE" ]]; do
+        hops=$((hops + 1))
+        ((hops <= 40)) || {
+            log_error "環境ファイルの symlink が深すぎます"
+            exit 1
+        }
+        ENV_FILE=$(resolve_symlink "$ENV_FILE") || exit 1
+    done
+    ENV_FILE="$(cd "$(dirname "$ENV_FILE")" && pwd -P)/$(basename "$ENV_FILE")"
+    state_dir="${XDG_STATE_HOME:-$HOME/.local/state}/sbx-agent/environments/$SANDBOX_NAME"
+    mkdir -p "$state_dir" || exit 1
+    state_dir=$(cd "$state_dir" && pwd -P)
+    assert_env_path_unmounted "$state_dir"
+    # mise の symlink-each で配った標準設定は dotfiles 自身を指す。
+    # dotfiles を workspace にしても使えるよう、相対 kit 参照を保ってホスト専用の
+    # snapshot に展開する。任意の --env-file は参照先の構成を推測せず、そのまま検証する。
+    env_dir=$(dirname "$ENV_FILE")
+    env_repo=$(cd "$env_dir/../.." && pwd -P)
+    if [[ "$ENV_FILE" == "$env_repo/config/sbx/sbxenv.yaml" ]] && looks_like_dotfiles_repo "$env_repo"; then
+        snapshot=$(umask 077; mktemp -d "$state_dir/config.XXXXXX") || exit 1
+        if ! (umask 077; cp "$ENV_FILE" "$snapshot/sbxenv.yaml" && cp -RL "$env_dir/kits" "$snapshot/kits"); then
+            rm -rf "$snapshot"
+            log_error "環境ファイルと kit の snapshot 作成に失敗しました"
+            exit 1
+        fi
+        rm -rf "$state_dir/config"
+        mv "$snapshot" "$state_dir/config" || exit 1
+        ENV_FILE="$state_dir/config/sbxenv.yaml"
+        if [[ -n "$SUBSCRIPTION_KIT" ]]; then
+            SUBSCRIPTION_KIT="$state_dir/config/kits/claude-subscription"
+        fi
+    fi
+    assert_env_path_unmounted "$ENV_FILE"
+    [[ -z "$SUBSCRIPTION_KIT" ]] || assert_env_path_unmounted "$SUBSCRIPTION_KIT"
+    ENV_OVERLAY="$state_dir/runtime.yaml"
+    local env_json='{}' mounts_json='[]' ports_json='[]' options_json
+    local i=0
+    while [[ $i -lt ${#ENV_ARGS[@]} ]]; do
+        item="${ENV_ARGS[i + 1]}"
+        key="${item%%=*}"
+        value="${item#*=}"
+        env_json=$(jq -cn --argjson e "$env_json" --arg k "$key" --arg v "$value" '$e + {($k):$v}') || exit 1
+        i=$((i + 2))
+    done
+    for spec in ${MOUNTS[@]+"${MOUNTS[@]}"}; do
+        path="${spec%:ro}"
+        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
+    done
+    if [[ -n "$CLAUDE_PROJECTS_HOST" ]]; then
+        # 別 target の rw mount で、明示された read-only mount を迂回しない。
+        if ! python3 - "$CLAUDE_PROJECTS_HOST" ${MOUNTS[@]+"${MOUNTS[@]}"} <<'PYPROJECTS'
+import os, sys
+projects = os.path.realpath(sys.argv[1])
+for spec in sys.argv[2:]:
+    if not spec.endswith(":ro"):
+        continue
+    readonly = os.path.realpath(spec[:-3])
+    if os.path.commonpath([projects, readonly]) in (projects, readonly):
+        sys.exit("projects の永続化と read-only mount が競合します: " + spec)
+PYPROJECTS
+        then
+            exit 1
+        fi
+        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$CLAUDE_PROJECTS_HOST" '$m + [{path:$p,target:"/home/agent/.claude/projects",readOnly:false}]') || exit 1
+    fi
+    if [[ "$HOST_BRIDGE" == true ]]; then
+        PUBLISH_PORTS+=("$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT")
+    fi
+    for spec in ${PUBLISH_PORTS[@]+"${PUBLISH_PORTS[@]}"}; do
+        ports_json=$(jq -cn --argjson p "$ports_json" --arg s "$spec" '$p + [($s | split(":") | if length == 1 then {sandbox:(.[0]|tonumber)} else {host:(.[0]|tonumber),sandbox:(.[1]|tonumber)} end)]') || exit 1
+    done
+    options_json=$(jq -cn --arg t "$TEMPLATE" --arg s "$SKILLS" --arg c "$CPUS" --arg m "$MEMORY" '{skills:$s,pullPolicy:"missing"} + (if $t=="" then {} else {template:$t} end) + (if $c=="" then {} else {cpus:($c|tonumber)} end) + (if $m=="" then {} else {memory:$m} end)') || exit 1
+    # 引数をそのまま shell へ連結しない。特に空白・改行・引用符を保持する。
+    (
+        umask 077
+        jq -n --arg a "$AGENT" --arg w "$WORKSPACE" --argjson e "$env_json" --argjson m "$mounts_json" --argjson p "$ports_json" --argjson o "$options_json" --arg subscription "$SUBSCRIPTION_KIT" \
+            '({schemaVersion:"1",agent:$a,workspace:$w,env:$e,additionalWorkspaces:$m,ports:$p,sandboxOptions:$o} + (if $subscription == "" then {} else {agent:"claude-subscription",kits:[$subscription]} end))' >"$ENV_OVERLAY"
+    ) || exit 1
+    # static MCP は従来の load_static_mcp で作成後に適用する。
+}
+
+prepare_env_files
+if [[ "$ENV_PLAN" == true ]]; then
+    exec sbx env plan --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"
+fi
+
+CREATED_MARKER_VERSION=v3
+[[ "$CLAUDE_OAUTH" == true ]] && CREATED_MARKER_VERSION=v3-oauth
+log_info "既存 sandbox と認証設定を確認します"
+# 旧経路で作った sandbox を、新しい kit 構成のまま再利用したと誤認しない。
+if sandbox_exists && [[ "$FORCE_NEW" != true ]]; then
+    if [[ ! -f "${ENV_OVERLAY%/*}/created" || "$(cat "${ENV_OVERLAY%/*}/created")" != "$CREATED_MARKER_VERSION" ]]; then
+        log_error "この sandbox は選択した認証方式の v3 kit での作成を確認できません。必要なデータを保存して --new で作り直してください"
+        exit 1
+    fi
+fi
+
+# Re-register on every attach: deletion/recreation also removes scoped secrets.
+# Never adopt a built-in Claude sandbox with the same name.
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    if sandbox_exists && [[ "$FORCE_NEW" != true ]]; then
+        if [[ ! -f "$SUBSCRIPTION_MARKER" || "$(cat "$SUBSCRIPTION_MARKER")" != "$CLAUDE_ACCOUNT" ]]; then
+            log_error "既存 sandbox の kit/account を確認できません。別の --name を使うか、必要なデータを保存して --new で作り直してください"
+            exit 1
+        fi
+    fi
+    # sbx 0.53.0: sandbox-scoped secrets override global credentials, including
+    # the OAuth login used by a separate Chrome sandbox. Never delete that login.
+    if ! python3 - "$CONFIG_DIR/settings.json" <<'PYSETTINGS'
+import json, pathlib, sys
+p = pathlib.Path(sys.argv[1])
+d = json.loads(p.read_text()) if p.exists() else {}
+env = d.get("env", {})
+if d.get("apiKeyHelper") or any(env.get(k) for k in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_BASE_URL")):
+    sys.exit("settings.json contains a conflicting authentication override")
+PYSETTINGS
+    then
+        log_error "Claude 設定の認証上書きを解消してから起動してください"
+        exit 1
+    fi
+    # File mounts expose that file, not its parent (e.g. ~/.claude.json).
+    if ! python3 - "$SUBSCRIPTION_TOKEN" "$WORKSPACE" ${MOUNTS[@]+"${MOUNTS[@]}"} <<'PYMOUNTS'
+import os, sys
+secret = os.path.realpath(sys.argv[1])
+private = os.path.dirname(secret)
+for spec in sys.argv[2:]:
+    path = os.path.realpath((spec[:-3] if spec.endswith(":ro") else spec))
+    exposes = os.path.commonpath([private, path]) == private
+    if os.path.isdir(path):
+        exposes |= os.path.commonpath([private, path]) == path
+    elif os.path.exists(path):
+        exposes |= os.path.samefile(path, secret)
+    if exposes:
+        sys.exit("token 保存先を含む workspace/mount は使えません: " + path)
+PYMOUNTS
+    then
+        exit 1
+    fi
+fi
+
+register_subscription_secret() {
+    log_info "Claude の sandbox 専用認証を登録します"
+    # Validate without printing a credential or putting it in argv/environment.
+    # pipefail ensures a failed validation/registration stops before sbx run.
+    if ! python3 - "$SUBSCRIPTION_TOKEN" <<'PYTOKEN' | sbx secret set anthropic --sandbox "$SANDBOX_NAME" --force >/dev/null
+import os, stat, sys
+p = sys.argv[1]
+st = os.stat(p)
+if st.st_uid != os.getuid() or stat.S_IMODE(st.st_mode) & 0o077:
+    sys.exit("token file must be owned by you with mode 600 (or 400)")
+token = open(p).read().strip()
+if not token.startswith("sk-ant-oat01-") or any(c.isspace() for c in token):
+    sys.exit("invalid subscription setup-token")
+sys.stdout.write(token)
+PYTOKEN
+    then
+        log_error "sandbox 専用 token の登録に失敗しました。起動を中止します"
+        exit 1
+    fi
+}
+
+# --new は既存の環境と scoped secret を先に削除する。
+if [[ "$FORCE_NEW" == true ]] && sandbox_exists; then
+    log_info "既存の sandbox を削除します: $SANDBOX_NAME"
+    if ! sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY"; then
+        log_error "既存 sandbox の削除に失敗しました: $SANDBOX_NAME"
+        exit 1
+    fi
+    rm -f "${ENV_OVERLAY%/*}/created"
+fi
+
+SANDBOX_CREATED=false
+if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
+    [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
+
+    create_cmd=(sbx env create --name "$SANDBOX_NAME")
+    [[ "$ENV_FORCE" == true ]] && create_cmd+=(--force)
+    create_cmd+=("$ENV_FILE" "$ENV_OVERLAY")
+    log_info "環境ファイルから sandbox を作成します: $SANDBOX_NAME"
+    if ! "${create_cmd[@]}"; then
+        log_error "sandbox の作成に失敗しました"
+        if [[ -n "$TEMPLATE" ]]; then
+            # --pull missing なので、ローカルの image store に無い template は作成できない。
+            # 「image が無い」系のエラーはここが原因なので、確認と作成の手順を出す。
+            log_error "  template ($TEMPLATE) が原因かもしれません。確認するには:"
+            log_error "    sbx template ls"
+            # build-template は選んだ agent しか作らないため、この agent を明示させる
+            log_error "  未ビルドなら: mise run sandbox:build-template ${AGENT}"
+            log_error "  template 無しで起動するには --no-template を付けてください"
+        fi
+        exit 1
+    fi
+    (umask 077; printf '%s\n' "$CREATED_MARKER_VERSION" >"${ENV_OVERLAY%/*}/created") || exit 1
+    SANDBOX_CREATED=true
+    load_static_mcp
+    record_invocation
+
+else
+    [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
+    log_info "既存の sandbox を再利用します: $SANDBOX_NAME"
+    republish_ports
+    load_static_mcp
+fi
+
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    (umask 077; mkdir -p "$(dirname "$SUBSCRIPTION_MARKER")" && printf '%s\n' "$CLAUDE_ACCOUNT" >"$SUBSCRIPTION_MARKER") || exit 1
+    log_info "Claude subscription account: $CLAUDE_ACCOUNT (scoped Bearer kit)"
+fi
+
+# 初期化は作成時だけでなくアタッチごとに実行する。bind mount による生成物の分離と
+# 公開ポートは sandbox の停止で失われるため、毎回張り直す必要がある（全処理は冪等）。
+run_post_create
+
+# ブラウザーログインは新規作成時だけ試し、失敗しても sandbox の利用を続ける。
+if [[ "$SANDBOX_CREATED" == true ]]; then
+    if coderabbit_repo=$(find_dotfiles_repo); then
+        log_info "CodeRabbit のブラウザーログインを開始します"
+        mise -C "$coderabbit_repo" run sandbox:coderabbit-login "$SANDBOX_NAME" \
+            || log_warn "CodeRabbit のログインに失敗しました。sandbox の作成は完了しています。後から mise run sandbox:coderabbit-login $SANDBOX_NAME で再実行してください"
+    else
+        log_warn "dotfiles の配置が見つからないため CodeRabbit のログインをスキップします（DOTFILES_DIR）"
+    fi
+fi
+
+# One lookup per account/token, including failed attempts; statusline never calls APIs.
+SUBSCRIPTION_ORG_ID=""
+if [[ -n "$CLAUDE_ACCOUNT" ]]; then
+    log_info "Claude の組織情報を確認します（初回は API 接続を行います）"
+    mise -C "$subscription_repo" run sandbox:claude-auth-check "$SANDBOX_NAME" \
+        || log_warn "組織 ID を取得できませんでした。自動再取得はしません（docs 参照）"
+    SUBSCRIPTION_ORG_ID=$(python3 - "$SUBSCRIPTION_TOKEN" "$CLAUDE_ACCOUNT" <<'PYORG'
+import hashlib, json, pathlib, re, sys
+p = pathlib.Path(sys.argv[1])
+try:
+    d = json.loads((p.parent / "organizations" / (sys.argv[2] + ".json")).read_text())
+    org = d.get("organization_id", "")
+    if d.get("token_sha256") == hashlib.sha256(p.read_bytes().strip()).hexdigest() and re.fullmatch(r"[A-Za-z0-9_-]{1,128}", org):
+        print(org)
+except (OSError, ValueError):
+    pass
+PYORG
+    )
+fi
+
+# ホストで鍵が見えていても、daemon の古い socket や設定により relay が無い場合がある。
+# agent と同じユーザーで実際に署名し、login shell の socket を起動環境へ明示的に渡す。
+if [[ "$MOUNT_CONFIG" == true ]]; then
+    log_info "sandbox 内の SSH 署名を検証します"
+    signing_socket=$(sbx exec -u agent --env "SBX_SIGNING_PUBKEY=$signing_pubkey" "$SANDBOX_NAME" bash -lc '
+        set -eu
+        test -n "${SSH_AUTH_SOCK:-}" && test -S "$SSH_AUTH_SOCK" || {
+            echo "署名用 SSH_AUTH_SOCK が未設定、または relay socket がありません" >&2
+            exit 1
+        }
+        probe=$(mktemp -d)
+        trap "rm -rf -- \"\$probe\"" EXIT
+        printf "%s\n" "$SBX_SIGNING_PUBKEY" >"$probe/key.pub"
+        printf "sbx-agent signing probe\n" | ssh-keygen -Y sign -U -n git -f "$probe/key.pub" >/dev/null
+        printf "%s" "$SSH_AUTH_SOCK"
+    ') || {
+        log_error "sandbox 内で署名できないため起動を中止します。署名設定と作業データは保持しています"
+        log_error "ホストで ssh-add -l と sbx settings get ssh.agentForwardingEnabled を確認してください"
+        log_error "設定変更時は sbx daemon restart、続いて sbx stop $SANDBOX_NAME を実行し、同じシェルで sbx-agent を再実行してください"
+        exit 1
+    }
+    add_env SSH_AUTH_SOCK "$signing_socket"
+fi
+
+if [[ "$SETUP_ONLY" == true ]]; then
+    log_info "sandbox の準備が完了しました: $SANDBOX_NAME"
+    exit 0
+fi
+
+# 既存 sandbox には agent 名を渡さない（sandbox の spec から解決される）
+# 既存 sandbox を位置引数で渡す `sbx run <name>` は deprecated（sbx 0.47 で警告が出る）
+log_info "${AGENT} を起動します"
+# 再利用時も現在の署名鍵・Git 設定・socket を渡す（overlay は作成時の設定）。
+run_cmd=(sbx run --name "$SANDBOX_NAME" ${ENV_ARGS[@]+"${ENV_ARGS[@]}"})
+[[ -n "$CLAUDE_AUTH_METHOD" ]] && run_cmd+=(--env "SBX_CLAUDE_AUTH_METHOD=$CLAUDE_AUTH_METHOD")
+[[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
+[[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
+# OAuth はホストの Claude 設定を共有しない。statusLine だけ CLI の settings で追加し、
+# Sandbox 内の OAuth credential file や built-in settings は置き換えない。
+if [[ "$CLAUDE_OAUTH" == true && "$MOUNT_CONFIG" == true && -f "${dotfiles_repo:-}/claude/statusline.sh" ]]; then
+    oauth_settings=$(jq -cn --arg p "$dotfiles_repo/claude/statusline.sh" '{statusLine:{type:"command",command:("bash " + ($p|@sh))}}') || exit 1
+    AGENT_ARGS=(--settings "$oauth_settings" ${AGENT_ARGS[@]+"${AGENT_ARGS[@]}"})
+fi
+[[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
+
+if [[ "$REMOVE_ON_EXIT" == true ]]; then
+    # sbx env が作った scoped secret も含めて削除する。
+    rc=0
+    "${run_cmd[@]}" || rc=$?
+    sbx env rm --force --name "$SANDBOX_NAME" "$ENV_FILE" "$ENV_OVERLAY" || exit 1
+    rm -f "${ENV_OVERLAY%/*}/created"
+    exit "$rc"
+fi
+exec "${run_cmd[@]}"
