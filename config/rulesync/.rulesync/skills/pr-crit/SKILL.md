@@ -39,6 +39,8 @@ targets:
 | 3    | `<refs>/manual-test.md`  | なし                                   |
 | 6    | `<refs>/draft-review.md` | crit のコメントから作る（下記 6）      |
 
+[レビュアー向けの段階一覧](../pr-reviewer-all-review/references/stages.md) と [作者向けの段階一覧](../pr-author-all-review/references/stages.md) の共通列が「レビュアー」の全行を読み、段階 3 の実行確認に従う。統合レビューから呼び出された場合は、確定した実行内容と確認済みの一覧を引き継ぐ。スキルの選択を聞き直さず、共通段階の実施結果も引き継いで重複実行を避ける。
+
 `crit` / `crit-cli` skill（APM で配布）の CLI の使い方も前提にする。
 
 ## 1. PR の情報を集め、checkout する

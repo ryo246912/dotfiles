@@ -817,6 +817,7 @@ desloppify status --json   # 状態を JSON で出力
 /pr-reviewer-all-review 123 -c                  # crit で確認
 /pr-reviewer-all-review 123 -br -c              # 解説資料と crit
 /pr-reviewer-all-review 123 -br -c -nb          # 実環境の操作を省略
+/pr-reviewer-all-review 123 -s                  # レビュースキルと crit・brief・behavior を開始前に選ぶ
 ```
 
 ## understand-mode
