@@ -216,7 +216,7 @@ def prepare(profile):
         dotfiles = (Path.home() / "dotfiles").resolve()
         if not dotfiles.is_dir():
             raise ValueError(f"dotfiles のディレクトリがありません: {dotfiles}")
-        mounts.extend(["--mount", f"{dotfiles}:ro"])
+        mounts.append("--writable-dotfiles")
         workspaces.append(dotfiles)
     run(["sbx-agent", "claude", *auth_args,
          "--workspace", profile["workspace"], "--name", profile["name"],
