@@ -49,7 +49,13 @@ def state_root():
     return Path(os.environ.get("XDG_STATE_HOME", str(Path.home() / ".local/state"))) / "t3-sandbox"
 
 
+def shared_workspace():
+    return (Path.home() / "Programming").resolve()
+
+
 def profile_key(account, repository):
+    if repository == shared_workspace():
+        return f"programming-{REPOSITORY_PREFIXES[account]}-t3"
     slug = re.sub(r"[^a-z0-9]+", "-", repository.name.lower())[:24].strip("-") or "repo"
     digest = sha256(os.fsencode(repository)).hexdigest()[:16]
     return f"{slug}-{REPOSITORY_PREFIXES[account]}-{digest}-t3"
@@ -204,14 +210,23 @@ def prepare(profile):
     else:
         auth_args = ["--claude-account", account, "--config-dir", Path.home() / ACCOUNTS[account]]
         environment = os.environ
+    workspaces = [Path(profile["workspace"])]
+    mounts = ["--mount", profile["storage"]]
+    if profile["name"] == profile_key(account, shared_workspace()):
+        dotfiles = (Path.home() / "dotfiles").resolve()
+        if not dotfiles.is_dir():
+            raise ValueError(f"dotfiles のディレクトリがありません: {dotfiles}")
+        mounts.extend(["--mount", f"{dotfiles}:ro"])
+        workspaces.append(dotfiles)
     run(["sbx-agent", "claude", *auth_args,
          "--workspace", profile["workspace"], "--name", profile["name"],
-         "--mount", profile["storage"], "--publish", f'{profile["port"]}:3773', "--setup-only"],
+         *mounts, "--publish", f'{profile["port"]}:3773', "--setup-only"],
         env=environment)
-    mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", profile["workspace"]])
-    if mounted.returncode:
-        raise ValueError(f"{profile['name']} 内で workspace にアクセスできません: {profile['workspace']}。"
-                         "既存 sandbox のマウントを確認してください")
+    for workspace in workspaces:
+        mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", workspace])
+        if mounted.returncode:
+            raise ValueError(f"{profile['name']} 内で workspace にアクセスできません: {workspace}。"
+                             "既存 sandbox のマウントを確認してください")
     allow_t3_connect_network(profile)
     # sbx loses host mappings on stop; sbx-agent only restores its own bridge ports.
     mapped = mapped_t3_ports(profile["name"])
@@ -423,7 +438,10 @@ def setup_account(profile, repository, no_autostart):
     if not no_autostart:
         install_service(profile, repository)
     print(f"設定済み: {profile['name']} — http://127.0.0.1:{profile['port']}")
-    print(f"初回のアプリ接続: cd {shlex.quote(str(repository))} && mise run t3:cli（pair → {account}）")
+    cli = "mise run t3:cli"
+    if repository != shared_workspace():
+        cli = f"cd {shlex.quote(str(repository))} && {cli} -- --repo"
+    print(f"初回のアプリ接続: {cli}（pair → {account}）")
     if no_autostart:
         location = f" --repository {shlex.quote(str(repository))}"
         print(f"自動起動は未登録です。起動: t3-sandbox run {account}{location}")
@@ -465,7 +483,9 @@ def setup_lock():
 
 
 def setup(args):
-    repository = git_workspace(args.workspace)
+    repository = git_workspace(args.workspace) if args.repo or args.workspace else shared_workspace()
+    if not repository.is_dir():
+        raise ValueError(f"workspace のディレクトリがありません: {repository}")
     print(f"Workspace: {repository}", flush=True)
     accounts = list(dict.fromkeys(args.account or choose_accounts(repository=repository)))
     if args.port is not None and len(accounts) != 1:
@@ -505,8 +525,8 @@ def setup(args):
             setup_account(profile, repository, args.no_autostart)
 
 
-def reset():
-    repository = git_workspace(None)
+def reset(repo=False):
+    repository = git_workspace(None) if repo else shared_workspace()
     account = choose_accounts(repository, multiple=False, configured_only=True)[0]
     name = profile_key(account, repository)
     print(f"Workspace: {repository}\nSandbox: {name}")
@@ -539,25 +559,27 @@ def reset():
         if stop_sandbox(profile):
             run(["sbx", "rm", name])
         profile_path(account, repository).unlink()
-    print(f"削除済み: {name}。再度使う場合は mise run t3:setup を実行してください。")
+    setup_command = "mise run t3:setup -- --repo" if repo else "mise run t3:setup"
+    print(f"削除済み: {name}。再度使う場合は {setup_command} を実行してください。")
 
 
 def main():
     parser = argparse.ArgumentParser(prog="t3-sandbox", description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
-    initial = sub.add_parser("setup", help="アカウントを選び、カレント Git リポジトリ用の sbx と自動起動を設定")
+    initial = sub.add_parser("setup", help="アカウントを選び、共有 sbx と自動起動を設定")
     initial.add_argument("--sbx", "--account", dest="account", choices=ACCOUNTS, nargs="+", action="extend",
                          help="複数指定可。例: --sbx account1 work3")
-    initial.add_argument("--workspace", help="最初にアプリへ登録する Git repository (default: cwd)")
-    initial.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
+    initial.add_argument("--workspace", help="専用 sandbox を作る Git リポジトリ")
+    initial.add_argument("--repo", action="store_true", help="カレント Git リポジトリ専用の sandbox を操作")
     initial.add_argument("--port", type=int)
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
-    sub.add_parser("reset", help="設定済みの sandbox を選び、確認後に削除")
+    reset_parser = sub.add_parser("reset", help="設定済みの sandbox を選び、確認後に削除")
+    reset_parser.add_argument("--repo", action="store_true", help="カレント Git リポジトリ専用の sandbox を操作")
     service = sub.add_parser("run")
     service.add_argument("account", choices=ACCOUNTS)
     service.add_argument("--repository", type=Path)
     cli = sub.add_parser("cli", allow_abbrev=False)
-    cli.add_argument("--repo", action="store_true", help=argparse.SUPPRESS)
+    cli.add_argument("--repo", action="store_true", help="カレント Git リポジトリ専用の sandbox を操作")
     cli.add_argument("--sbx", choices=ACCOUNTS, help="対象 sandbox。省略時は fzf で選択")
     cli.add_argument("arguments", nargs=argparse.REMAINDER, help="操作または T3 CLI の引数")
     args, leading = parser.parse_known_args()
@@ -569,7 +591,7 @@ def main():
         setup(args)
         return
     if args.action == "reset":
-        reset()
+        reset(args.repo)
         return
     if args.action == "run":
         profile = load_profile(args.account, args.repository)
@@ -583,7 +605,7 @@ def main():
             account = arguments.pop(0)
         if arguments[:1] == ["--"]:
             arguments.pop(0)
-        repository = git_workspace(None)
+        repository = git_workspace(None) if args.repo else shared_workspace()
         account, arguments = choose_cli_target(account, arguments, repository)
         profile = load_profile(account, repository)
         print(f"Sandbox: {profile['name']} / Command: {' '.join(arguments)}", flush=True)

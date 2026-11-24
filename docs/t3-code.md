@@ -10,34 +10,17 @@
 
 ## 全体構成
 
-要点は 3 つ。
+既定では `oauth`、`account1`、`account2`、`work3` の各アカウントに、共有 SBX と T3 サーバーを一つずつ用意する。
+共有 SBX はホストの `~/Programming` を読み書き可能、`~/dotfiles` を読み取り専用でマウントする。
+T3 アプリから接続済みの環境で **Add Project** を選び、SBX 内で見えているホストの Git リポジトリを指定する。
+後から `~/Programming` 配下に作ったリポジトリも同じ環境から見える。マウント追加やペアリングのやり直しは不要。
 
-1. **sandbox は Git リポジトリのルートパスとアカウントの組み合わせごとに 1 つ**。
-2. **T3 サーバーも sandbox の中に 1 つ**。このサーバーが、そのアカウントのエージェント（Claude Code / Codex）を動かす。
-3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
+`~/Programming` 配下の既存ファイルや Git の管理ファイルも、共有 SBX を使う各アカウントのエージェントから読み書きできる。
+アカウントの認証と T3 履歴は別々だが、同じチェックアウトを複数のエージェントが使えば変更が競合し得る。
+同時作業には T3 の worktree が使える。dotfiles を編集する場合は専用環境かホストで作業する。
 
-PC とスマホのアプリで同じ環境に接続すると、同じセッションと履歴を操作できる。
-以下は、`xxx` に OAuth 環境、`yyy` に account1 環境を作った例。
-
-```text
-T3 Code アプリ（接続先を切り替え）
-  PC はローカルの公開ポート、スマホは T3 Connect で接続
-  公開ポート枠: oauth 3800–3809 / account1 3810–3819
-                account2 3820–3829 / work3 3830–3839
-  │
-  └─ Mac（ホスト）
-      ├─ 127.0.0.1:3800 → xxx-oauth-<パスのハッシュ>-t3
-      │                    ├─ T3 サーバー（sandbox 内の :3773）
-      │                    ├─ workspace: xxx
-      │                    └─ T3 の設定・履歴: xxx の環境の保存先
-      │
-      └─ 127.0.0.1:3810 → yyy-a1-<パスのハッシュ>-t3
-                           ├─ T3 サーバー（sandbox 内の :3773）
-                           ├─ workspace: yyy
-                           └─ T3 の設定・履歴: yyy の環境の保存先
-```
-
-各環境にはアカウントごとの枠から空いている公開ポートを1つ割り当てる。
+既存のリポジトリ別環境は `--repo` で引き続き操作できる。共有環境には初回だけ別途ペアリングする。
+同じ共有環境を再起動すると、公開ポートとホストに保存した T3 データを再利用する。
 
 ### 各部品の役割
 
@@ -85,7 +68,7 @@ mise run sandbox:build-template claude
 クリップボードや Claude の Chrome 連携などのホスト設定も有効にする場合は、
 別途 `mise run sandbox:sbx-settings` を実行する。このタスクは sbx デーモンを再起動する。
 
-template は T3 追加後に再ビルドする。セットアップではリポジトリとアカウントの組み合わせに対応する sandbox を作る。同名の sandbox がある場合は再利用する。
+template は T3 追加後に再ビルドする。セットアップでは選択したアカウントごとに共有 sandbox を作る。同名の sandbox がある場合は再利用する。
 既存 sandbox の mount は setup では更新されない。構成が違う場合は必要なデータを保存し、
 対象 sandbox を停止・削除してから setup で作り直す（自動削除はしない）。
 T3 アプリは [公式ダウンロード](https://t3.codes/download) から導入する。
@@ -95,10 +78,9 @@ Homebrew の公開版がサーバーより古い場合は、アプリも公式�
 
 ## 最初にアカウントを選ぶ
 
-初回だけ、最初に登録する Git リポジトリで次を実行する。
+初回だけ、次を実行する。ホストに `~/Programming` と `~/dotfiles` が必要。
 
 ```bash
-cd /path/to/project
 mise run t3:setup
 ```
 
@@ -115,9 +97,9 @@ Claude の認証先をその sandbox に固定する。token が未登録の場�
 ```bash
 mise run sandbox:claude-token account2
 # メニューを使わず指定する場合
-mise run t3:setup -- --sbx account2 --workspace /path/to/project
+mise run t3:setup -- --sbx account2
 # 複数アカウントをまとめて準備する場合
-mise run t3:setup -- --sbx account1 account2 work3 --workspace "$PWD"
+mise run t3:setup -- --sbx account1 account2 work3
 ```
 
 `sandbox:setup` が行う認証 binding も必要。詳細は [Docker Sandboxes](docker-sandboxes.md) を参照。
@@ -139,13 +121,13 @@ T3 Code アプリに接続したいリポジトリのルートで次を実行す
 
 ```sh
 cd /path/to/yyy
-mise run t3:setup
-mise run t3:cli
+mise run t3:setup -- --repo
+mise run t3:cli -- --repo
 ```
 
 セットアップでは fzf でアカウントを選び、CLI では **pair → 同じアカウント** を選ぶ。
 サブディレクトリからの実行でも Git が検出したルートを使う。別の場所からセットアップする場合は、
-`--workspace /path/to/repo` で対象を指定できる。ペアリングは対象リポジトリ内で実行する。
+`--workspace /path/to/repo` で対象を指定できる。専用環境のペアリングも対象リポジトリ内で `--repo` を指定する。
 
 セットアップは Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
 個別に作る。sandbox 名には CCManager の preset と同じ `a1`、`a2`、`w3`、`oauth` が入る。
@@ -245,7 +227,7 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
 複数アカウントを使う場合は、それぞれ一度 setup と接続を行う。
 **以降のアカウント切替はアプリの接続先環境を選ぶだけ**。
 
-`mise run t3:cli` は **操作 → 対象 Sandbox** の順で選ぶ。対象はカレントリポジトリで設定済みの環境。
+`mise run t3:cli` は **操作 → 対象 Sandbox** の順で選ぶ。既定の対象は設定済みの共有環境。専用環境にはリポジトリ内で `--repo` を指定する。
 **login** を選ぶと途中で **Claude / Codex** の選択が入り、その操作に対応した Sandbox が表示される。
 スクリプトなどから直接実行する場合は `mise run t3:cli -- --sbx work3 pair` も使える。
 
@@ -492,7 +474,7 @@ sandbox を削除した場合はサービス経由ではなく、対象アカウ
 
 ### 設定済み sandbox を削除する
 
-対象リポジトリで `mise run t3:reset` を実行し、fzf でアカウントを選んで削除を確認する。
+共有環境は `mise run t3:reset`、専用環境は対象リポジトリで `mise run t3:reset -- --repo` を実行し、fzf でアカウントを選んで削除を確認する。
 自動起動サービスを解除し、sandbox を停止してから削除する。ホスト側の登録も削除し、公開ポートを解放する。
 実行中の作業は中断されるため、sandbox 内だけにある必要なファイルは先に保存する。
 ホストに保存された T3 の設定と履歴は残る。
