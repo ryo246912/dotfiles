@@ -1,0 +1,206 @@
+#!/usr/bin/env python3
+"""Manage a headless Orca server per sbx account on macOS."""
+
+import argparse
+from contextlib import contextmanager
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import platform
+import plistlib
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ACCOUNTS = {
+    "oauth": (3840, None),
+    "account1": (3841, ".claude"),
+    "account2": (3842, ".claude-account2"),
+    "work3": (3843, ".claude-work3"),
+}
+VERSION = "1.4.273"
+RELEASES = {
+    "x86_64": ("x64", "be4e205696d0387677a17629f9c20ae1f432206eb1c4e2864d216e9cc3331d35"),
+    "arm64": ("arm64", "5b2b10da6851db7f815422b2147eb369754567b336273edc7971643458a31a58"),
+}
+HOME = Path.home()
+STATE = Path(os.environ.get("XDG_STATE_HOME", HOME / ".local/state")).resolve() / "orca-sandbox"
+DATA = Path(os.environ.get("XDG_DATA_HOME", HOME / ".local/share")).resolve() / "orca-sandbox"
+
+
+def run(*args, **kwargs):
+    return subprocess.run([str(arg) for arg in args], check=True, **kwargs)
+
+
+@contextmanager
+def setup_lock():
+    STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with (STATE / "setup.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def install_server():
+    machine = platform.machine()
+    if machine not in RELEASES:
+        raise ValueError(f"未対応のアーキテクチャ: {machine}")
+    arch, expected = RELEASES[machine]
+    directory = DATA / "releases" / arch
+    binary = directory / VERSION / "bin/orca-ide"
+    if binary.is_file():
+        return directory, binary
+    directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with tempfile.TemporaryDirectory(dir=directory) as temporary:
+        archive = Path(temporary) / "server.tar.gz"
+        url = f"https://github.com/stablyai/orca/releases/download/v{VERSION}/orca-server-linux-{arch}.tar.gz"
+        run("curl", "-fLSs", "--retry", 3, "--output", archive, url)
+        digest = hashlib.sha256()
+        with archive.open("rb") as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != expected:
+            raise ValueError("Orca server の SHA256 が一致しません")
+        unpacked = Path(temporary) / "server"
+        unpacked.mkdir()
+        run("tar", "-xzf", archive, "-C", unpacked, "--strip-components=1")
+        if not (unpacked / "bin/orca-ide").is_file():
+            raise ValueError("Orca server の CLI が見つかりません")
+        unpacked.rename(directory / VERSION)
+    return directory, binary
+
+
+def prepare(account, profile):
+    port, config_dir = ACCOUNTS[account]
+    name = f"orca-{account}"
+    env = os.environ.copy()
+    if config_dir:
+        auth = ["--claude-account", account, "--config-dir", HOME / config_dir]
+    else:
+        auth = ["--claude-oauth"]
+        env.pop("SBX_AGENT_STATIC_MCP", None)
+    run("sbx-agent", "claude", *auth, "--workspace", profile["workspace"], "--name", name,
+        "--mount", profile["storage"], "--mount", profile["release_dir"] + ":ro",
+        "--publish", f"{port}:{port}", "--setup-only", env=env)
+    mounts = 'test -x "$1" && test -w "$2"'
+    guest(account, profile, ["bash", "-c", mounts, "bash", profile["binary"], profile["storage"]])
+    # sbx drops published mappings when the sandbox stops.
+    listing = run("sbx", "ports", name, capture_output=True, text=True).stdout
+    mappings = [fields[1] for row in listing.splitlines()
+                if len(fields := row.split()) >= 3 and fields[2] == str(port)]
+    if not mappings:
+        run("sbx", "ports", name, "--publish", f"{port}:{port}")
+    elif str(port) not in mappings:
+        raise ValueError(f"{name} の公開ポートが設定と一致しません: {mappings}")
+
+
+def guest(account, profile, command, interactive=False):
+    terminal = []
+    if interactive:
+        terminal.append("-i")
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            terminal.append("-t")
+    run("sbx", "exec", *terminal, "-u", "agent", f"orca-{account}",
+        "bash", "--noprofile", "--norc", "-c",
+        '[ ! -r /etc/sandbox-persistent.sh ] || . /etc/sandbox-persistent.sh; '
+        'export ORCA_USER_DATA_PATH="$2"; workspace="$1"; shift 2; '
+        'exec mise --cd /mise exec -- bash --noprofile --norc -c '
+        '\'cd "$1" || exit 1; shift; exec "$@"\' bash "$workspace" "$@"',
+        "bash", profile["workspace"], profile["storage"], *command)
+
+
+def install_service(account):
+    label = f"local.orca-sandbox.{account}"
+    domain = f"gui/{os.getuid()}"
+    if subprocess.run(["launchctl", "print", f"{domain}/{label}"],
+                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
+        return
+    log = STATE / f"{account}.log"
+    paths = [HOME / ".local/bin", Path("/opt/homebrew/bin"), Path("/usr/local/bin"),
+             Path(os.environ.get("MISE_DATA_DIR", HOME / ".local/share/mise")) / "shims"]
+    environment = {key: os.environ[key] for key in (
+        "MISE_ENV", "HOST_ENV", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_DATA_HOME",
+        "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR",
+        "MISE_CONFIG_DIR", "SBX_AGENT_SIGNING_KEY",
+    ) if key in os.environ}
+    environment["PATH"] = os.pathsep.join(dict.fromkeys([*map(str, paths), *os.environ["PATH"].split(os.pathsep)]))
+    mise = shutil.which("mise")
+    if not mise:
+        raise ValueError("mise が見つかりません")
+    path = HOME / "Library/LaunchAgents" / f"{label}.plist"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(plistlib.dumps({
+        "Label": label, "RunAtLoad": True, "KeepAlive": True, "ThrottleInterval": 15,
+        "Umask": 0o077, "EnvironmentVariables": environment,
+        "ProgramArguments": [mise, "--cd", str(HOME), "exec", "--", "python3",
+                             str(Path(__file__).absolute()), "serve", account],
+        "StandardOutPath": str(log), "StandardErrorPath": str(log),
+    }))
+    run("launchctl", "bootstrap", domain, path)
+
+
+def setup(account, workspace, config):
+    workspace = workspace.expanduser().resolve(strict=True)
+    if not workspace.is_dir() or workspace == Path(workspace.anchor) or HOME.is_relative_to(workspace):
+        raise ValueError("--workspace には対象プロジェクトだけを置くディレクトリを指定してください")
+    storage = DATA / account
+    if any(path.is_relative_to(workspace) or workspace.is_relative_to(path) for path in (STATE, DATA)):
+        raise ValueError("workspace と Orca の保存先は分けてください")
+    if config.exists() and json.loads(config.read_text())["workspace"] != str(workspace):
+        raise ValueError("このアカウントは別の workspace で設定済みです")
+    release_dir, binary = install_server()
+    storage.mkdir(parents=True, exist_ok=True, mode=0o700)
+    profile = {"workspace": str(workspace), "storage": str(storage),
+               "release_dir": str(release_dir), "binary": str(binary)}
+    prepare(account, profile)
+    with tempfile.NamedTemporaryFile(mode="w", dir=STATE, delete=False) as stream:
+        json.dump(profile, stream)
+    Path(stream.name).replace(config)
+    install_service(account)
+    print(f"orca-{account} を設定しました（ポート {ACCOUNTS[account][0]}）")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    actions = parser.add_subparsers(dest="action", required=True)
+    initial = actions.add_parser("setup")
+    initial.add_argument("--workspace", type=Path, required=True)
+    initial.add_argument("--sbx", choices=ACCOUNTS, nargs="+", required=True)
+    service = actions.add_parser("serve")
+    service.add_argument("account", choices=ACCOUNTS)
+    cli = actions.add_parser("cli")
+    cli.add_argument("--sbx", dest="account", choices=ACCOUNTS, required=True)
+    cli.add_argument("command", choices=("orca", "claude", "codex"))
+    cli.add_argument("arguments", nargs=argparse.REMAINDER)
+    args = parser.parse_args()
+    if args.action == "setup":
+        if sys.platform != "darwin":
+            parser.error("Orca sbx の自動起動設定は macOS 専用です")
+        with setup_lock():
+            for account in dict.fromkeys(args.sbx):
+                setup(account, args.workspace, STATE / f"{account}.json")
+        return
+    profile = json.loads((STATE / f"{args.account}.json").read_text())
+    if args.action == "serve":
+        # Setup is the only entry point allowed to create sandboxes.
+        listing = run("sbx", "ls", capture_output=True, text=True).stdout
+        if not any(row.split()[0] == f"orca-{args.account}" for row in listing.splitlines() if row.strip()):
+            raise ValueError("sandbox が見つかりません。orca:setup を再実行してください")
+        prepare(args.account, profile)
+        guest(args.account, profile, [profile["binary"], "serve", "--bind", "0.0.0.0",
+                                     "--port", ACCOUNTS[args.account][0], "--refuse-public", "--no-pairing"])
+        return
+    if args.command == "codex" and args.arguments[:1] == ["login"]:
+        run("sbx", "policy", "allow", "network", "--sandbox", f"orca-{args.account}",
+            "auth.openai.com:443,chatgpt.com:443,api.openai.com:443")
+    guest(args.account, profile, [profile["binary"] if args.command == "orca" else args.command,
+                                  *args.arguments], interactive=True)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (OSError, ValueError, subprocess.CalledProcessError) as error:
+        sys.exit(str(error))

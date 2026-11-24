@@ -1,0 +1,10 @@
+["orca:setup"]
+description = "Set up one Orca server sandbox per account"
+dir         = "{{cwd}}"
+raw         = true
+run         = 'exec "$HOME/.local/bin/orca-sandbox" setup'
+
+["orca:cli"]
+description = "Pair clients or run a command in an Orca sandbox"
+raw         = true
+run         = 'exec "$HOME/.local/bin/orca-sandbox" cli'

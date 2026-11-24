@@ -1,88 +1,89 @@
 # Orca
 
-[Orca](https://github.com/stablyai/orca) は、Codex や Claude Code などの CLI agent を
-worktree ごとに起動し、desktop と mobile から状態確認・追加入力・差分レビューを行うための
-アプリケーションです。この dotfiles では macOS 版を Homebrew で導入し、ログイン時に起動します。
+[Orca](https://github.com/stablyai/orca) の PC アプリとスマホから、同じ Docker Sandbox 内の
+worktree・エージェントセッション・履歴を操作する。Mac の LaunchAgent がアカウントごとの
+Orca サーバーを起動する。
 
-## 導入
+| プロファイル | Sandbox         | ポート | Claude の認証    |
+| ------------ | --------------- | ------ | ---------------- |
+| `oauth`      | `orca-oauth`    | 3840   | sbx OAuth        |
+| `account1`   | `orca-account1` | 3841   | subscription kit |
+| `account2`   | `orca-account2` | 3842   | subscription kit |
+| `work3`      | `orca-work3`    | 3843   | subscription kit |
 
-macOS の bootstrap を実行します。
+各プロファイルに sbx と Orca サーバーを一つずつ作る。複数の Git リポジトリや Orca worktree を
+同じプロファイルに追加できる。T3 Code を併用するときは、それぞれの UI で作った worktree を使う。
 
-```bash
-mise run bootstrap:mac
-```
+## 初回セットアップ
 
-既存環境で Orca だけを追加する場合も、同じ package task は冪等に実行できます。
+Docker Sandboxes が使える Mac で実行する。macOS bootstrap は公式 Homebrew tap の
+`stablyai/orca/orca` をインストールする。別の PC には
+[公式の Orca デスクトップアプリ](https://orca.dev/docs/install)を導入する。
+スマホには [公式の Orca Mobile](https://orca.dev/docs/mobile) を導入する。
 
-```bash
+```sh
+mise bootstrap dotfiles diff
+mise bootstrap dotfiles apply
 mise run bootstrap:mac-packages
+mise run sandbox:setup
+mise run sandbox:build-template claude
+mise run sandbox:claude-token account1
 ```
 
-これは公式 tap の `stablyai/orca/orca` cask をインストールします。Homebrew から明示的に更新する
-場合は次を実行します（Orca の stable channel に追従します）。
+`--workspace` には sbx から操作する Git リポジトリ、またはそれだけを置いた親ディレクトリを指定する。
+指定したディレクトリの内容は、選択した各 sbx から読み書きできる。
+subscription アカウントは使うものだけ token を登録する。
 
-```bash
-brew upgrade --cask orca
+```sh
+mise run orca:setup -- --sbx oauth account1 --workspace "$HOME/projects/orca"
 ```
 
-初回起動後は次を設定します。
+このタスクは Linux 用 Orca サーバーのアーカイブをホスト側で取得して SHA256 を検証し、
+sbx に読み取り専用でマウントする。各サーバーの状態は
+`${XDG_DATA_HOME:-$HOME/.local/share}/orca-sandbox/<account>/` に保存する。
+同じプロファイルとパスで setup を再実行すると既存の sandbox を再利用する。登録済みの workspace を
+変更する場合は LaunchAgent を停止し、必要なデータを退避して sandbox と登録を作り直す。
 
-1. home directory へのアクセスを許可する。
-2. `~/.codex`、`~/.claude`、Ghostty 設定の import を確認する。
-3. dotfiles repository を追加し、base ref を `origin/main` にする。
-4. Codex / Claude Code は既存の CLI で一度ログインしてから、Orca の agent selector で選ぶ。
-5. **Settings → Terminal** で Ghostty 設定を import し、OSC 52 clipboard を必要に応じて許可する。
+OAuth 用の Claude は `mise run orca:cli -- --sbx oauth claude` で起動し、必要に応じて
+`/login` を実行する。サブスク用の Claude は選んだアカウントの subscription kit を使用する。
+Codex は使う sbx ごとに `mise run orca:cli -- --sbx account1 codex login --device-auth` で認証する。
+追加の MCP は対象の `orca-<account>` を選んで `mise run sandbox:mcp-load` で割り当てる。
 
-## tmux と terminal emulator との共生
+## PC とスマホを接続する
 
-Orca の terminal は独立した PTY を持つ terminal emulator です。Ghostty / WezTerm などを置き換えず、
-用途を分けて併用します。
+Mac 上の Orca では、接続したいプロファイルのリンクを発行し **Remote Orca Servers → Add Server**
+で開く。以下は `account1` の例。
 
-- **Orca terminal（推奨）**: agent の起動、状態追跡、mobile からの操作、worktree ごとの terminal。
-- **Ghostty / WezTerm + tmux**: 普段の shell、長時間の手動作業、Orca を終了しても保持したい既存 session。
-- **同じ repository を同時操作しない**: Orca が作成した worktree は Orca から、通常 checkout は
-  tmux から操作し、同じ working tree への同時書き込みを避ける。
-
-この dotfiles の zsh は `TERM_PROGRAM=Orca` では tmux を自動 attach しません。これにより Orca が
-各 agent process と terminal tab を直接追跡できます。Orca terminal 内で既存 tmux session が必要な
-場合だけ明示的に attach します。
-
-```bash
-tmux list-sessions
-tmux attach-session -t <session-name>
+```sh
+mise run orca:cli -- --sbx account1 orca pair --address 127.0.0.1
+mise run orca:cli -- --sbx account1 orca repo add --path "$HOME/projects/orca/example"
 ```
 
-逆に Ghostty / WezTerm では従来どおり tmux が自動起動します。Orca 内で常時 tmux を自動起動すると、
-Orca の tab/split、agent status、scrollback と tmux の window/pane が二重管理になるため推奨しません。
-tmux 内で起動した任意の CLI agent は動作しますが、Orca の専用 agent launcher から起動した場合ほど
-status や session metadata が統合されない点にも注意してください。
+Android・iOS は Mac と同じ Tailscale ネットワークに接続する。または同じ LAN を使う。
+スマホから Mac の公開ポートに届くことを確認し、下記の IP を Mac の Tailscale IP または LAN IP
+に置き換える。別の PC から接続するときも、その PC から届く Mac の IP で PC 用のリンクを発行する。
 
-## mobile companion
+```sh
+mise run orca:cli -- --sbx account1 orca pair --mobile --address 100.64.1.20
+```
 
-mobile app は desktop の代替ではなく、desktop 上で動いている session の remote control です。
-desktop の Orca を終了すると接続できないため、この dotfiles では Orca を macOS のログイン項目へ
-追加します。
+sbx のポートが Mac の localhost でのみ待ち受けている場合は、Mac で Tailscale Serve の TCP 転送を設定する。
+対象のポート番号はアカウントの表に合わせる。
 
-1. iOS は [App Store](https://apps.apple.com/us/app/orca-ide/id6766130217)、Android は
-   [Orca Releases](https://github.com/stablyai/orca/releases) から公式版を導入する。
-2. desktop Orca の account / status menu から pairing を開き、one-time code を表示する。
-3. mobile で **Pair** を選び、code を入力する。
-4. internet 越しでは **Orca Relay** を優先する。Relay を使う場合は desktop と mobile で同じ
-   Orca account に sign in する。
-5. LAN / Tailscale を使う場合は、mobile の host address に到達可能な IP または hostname を設定する。
-   既定 port は `6768`。自宅 router でこの port を直接 internet 公開しない。
+```sh
+tailscale serve --bg --tcp=3841 tcp://127.0.0.1:3841
+```
 
-mobile からは agent の状態と terminal scrollback の確認、prompt への返信、Quick Commands、簡易的な
-source control 操作ができます。Chat UI は読み書きしやすく、raw terminal は TUI や tmux の確認に向きます。
-端末ごとに **Settings → Chat UI** で既定表示を選択できます。
+Orca Mobile の **Pair** で QR コードを読むか、リンクを開く。
+接続できない場合は `sbx ports orca-account1` とホストのファイアウォールを確認する。
+公開ポートをルーターからインターネットへ転送しない。ペアリングリンクは接続先の操作権限を与えるため、
+接続する端末だけで使う。
 
-接続できない場合は次を確認します。
+デスクトップで登録したプロジェクトと作成した worktree は、同じ接続先のスマホでも表示される。
+アカウントを切り替える場合は、PC とスマホで対象の接続先を選ぶ。
+最初の作業前に、接続先の `orca-<account>` と worktree を確認する。
 
-- desktop Orca が起動中で、desktop / mobile の両方が最新である。
-- pairing code の有効期限が切れていない。切れていれば再発行する。
-- Relay では同じ Orca account、LAN / Tailscale では同じ到達可能な network path を使っている。
-- Tailscale 利用時は macOS と mobile の双方が同じ tailnet に接続済みである。
-
-詳細は公式の [install](https://www.onorca.dev/docs/install)、
-[terminal](https://www.onorca.dev/docs/terminal)、
-[mobile companion](https://www.onorca.dev/docs/mobile) を参照してください。
+サーバーは Mac の GUI ログイン時に起動する。Mac がスリープ中は接続できない。
+自動起動のログは `${XDG_STATE_HOME:-$HOME/.local/state}/orca-sandbox/<account>.log` にある。
+サーバーのみの Linux 版で使える機能とペアリングの詳細は
+[Orca の Remote Servers ガイド](https://orca.dev/docs/remote-servers)を参照。
