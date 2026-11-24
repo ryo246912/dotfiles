@@ -221,26 +221,26 @@ url_api = "https://api.github.com/repos/zizmorcore/zizmor/releases/assets/703541
 provenance = "github-attestations"
 
 [[tools."github:betterleaks/betterleaks"]]
-version = "1.3.1"
+version = "1.10.1"
 backend = "github:betterleaks/betterleaks"
-specifiers = ["1.3.1"]
+specifiers = ["v1.10.1"]
 
 [tools."github:betterleaks/betterleaks"."platforms.linux-arm64"]
-checksum = "sha256:8e4145c1f4155757f4a9e1b75facc49ee67525365cde2c38373457d92e2fdc9d"
-url = "https://github.com/betterleaks/betterleaks/releases/download/v1.3.1/betterleaks_1.3.1_linux_arm64.tar.gz"
-url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/427212673"
+checksum = "sha256:62a63199f9f61a6b5e5a6f58f048493db20fbc8c770014f4d903a4d97886e1bf"
+url = "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/betterleaks_1.10.1_linux_arm64.tar.gz"
+url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/740237676"
 provenance = "github-attestations"
 
 [tools."github:betterleaks/betterleaks"."platforms.linux-x64"]
-checksum = "sha256:7b241c80204538cbb210c94514dc7cdff86430938bd7d5b6e289207959530849"
-url = "https://github.com/betterleaks/betterleaks/releases/download/v1.3.1/betterleaks_1.3.1_linux_x64.tar.gz"
-url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/427212674"
+checksum = "sha256:c174b42d7aa60caf58c0c3e555c0e4bed01fe6b0d99a412bce777b5af4ce913e"
+url = "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/betterleaks_1.10.1_linux_x64.tar.gz"
+url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/740237681"
 provenance = "github-attestations"
 
 [tools."github:betterleaks/betterleaks"."platforms.macos-arm64"]
-checksum = "sha256:d8840dc2523074900fc053d85af776f667f351ec1ea0158f9ff65861cf011c7d"
-url = "https://github.com/betterleaks/betterleaks/releases/download/v1.3.1/betterleaks_1.3.1_darwin_arm64.tar.gz"
-url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/427212670"
+checksum = "sha256:ca91eb3b006f15478411f235b5e2712fb15cea74f6701ebadc2364efe0af1403"
+url = "https://github.com/betterleaks/betterleaks/releases/download/v1.10.1/betterleaks_1.10.1_darwin_arm64.tar.gz"
+url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/740237732"
 provenance = "github-attestations"
 
 [[tools."github:dyoshikawa/rulesync"]]
