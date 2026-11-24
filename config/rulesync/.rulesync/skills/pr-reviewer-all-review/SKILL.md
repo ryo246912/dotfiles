@@ -62,7 +62,7 @@ crit を使う場合は pr-crit の checkout・壁打ち・投稿手順を使う
 
 ## 3. 動作確認レポートを作る
 
-[段階一覧の段階 5](references/stages.md) に従って `pr-behavior-review` を実行する。候補提示時は HTML レポートへのリンクと実施状況を添える。手順・データ・画像はレポートにまとめる。
+[段階一覧の段階 5](references/stages.md) に従って `pr-behavior-review` を実行する。候補提示時の案内も段階 5 の共通手順に従う。
 
 ## 4. 指摘候補を出す
 
