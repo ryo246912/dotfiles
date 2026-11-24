@@ -286,7 +286,12 @@ def service_environment():
     # and the environment selectors that enable config.mac.toml (including sbx).
     xdg_data = Path(os.environ.get("XDG_DATA_HOME", str(Path.home() / ".local/share")))
     data = Path(os.environ.get("MISE_DATA_DIR", str(xdg_data / "mise")))
-    paths = [str(Path.home() / ".local/bin"), str(data / "shims"), *os.environ["PATH"].split(os.pathsep)]
+    paths = [str(Path.home() / ".local/bin")]
+    if sys.platform == "darwin":
+        # macOS bootstrap installs Bash through Homebrew. Prefer it to an
+        # unconfigured mise Bash shim when sbx-agent uses /usr/bin/env bash.
+        paths.append("/opt/homebrew/bin")
+    paths.extend([str(data / "shims"), *os.environ["PATH"].split(os.pathsep)])
     environment = {"PATH": os.pathsep.join(dict.fromkeys(paths))}
     for key in ("MISE_ENV", "HOST_ENV", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CONFIG_HOME", "DOTFILES_DIR", "MISE_DATA_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR", "MISE_CONFIG_DIR", "SBX_AGENT_SIGNING_KEY"):
         if key in os.environ:
