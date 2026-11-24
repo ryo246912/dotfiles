@@ -227,6 +227,8 @@ def sandbox_command(profile, arguments, interactive=False, tool="t3"):
     terminal = ["-i"] if interactive else []
     if interactive and sys.stdin.isatty() and sys.stdout.isatty():
         terminal.append("-t")
+    # T3 starts Claude through its server, so enable Chrome in the server's environment.
+    chrome_env = "export CLAUDE_CODE_ENABLE_CFC=1; " if profile["account"] == "oauth" else ""
     return ["sbx", "exec", *terminal, "-u", "agent", profile["name"], "bash", "--noprofile", "--norc", "-c",
             '[ ! -r /etc/sandbox-persistent.sh ] || . /etc/sandbox-persistent.sh; '
             'cd "$1" || exit 1; export T3CODE_HOME="$2" MISE_PREFER_OFFLINE=false MISE_OFFLINE=false; '
@@ -235,7 +237,7 @@ def sandbox_command(profile, arguments, interactive=False, tool="t3"):
             'printf "%s\n" "Aqua レジストリを取得しています（初回のみ）..." >&2; '
             'mise --cd /mise cache clear aqua:cli/cli && '
             'mise --cd /mise ls-remote --no-versions-host aqua:cli/cli >/dev/null || exit 1; fi; '
-            'shift 2; exec mise exec -- "$@"',
+            + chrome_env + 'shift 2; exec mise exec -- "$@"',
             "bash", profile["workspace"], str(Path(profile["storage"]) / "t3"), tool, *arguments]
 
 
@@ -582,7 +584,7 @@ def main():
         print(f"Sandbox: {profile['name']} / Command: {' '.join(arguments)}", flush=True)
         if arguments == ["claude-login"]:
             require("sbx")
-            command = ["sbx", "run", "--name", profile["name"]]
+            command = ["sbx", "run", "--name", profile["name"], "--", "--chrome"]
         elif arguments == ["codex-login"]:
             require("sbx")
             run(["sbx", "policy", "allow", "network", "--sandbox", profile["name"], CODEX_NETWORK])

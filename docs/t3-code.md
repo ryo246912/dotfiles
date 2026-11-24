@@ -202,6 +202,9 @@ mise run t3:cli
 **login → Claude → oauth** を選ぶと専用 Sandbox の Claude が開く。
 必要に応じて `/login` を実行し、`/mcp` でツールを確認する。続いて **pair → oauth** で T3 アプリを接続する。
 Claude OAuth は既存の ccmanager OAuth プリセットと同じ sbx のホスト共通認証を使う。
+T3 の `oauth` プロファイルでは起動時に Claude in Chrome を有効にする。
+ホストで `sbx settings set claude.chrome true` を設定し、Chrome 拡張には Claude の `/login` と同じアカウントでログインする。
+起動済みの T3 サーバーには **restart-server → oauth** で反映し、新規 Claude スレッドで確認する。
 MCP 側の OAuth はそれぞれの MCP 登録で管理する。T3 に接続したら、新規スレッドのツール一覧でも確認する。
 
 `sandbox:mcp-load` は選んだ MCP で割り当てを置き換える。引き続き使う MCP も Tab で選ぶ。
