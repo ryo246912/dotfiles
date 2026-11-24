@@ -224,7 +224,7 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
    PC から到達できる `http://127.0.0.1:3774` などの URL に変換して表示する。
 5. 必要なら表示名を `account2` などに変更し、Providers で Claude の認証状態を確認する。
 6. 初回にプロジェクトが未登録なら、コマンドパレットの **Add project** → **Local folder** から
-   setup で指定した workspace を追加する。
+   共有環境では `~/Programming` 配下の Git リポジトリか dotfiles の checkout、専用環境では setup で指定した Git リポジトリを追加する。
 
 サービス起動直後に pair が「サーバーがない」と返す場合は、起動完了後に再実行する。
 ペアリングは端末ごとに一度だけでよい。URL / コードは認証情報なのでコミット・共有しない。
@@ -472,8 +472,8 @@ mise run t3:cli -- --sbx account2 server-status
 
 サービスを止める際は実行中の作業を確認する。
 sandbox を停止するだけだとサービスが再試行する。
-sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して（以下は work3 の例）
-`mise run t3:setup -- --sbx work3 --workspace /path/to/project` を実行し、
+sandbox を削除した場合はサービス経由で再作成せず、共有環境なら `mise run t3:setup -- --sbx work3`、
+専用環境なら対象リポジトリ内で `mise run t3:setup -- --repo --sbx work3` を実行し、
 再作成時の plan を手動で確認・承認する。サービスからの無条件な自動承認は行わない。
 
 ### 設定済み sandbox を削除する
@@ -482,8 +482,8 @@ sandbox を削除した場合はサービス経由ではなく、対象アカウ
 自動起動サービスを解除し、sandbox を停止してから削除する。ホスト側の登録も削除し、公開ポートを解放する。
 実行中の作業は中断されるため、sandbox 内だけにある必要なファイルは先に保存する。
 ホストに保存された T3 の設定と履歴は残る。
-また使う場合は `mise run t3:setup` で環境を作成する。
-削除の途中でエラーが出たら、原因を解消して `mise run t3:reset` を再実行する。
+また使う場合は共有環境なら `t3:setup`、専用環境なら `t3:setup -- --repo` で作成する。
+削除の途中でエラーが出たら、原因を解消して同じ reset コマンドを再実行する。
 
 ### macOS で旧 sandbox の自動起動を解除する
 
