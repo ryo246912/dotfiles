@@ -45,7 +45,7 @@ experimental    = true
 "npm:oxfmt"                                      = "0.79.0"
 "npm:oxlint"                                     = "1.87.0"
 "npm:t3"                                         = "0.1.11"
-"pipx:basic-memory"                              = { version = "0.24.1", uvx_args = "--prerelease=allow" }
+"pipx:basic-memory"                              = { version = "1.0.0", uvx_args = "--prerelease=allow" }
 "pipx:desloppify"                                = { version = "1.0", extras = "full" }
 
 [settings.pipx]
