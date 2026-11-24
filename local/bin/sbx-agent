@@ -644,11 +644,22 @@ fi
 # workspace が linked worktree の場合、.git file は common git dir を絶対パスで参照する。
 # sbx はホストと同じ絶対パスにマウントするため、これも渡さないと sandbox 内で git が壊れる
 # （公式ドキュメントの "Host worktree" の制限を回避する方法。docs/docker-sandboxes.md 参照）。
-if grep -q '^gitdir: [^/]' "${WORKSPACE}/.git" 2>/dev/null; then
-    log_warn "workspace が relative-paths 形式の worktree のため、sandbox 内で git が使えません"
-elif common_git_dir=$(git -C "$WORKSPACE" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
-    [[ "$common_git_dir" != "${WORKSPACE}/.git" ]] && add_mount "$common_git_dir"
+mount_worktree_git_dir() {
+    local workspace="$1" suffix="${2:-}" common_git_dir
+    if grep -q '^gitdir: [^/]' "${workspace}/.git" 2>/dev/null; then
+        log_warn "$workspace が relative-paths 形式の worktree のため、sandbox 内で git が使えません"
+    elif common_git_dir=$(git -C "$workspace" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+        if [[ "$common_git_dir" != "${workspace}/.git" ]]; then
+            add_mount "${common_git_dir}${suffix}"
+        fi
+    fi
+}
+if [[ -n "$writable_dotfiles" ]]; then
+    mount_worktree_git_dir "$writable_dotfiles"
+elif [[ -n "${dotfiles_repo:-}" && "$WORKSPACE" != "$dotfiles_repo" ]]; then
+    mount_worktree_git_dir "$dotfiles_repo" :ro
 fi
+mount_worktree_git_dir "$WORKSPACE"
 
 # ---------------------------------------------------------------------------
 # sandbox の環境変数
