@@ -227,7 +227,7 @@ gh pr view 123 --json number,title,author,body,headRefOid,files
 gh pr checkout 123
 git rev-parse HEAD   # headRefOidと一致すること（critのcomment行番号は手元のfileの行番号）
 
-# 2. agentが指摘候補を裏取りし、動作確認手順を書く
+# 2. agentが指摘候補を裏取りし、必要に応じてpr-behavior-reviewのHTMLレポートを作る
 
 # 3. PRの差分（merge-base..head、GitHubと同じ範囲）をcritで開き、指摘候補をline commentとして並べる
 crit pr 123
@@ -254,8 +254,8 @@ devcontainerの`agent_cmd`による**Send now**も使えますが、補助に留
 
 ### pr-reviewer-all-reviewとの共通化
 
-指摘の区分・本PRとの関係・動作確認手順・投稿書式・submit本文例は、critを使わない`pr-reviewer-all-review` skillと共通です。重複を避けるため、
-共通部分は`pr-reviewer-all-review`の`references/`（`pr-info.md` / `findings.md` / `manual-test.md` / `draft-review.md`）に置き、
+指摘の区分・本PRとの関係・投稿書式・submit本文例は、critを使わない`pr-reviewer-all-review` skillと共通です。重複を避けるため、
+共通部分は`pr-reviewer-all-review`の`references/`（`pr-info.md` / `findings.md` / `draft-review.md`）に置き、
 両方のskillがそこを読みます。`pr-crit`にはcrit固有の手順だけを書いています。投稿scriptも`pr-reviewer-all-review`の
 `scripts/post_draft_review.py`を使うため、2つのskillは一緒に配布しておきます。
 
