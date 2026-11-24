@@ -10,17 +10,21 @@
 
 ## 全体構成
 
-既定では `oauth`、`account1`、`account2`、`work3` の各アカウントに、共有 SBX と T3 サーバーを一つずつ用意する。
-共有 SBX はホストの `~/Programming` と `~/dotfiles` を読み書き可能でマウントする。
+既定では、選択した `oauth`、`account1`、`account2`、`work3` の各アカウントに、共有 SBX と T3 サーバーを一つずつ用意する。
+共有 SBX はホストの `~/Programming` と、`sbx-agent` が検出した dotfiles（通常は `~/dotfiles`）を読み書き可能でマウントする。
 T3 アプリから接続済みの環境で **Add Project** を選び、SBX 内で見えているホストの Git リポジトリを指定する。
 後から `~/Programming` 配下に作ったリポジトリも同じ環境から見える。マウント追加やペアリングのやり直しは不要。
 
 `~/Programming` 配下の既存ファイルや Git の管理ファイルも、共有 SBX を使う各アカウントのエージェントから読み書きできる。
 アカウントの認証と T3 履歴は別々だが、同じチェックアウトを複数のエージェントが使えば変更が競合し得る。
-同時作業には T3 の worktree が使える。dotfiles の編集はホストにも反映され、ホストが参照する設定やスクリプトにも影響する。
+同時作業では、対象プロジェクトの変更を T3 の worktree で分けられる。
+共有 SBX は同じホストの dotfiles checkout を参照するため、そこを直接編集すると他のスレッド・アカウントとホストに反映される。
+共有マウントには `.git` も含まれ、Git の設定やフックの変更は後続のホスト側 Git 操作に影響し得るため、信頼できるエージェントで使う。
 
 既存のリポジトリ別環境は `--repo` で引き続き操作できる。共有環境には初回だけ別途ペアリングする。
 同じ共有環境を再起動すると、公開ポートとホストに保存した T3 データを再利用する。
+公開ポートは専用環境と同じアカウント別の枠から割り当てる。
+`oauth` は 3800–3809、`account1` は 3810–3819、`account2` は 3820–3829、`work3` は 3830–3839。
 
 ### 各部品の役割
 
@@ -78,7 +82,7 @@ Homebrew の公開版がサーバーより古い場合は、アプリも公式�
 
 ## 最初にアカウントを選ぶ
 
-初回だけ、次を実行する。ホストに `~/Programming` と `~/dotfiles` が必要。
+初回だけ、次を実行する。ホストに `~/Programming` と dotfiles の checkout が必要。
 
 ```bash
 mise run t3:setup
@@ -89,7 +93,7 @@ mise run t3:setup
 `fzf` で Tab / Shift-Tab を使って複数選択し、Enter で確定する。
 Ctrl-A で全選択、Ctrl-D で選択解除、Esc で設定を変更せず中止できる。
 `fzf` が未導入なら `mise install aqua:junegunn/fzf` で導入する。
-開始前に表示される Workspace が、操作しているプロジェクトのパスであることを確認する。
+開始前に表示される Workspace は、共有環境なら `~/Programming`、`--repo` で作る専用環境なら対象リポジトリのルートになる。
 
 subscription プロファイルは `sbx-agent --claude-account` と subscription kit を使い、
 Claude の認証先をその sandbox に固定する。token が未登録の場合は停止する。

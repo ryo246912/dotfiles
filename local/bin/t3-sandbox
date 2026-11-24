@@ -210,23 +210,18 @@ def prepare(profile):
     else:
         auth_args = ["--claude-account", account, "--config-dir", Path.home() / ACCOUNTS[account]]
         environment = os.environ
-    workspaces = [Path(profile["workspace"])]
     mounts = ["--mount", profile["storage"]]
     if profile["name"] == profile_key(account, shared_workspace()):
-        dotfiles = (Path.home() / "dotfiles").resolve()
-        if not dotfiles.is_dir():
-            raise ValueError(f"dotfiles のディレクトリがありません: {dotfiles}")
         mounts.append("--writable-dotfiles")
-        workspaces.append(dotfiles)
     run(["sbx-agent", "claude", *auth_args,
          "--workspace", profile["workspace"], "--name", profile["name"],
          *mounts, "--publish", f'{profile["port"]}:3773', "--setup-only"],
         env=environment)
-    for workspace in workspaces:
-        mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", workspace])
-        if mounted.returncode:
-            raise ValueError(f"{profile['name']} 内で workspace にアクセスできません: {workspace}。"
-                             "既存 sandbox のマウントを確認してください")
+    workspace = profile["workspace"]
+    mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", workspace])
+    if mounted.returncode:
+        raise ValueError(f"{profile['name']} 内で workspace にアクセスできません: {workspace}。"
+                         "既存 sandbox のマウントを確認してください")
     allow_t3_connect_network(profile)
     # sbx loses host mappings on stop; sbx-agent only restores its own bridge ports.
     mapped = mapped_t3_ports(profile["name"])

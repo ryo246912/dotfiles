@@ -18,7 +18,7 @@
 #   --claude-account ID Claude サブスクを sandbox ごとに固定（account1/account2/work3 など）
 #   --claude-oauth      通常の OAuth 用。ホストの Claude 設定・認証を共有しない
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
-#   --writable-dotfiles ~/dotfiles を読み書き可能で追加マウント
+#   --writable-dotfiles 検出した dotfiles を読み書き可能で追加マウント
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
 #   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
@@ -506,7 +506,11 @@ done
 
 writable_dotfiles=""
 if [[ "$WRITABLE_DOTFILES" == true ]]; then
-    writable_dotfiles=$(cd "${HOME}/dotfiles" && pwd -P) || exit 1
+    dotfiles_repo=$(find_dotfiles_repo) || {
+        log_error "dotfiles が見つかりません。DOTFILES_DIR に checkout のパスを設定してください"
+        exit 1
+    }
+    writable_dotfiles=$(cd "$dotfiles_repo" && pwd -P) || exit 1
     add_mount "$writable_dotfiles"
 fi
 
@@ -539,7 +543,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # 上のホスト設定は mise の [dotfiles] が symlink-each で配置しているため、中身は
     # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
     # 渡さないと sandbox 内ではリンク切れになる。既定では read-only にする。
-    if dotfiles_repo=$(find_dotfiles_repo); then
+    if [[ -n "$writable_dotfiles" ]] || dotfiles_repo=$(find_dotfiles_repo); then
         # 省略するのは workspace がリポジトリ root そのもののときだけ（既に rw でマウント
         # 済み）。サブディレクトリを workspace にした場合は root が見えないため、
         # ~/.config 配下の symlink を解決するにはリポジトリの追加マウントが必要になる。
