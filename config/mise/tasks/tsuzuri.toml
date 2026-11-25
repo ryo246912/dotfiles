@@ -1,0 +1,22 @@
+["tsuzuri:serve"]
+description = "Start the tsuzuri Japanese writing review app (install on first run)"
+dir = "{{cwd}}"
+run = '''
+set -euo pipefail
+
+# APM の skill と閲覧アプリのバージョンを揃える。
+manifest="$HOME/.apm/apm.yml"
+version=$(sed -n 's/^[[:space:]]*- MaryCache\/tsuzuri\/skills\/tsuzuri#\(v[0-9][0-9.]*\)$/\1/p' "$manifest")
+if [[ ! "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "error: tsuzuri release tag not found in $manifest; apply dotfiles first." >&2
+  exit 1
+fi
+
+app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/tsuzuri/$version"
+if [ ! -d "$app_dir" ]; then
+  mkdir -p "$(dirname "$app_dir")"
+  git clone --depth 1 --branch "$version" https://github.com/MaryCache/tsuzuri.git "$app_dir"
+fi
+exec python3 "$app_dir/app/server.py" "$@"
+'''
+shell = "bash -c"
