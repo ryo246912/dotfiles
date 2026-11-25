@@ -64,7 +64,7 @@ def main() -> int:
     payload = json.loads(Path(args.input).read_text(encoding="utf-8"))
     review_body = payload.get("body")
     if args.submit and (not isinstance(review_body, str) or not review_body.strip()):
-        parser.error("--submit には確認済みのレビュー本文（入力 JSON の body）が必要です")
+        parser.error("--submit には空でないレビュー本文（入力 JSON の body）が必要です")
 
     base = f"repos/{args.repo}/pulls/{args.pr}"
 
