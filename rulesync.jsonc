@@ -1,7 +1,7 @@
 {
   "targets": {
-    "claudecode": ["rules", "hooks"],
-    "codexcli": ["rules", "hooks"],
+    "claudecode": ["rules", "skills", "hooks"],
+    "codexcli": ["rules", "skills", "hooks"],
   },
   "outputRoots": ["."],
   "delete": false,

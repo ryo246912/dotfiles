@@ -1,6 +1,9 @@
 ---
 name: pr-library-review
 description: PRやローカルのGit差分を対象に、ライブラリ・フレームワーク・SDKの非推奨API、冗長な設定や自前実装、標準機能による簡素化、依存更新で使える新機能をレビューする。Context7とDeepWikiで調査し、対象バージョンの公式資料で裏付ける。依存更新PR、推奨設定の確認、ライブラリらしい実装のレビューに使う。
+targets:
+  - claudecode
+  - codexcli
 ---
 
 # PRライブラリレビュー

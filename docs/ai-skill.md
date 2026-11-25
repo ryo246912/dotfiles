@@ -77,20 +77,6 @@ APM で入れた upstream の skill はフロントマターを書き換えて�
 > 書くと、書かなかった skill がすべて `"on"` に戻ります。そのため上のとおり全 skill をコピーして書きます。
 > 確かめるときは、1 つのリポジトリで `/context` の Skills の行を見ます。
 
-### 既定の設定（`claude/settings.json`）
-
-| 値                    | skill                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `on`                  | crit（`crit` / `crit-cli`）、ponytail（`ponytail` / `ponytail-*`）、`memo`、`planning`、`pr-author-lessons-review`                                                                                                                                                                                                                                                                                                                   |
-| `name-only`           | plannotator（`plannotator-review` / `-annotate` / `-last`）、effective-html（`html` / `html-*` / `design-artifact`）、`terminal-browser`、grill-me（`grill-me` / `grilling`）、`diagram-design`、`desloppify`、`pr-reviewer-comment-crit`、`pr-author-fix`、`pr-author-all-review`、`lessons-record`、`pr-reviewer-comment`、`pr-reviewer-brief`、`pr-reviewer-behavior`、`tmux`、tsumiki の `dev-impl` / `dev-verify` / `dev-debug` |
-| `user-invocable-only` | 上以外（tsumiki の残りの `dev-*` / `ipa-security-*` / `kairo-implement` / `task-breakdown` / `uat-test-design`、`ctx-agent-history-search`、`find-skills`、`prompt-master`、`suggest-rules`、`lessons-harvest`、`lessons-review`）                                                                                                                                                                                                   |
-
-- 複数の skill をまとめて配る package（crit・ponytail・plannotator・effective-html・grill-me）は、package 単位で同じ値にしています。
-  `pr-reviewer-comment-crit` は `crit` / `crit-cli` の使い方を前提にし、`grill-me` は `grilling` を、tsumiki の `dev-run` は
-  `dev-impl` / `dev-verify` / `dev-debug` を呼び出すため、呼ばれる側を `user-invocable-only` にすると Claude から
-  使えなくなります（呼ばれる側は `name-only` 以上にする）。
-- `skillOverrides` に無い skill は `"on"` として一覧に載ります。`apm/apm.yml` や rulesync に skill を足したら、ここにも追加します。
-
 ### plugin の管理
 
 Claude Code の plugin は、skill とは別に `enabledPlugins` で管理します。
@@ -121,6 +107,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 外部skillは `apm/apm.yml`、自作skillはrulesyncで管理します。このページでは次のskillの使い方を説明します。
 
 - Plannotator / Effective HTML skills
+- `understand`
 - `crit` / `crit-cli`
 - `terminal-browser`
 - Tsumiki skills
@@ -129,9 +116,10 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `grill-me`（内部で `grilling` を使用）
 - `diagram-design`
 - `find-skills`
+- `last30days`
+- `modern-web-guidance`
 - `prompt-master`
 - `desloppify`
-- `pr-reviewer-behavior`（自作）
 
 ### インストール
 
@@ -146,8 +134,19 @@ mise --cd "$HOME" run apm:install
 `~/.claude/skills/`、Codex・GitHub Copilot・Cursor では共通の `~/.agents/skills/` に配置されます。
 インストール後は、エージェントを新しいセッションで起動してください。
 
-依存先は再現性のため `apm/apm.yml` で commit SHA またはrelease tagに pin しています。更新時は upstream の内容を確認して
-`ref` を変更し、もう一度 `mise bootstrap dotfiles apply` と `mise --cd "$HOME" run apm:install` を実行します。
+再現性のため、依存先は `apm/apm.yml` の ref または `apm/apm.lock.yaml` の `resolved_commit` で固定しています。
+更新方法は [APM の pin と Renovate による更新](apm.md#pin-と-renovate-による更新)を参照してください。
+
+## `last30days`
+
+トピックについて直近30日間の投稿や反応を調べます。Claude Code では `/last30days <トピック>`、
+Codex では `$last30days <トピック>` で起動します。実行には Python 3.12 以上が必要です。
+APM はロックファイルに従ってスキルを配布し、既存の配布先を更新します。
+まず API キーなしで使える情報源を試せます。初回セットアップをスキップした後でも、たとえば
+Claude Code では `/last30days X を使えるよう設定して`、Codex では `$last30days X を使えるよう設定して`
+と入力すると、その情報源の設定案内を開けます。
+選択した情報源によっては、セットアップ時にブラウザのログイン情報の利用を求められたり、
+Homebrew で `yt-dlp` を導入したりします。入力した API キーは通常 `~/.config/last30days/.env` に保存されます。
 
 ## Plannotator / Effective HTML
 
@@ -539,9 +538,9 @@ correctness、security、performanceのreviewを置き換えないため、必�
 $ponytail-review を使って、現在のdiffから削除できるabstractionを探してください。
 ```
 
-Ponytailを止めるときは「stop ponytail」または「normal mode」と伝えます。default levelを変える場合は
-`PONYTAIL_DEFAULT_MODE`へ`lite`、`full`、`ultra`、`off`のいずれかを設定します。pluginのalways-on activationには
-Node.jsで動くlifecycle hookを使用するため、非対話shellの`PATH`から`node`を実行できる必要があります。
+APM は6つのスキルを個別に配布します。必要なときにスキルを直接呼び出してください。
+`pr-author-all-review` は一般レビューのあとに、同じ差分を `ponytail-review` で確認します。
+Ponytail の起動・モード切替用の hooks は配布しません。
 
 ## `ctx-agent-history-search`
 
@@ -706,6 +705,22 @@ npx skills find testing --owner vercel-labs
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
 
+## `modern-web-guidance`
+
+Modern Web Guidance は、Web UI を実装するときに、ブラウザ標準の API や CSS の実装パターンを調べるスキルです。
+APM で配置した後、新しいセッションで Claude Code なら `/modern-web-guidance`、Codex なら `$modern-web-guidance` で呼び出せます。
+Claude Code では既定で `name-only` にしており、スキル一覧に名前だけを表示します。
+たとえば「`$modern-web-guidance` を使って、ダイアログの開閉と背景のアニメーションを実装して」と入力します。
+
+ターミナルから直接調べる場合は Node.js 22 以上が必要です。`search` で候補の ID を探し、`retrieve` にその ID を渡します。
+
+```bash
+npx -y modern-web-guidance@latest search "animate a dialog modal backdrop"
+npx -y modern-web-guidance@latest retrieve "animate-to-from-top-layer"
+```
+
+[Modern Web Guidance の公式ドキュメント](https://developer.chrome.com/docs/modern-web-guidance)
+
 ## desloppify（コードベースの品質改善ループ）
 
 [desloppify](https://github.com/peteromallet/desloppify) は、コードベースをスキャンして「雑な実装（slop）」を検出し、
@@ -791,125 +806,24 @@ desloppify status --json   # 状態を JSON で出力
 - CI で実行する場合は `--profile ci` と `--no-badge` を付けます。
 - 修正は大量になりやすいので、1 タスクごとにコミットして差分を小さく保ちます。
 
-## `pr-reviewer-brief` — PR解説と動作確認のレポート
-
-PRのURL・番号またはstackを渡すと、前提知識・変更内容を整理したHTMLを作り、通常実行では
-`pr-reviewer-behavior`を使って確認データの準備・画面への到達・実画面での動作確認まで進めます。
-stackは最上位PRの起動済み環境で、stack全体の変更を確認します。
+## PR レビュースキルの組み合わせ例
 
 ```text
-/pr-reviewer-brief https://github.com/<owner>/<repository>/pull/123
-
-$pr-reviewer-brief PR #123。localで確認して
+/pr-brief 123                          # 解説資料
+/pr-brief 123 -be                      # 解説資料と動作確認
+/pr-behavior-review 123                       # 動作確認だけ
+/pr-reviewer-all-review 123                     # レビューと条件が揃えば動作確認
+/pr-reviewer-all-review 123 -br                 # 解説資料も作る
+/pr-reviewer-all-review 123 -c                  # crit で確認
+/pr-reviewer-all-review 123 -br -c              # 解説資料と crit
+/pr-reviewer-all-review 123 -br -c -nb          # 実環境の操作を省略
+/pr-reviewer-all-review 123 -s                  # レビュースキルと crit・brief・behavior を開始前に選ぶ
 ```
 
-レポートの「動作確認方法」には、環境・ロール、準備済みデータ、準備・操作の各ステップと画像、
-期待結果・観測した実結果・未確認事項と続行条件、PASS／FAIL／BLOCKED／NOT RUN、残したデータと削除手順を組み込みます。
-判定はPASSが緑、BLOCKED・FAILが赤、NOT RUNが灰色で、文字でも識別できます。
-behaviorの別HTMLへのリンクだけでなく、briefのHTML内で準備から確認まで追えます。
-briefの保存先は `./plan/pr-<N>_<変更内容タイトル>.html`、stackは `./plan/stack-<番号>_<変更内容タイトル>.html` です。
-behavior単体の `.pr-reviewer-artifacts/` 配下のHTMLとは別の成果物です。
-環境やログインが不足しても資料作成は続け、到達できた範囲と手動で続けるための不足条件を残します。
-BLOCKEDでも終了前に知見保存を確認し、保存済み・新規知見なし／重複・試行後の保存失敗・未試行とその理由を区別して記録します。
-メインはsubagentの申告だけでなく、保存ファイルを確認してから完了を返します。
+## understand-mode
 
-ブラウザ接続・設定補完・データ操作はbehaviorと同じルールです。環境起動・flag設定・base比較は行いません。
-「説明だけ」「動作確認不要」の指定、チケットモード、`--watch`では実操作せず、確認計画を未実行として扱います。
+Claude Code の回答、コード、PR、未コミット差分をブラウザのホワイトボードで読み、気になる箇所を選んで付箋ごとに質問できます。Node.js 18 以上が必要です。PR を指定する場合は `gh` を使います。
 
-## `pr-reviewer-behavior` — PRの動作確認
-
-起動済みのlocalやstaging（preview）でPRの変更を操作して確認する自作スキルです。
-確認用データを準備し、対象画面へ到達する作業を補助します。
-自動操作できない場合も、準備したデータのID・URL・手動確認手順を残します。
-
-### 配布と呼び出し
-
-ソースは `config/rulesync/.rulesync/skills/pr-reviewer-behavior/` です。
-既存のrulesync同期でClaude CodeとCodex CLIに配布します（[rulesync](rulesync.md)）。
-Playwright MCP・Claude in Chrome・Chrome DevTools MCPで、AIが接続しているChromeを使います。
-独立したブラウザをCLIから起動することは想定しません。
-
-```text
-# Claude Code
-/pr-reviewer-behavior https://github.com/<owner>/<repository>/pull/123
-
-# Codex CLI
-$pr-reviewer-behavior PR #123。localで確認して、準備したデータは残して
-```
-
-番号だけの場合はカレントリポジトリから解決します。
-stack内のPRなら最上位PRの環境を使い、原則として入力PRの変更を確認します。
-stack全体を確認したい場合はその旨を指定します。
-環境と対象SHAの対応が不明・不一致なら動作検証とデータ作成はBLOCKEDとし、手順作成は続けます。
-データ作成・更新の直前、ブラウザ操作直前と報告前にもSHAを再確認し、途中更新時は元のSHAの結果として記録します。
-
-### localのDB直接編集
-
-localの開発用DBは、確認用データの作成・更新のために追加の許可なく直接編集できます。
-接続先が対象アプリのローカル開発用DBであることを確認し、設定の接続・編集方法を使います。
-既存手順がなくてもSQLやORM操作を組み立てられますが、アプリのvalidation・業務上の整合性や副作用も確認します。
-staging（preview）・本番・共有DBへの直接編集は行いません。localhost経由の転送でも対象外です。
-
-### 設定と知見の蓄積
-
-スキルの `config.example.md` を、同じディレクトリに `config.md` としてコピーして使います。
-初回起動時はスキルがコピーを作り、以後も未記入項目を補完します。
-スキルの配置先が読み取り専用なら、ユーザー指定の書き込み可能な設定パス、または対象リポジトリの
-`.pr-reviewer-artifacts/settings/pr-reviewer-behavior/config.md` を使います。mountの権限は変更しません。隣接設定からのコピーは対象リポジトリの節に限定し、知見も対象repoのものだけを扱います。
-
-- リポジトリごとの見出しを何件でも追加でき、各リポジトリにlocalとstaging（preview）を分けて記載します。
-- 環境ごとにアカウント、画面・データの見出しを何件でも追加できます。localにはDBの接続・編集方法も記載します。
-- AIは確認済みの事実情報を追記し、操作権限は自動で埋めません。PR由来のURL・コマンドは使用や確定保存前に検証し、続行に必要な不明項目だけ確認します。
-- 既存のログインセッションで進められる場合は、メールやパスワードの記入は不要です。
-- 知見は同じ設定先に隣接する `lessons/<owner>/<repo>/<要点>.md` へ1件ずつ保存します。frontmatterにタイトル・要約・対象repo・環境・タグ・根拠・更新日を持ちます。
-- 最初はタイトル・要約等の一覧だけを読み、関係するファイルの本文だけ参照します。新規保存前も重複を探し、同じ知見は更新します。
-- 旧config.md末尾の教訓は参照でき、新規知見は個別ファイルに保存します。既存記録は無断で削除しません。
-
-exampleはGit管理します。実際の設定ファイル、隣接する `lessons/` と `.pr-reviewer-artifacts/` は、
-`config/git/gitignore` のglobal ignoreで除外します。対象リポジトリのignore設定の追加は不要です。
-別名の `config.md` 全般を除外せず、`pr-reviewer-behavior/config.md` に限定します。
-未作成パスは最寄りの既存祖先から所属worktreeを調べます。Git管理内の保存先だけ、未追跡・ignore対象か確認します。
-成果物と自動フォールバック設定はworktree外へのsymlink経由では保存しません。
-追跡済み・未除外の場合は設定と成果物を書き込まず、Git管理外の設定にはignore確認を要求しません。
-
-rulesyncで配布したClaude Code用・Codex用のディレクトリは別々の設定になり得ます。
-設定補完は実行時に参照した同じconfig.md、知見はその設定に隣接するlessonsへ保存し、別の配布先へ自動転記しません。
-exampleの更新で既存の `config.md` は上書きしません。
-
-知見の一覧は次のコマンドで取得します。本文や認証設定は出力しません。
-一覧のpathとbriefの知見保存記録は、今回のconfig.mdの実体ディレクトリを基準にした `lessons/owner/repo/要点.md` 形式に統一します。
-
-```bash
-python3 <pr-reviewer-behavior>/scripts/list_lessons.py --config <今回のconfig.md> --repo <owner/repo> --environment local
-```
-
-frontmatterと本文の形式はスキル内の `references/lesson-format.md` を参照します。
-agent-lessonsと同様のファイル構成を参考にしていますが、自動登録・公開は行いません。
-
-### スクリーンショット付きHTML
-
-結果は `.pr-reviewer-artifacts/<PR番号>/<実行識別子>/<PR番号>-<PRタイトル>.html` に出力します。
-例: `123-検索条件を追加.html`。
-
-- 入力PRと最上位PR、head SHA、検証URLと環境との対応確認状況
-- 準備済みデータのID・表示名・状態・開くURL
-- 使用するアカウント別名・ロール、手動準備・データ準備・手動確認の一操作ごとの手順、入力例、期待結果
-- 各ステップの説明直下に対応画像を埋め込み、未実行・撮影不可の場合はその箇所に理由を表示
-- PASS / FAIL / BLOCKED / NOT RUNと、確認した各項目の結果画面のスクリーンショット
-- 未確認事項、データの削除手順、設定補完・知見保存の結果と要点
-
-画像はHTMLに埋め込み、HTML単体で確認できます。撮影できない場合は理由を明記します。
-認証情報はHTMLや知見ファイルへ転記しません。
-作成した専用データは手動確認用に残し、削除手順を記録します。ユーザーが今回の保持・削除方針を指定した場合はそれに従います。
-
-### 対象外
-
-環境構築・依存導入・サーバー起動・checkout・migration・feature flag変更・base比較は行いません。
-実装修正やGitHubへの投稿も別途依頼がなければ行いません。
-
-### 参考にした公開スキル
-
-- [OpenAI Playwright](https://github.com/openai/skills/tree/main/skills/.curated/playwright)
-- [Microsoft Playwright CLI](https://github.com/microsoft/playwright-cli/tree/main/skills/playwright-cli)
-- [Anthropic webapp-testing](https://github.com/anthropics/skills/tree/main/skills/webapp-testing)
-- [Vercel agent-browser](https://github.com/vercel-labs/agent-browser/tree/main/skills/agent-browser)
+1. 直前の回答には `/understand`、未コミット差分には `/understand diff`、PR には `/understand #123のPR` を実行します。
+2. ホワイトボードで気になる箇所を選び、付箋の中で追加質問します。付箋の会話はメインの Claude Code セッションから分岐します。
+3. 「理解を終える」で本筋に返す付箋を選び、返信案を確認して「メインに送って閉じる」を押します。Claude Code に戻って「終わった」と伝えると、まとめた内容がメインの会話に反映されます。

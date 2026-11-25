@@ -11,6 +11,8 @@
     "unmanaged/thaw/**",
     "config-mac/vicinae/**",
     "**/bun.lock",
+    ".claude/skills/**",
+    ".agents/skills/**",
     "**/*.toml"
   ]
 }
