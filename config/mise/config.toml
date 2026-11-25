@@ -124,7 +124,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:shazow/wifitui"                                     = "0.13.0"
 "github:skanehira/ghost"                                    = "0.3.1"
 "github:superfly/flyctl"                                    = "0.4.29"
-"github:theseus-rs/postgresql-binaries"                     = { version = "18.7.0", bin_path = "bin", strip_components = 1 }
+"github:theseus-rs/postgresql-binaries"                     = { version = "19.0.0", bin_path = "bin", strip_components = 1 }
 "github:tomasz-tomczyk/crit"                                = "0.19.1"
 "github:trasta298/keifu"                                    = "0.3.0"
 "go:github.com/air-verse/air"                               = "1.67.4"
