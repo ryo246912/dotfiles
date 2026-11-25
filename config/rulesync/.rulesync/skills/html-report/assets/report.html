@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+<style>
+/* Layout: one reading column (~48rem) with a sticky index on wide screens. Part 1 (biz) reads as plain prose and cards; Part 2 (dev) carries tables, ER diagram and SQL, each scrolling inside its own box */
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --ink: #1d2421;
+  --muted: #5b6661;
+  --line: #d9ded9;
+  --accent: #1f5f53;
+  --accent-soft: #e3efeb;
+  --ok: #2c6e3f;   --ok-bg: #e5f2e8;
+  --warn: #8a5a00; --warn-bg: #fbf0d9;
+  --bad: #a3322a;  --bad-bg: #f9e3e0;
+  --code-bg: #eef1ee;
+  --font-body: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #141917; --surface: #1b211f; --ink: #e4e9e6; --muted: #9aa6a0; --line: #2f3834;
+    --accent: #7cc2b1; --accent-soft: #1f2f2b;
+    --ok: #8fd19e; --ok-bg: #1d2e22; --warn: #e8c069; --warn-bg: #33291a; --bad: #f0958c; --bad-bg: #3a1f1c;
+    --code-bg: #111614; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #141917; --surface: #1b211f; --ink: #e4e9e6; --muted: #9aa6a0; --line: #2f3834;
+  --accent: #7cc2b1; --accent-soft: #1f2f2b;
+  --ok: #8fd19e; --ok-bg: #1d2e22; --warn: #e8c069; --warn-bg: #33291a; --bad: #f0958c; --bad-bg: #3a1f1c;
+  --code-bg: #111614; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.75; margin: 0; }
+.wrap { max-width: 70rem; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 48px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; }
+nav.toc .part { font-size: 11px; letter-spacing: .08em; color: var(--muted); margin: 14px 0 6px; font-weight: 700; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+nav.toc a { color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
+main { min-width: 0; max-width: 50rem; }
+header .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--muted); }
+h1 { font-size: 30px; line-height: 1.35; margin: 6px 0 10px; text-wrap: balance; }
+h2 { font-size: 21px; margin: 52px 0 14px; padding-top: 14px; border-top: 1px solid var(--line); text-wrap: balance; }
+h3 { font-size: 16px; margin: 28px 0 8px; }
+p, li { max-width: 46rem; }
+.meta { color: var(--muted); font-size: 13px; }
+a { color: var(--accent); }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+.partband { margin: 64px 0 0; padding: 18px 20px; border-radius: 6px; background: var(--accent-soft); }
+.partband .label { font-size: 12px; letter-spacing: .1em; font-weight: 700; color: var(--accent); }
+.partband .title { font-size: 22px; font-weight: 700; margin-top: 2px; }
+.partband p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.partband + h2 { border-top: 0; margin-top: 28px; }
+.verdict { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: 18px 20px; margin: 24px 0; }
+.verdict h2 { border: 0; margin: 0 0 8px; padding: 0; font-size: 17px; }
+.verdict dl { display: grid; grid-template-columns: 11rem minmax(0,1fr); gap: 12px 16px; margin: 0; }
+.verdict dt { font-weight: 700; }
+.verdict dd { margin: 0; }
+.chip { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.ok { color: var(--ok); background: var(--ok-bg); }
+.chip.warn { color: var(--warn); background: var(--warn-bg); }
+.chip.bad { color: var(--bad); background: var(--bad-bg); }
+.chip.info { color: var(--accent); background: var(--accent-soft); }
+.buckets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+.bucket { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
+.bucket h3 { margin: 0 0 6px; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bucket ul { margin: 0; padding-left: 1.1em; font-size: 14px; }
+.bucket p { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.bucket.del { border-top: 3px solid var(--bad); }
+.bucket.keep { border-top: 3px solid var(--ok); }
+.bucket.sep { border-top: 3px solid var(--warn); }
+.bucket.backup { border-top: 3px solid var(--muted); }
+.cautions { list-style: none; padding: 0; margin: 12px 0; display: grid; gap: 10px; }
+.cautions li { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; max-width: none; }
+.cautions b { display: block; }
+.shots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 14px 0; }
+figure { margin: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; min-width: 0; }
+figure img { display: block; width: 100%; height: auto; border-radius: 4px; border: 1px solid var(--line); }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
+.tbl { overflow-x: auto; margin: 12px 0 20px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-weight: 700; background: var(--accent-soft); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+ol.steps { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 14px; counter-reset: s; }
+ol.steps > li { counter-increment: s; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px 14px 56px; position: relative; max-width: none; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 16px; top: 13px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--surface); font-weight: 700; font-size: 13px; display: grid; place-items: center; font-variant-numeric: tabular-nums; }
+ol.steps .who { font-size: 12px; color: var(--muted); }
+ol.steps ul { margin: 6px 0 0; padding-left: 1.2em; }
+.code { position: relative; margin: 10px 0 20px; }
+.code pre { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; max-height: 34rem; }
+.code button { position: absolute; top: 8px; right: 8px; font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+.code button:focus-visible, nav.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.er { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin: 12px 0; }
+.er svg { display: block; min-width: 860px; width: 100%; height: auto; }
+.er .zone-del { fill: var(--bad-bg); }
+.er .zone-keep { fill: var(--ok-bg); }
+.er .zone-label { fill: var(--ink); font: 700 13px var(--font-body); }
+.er .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; }
+.er .box.hl { stroke: var(--accent); stroke-width: 2; }
+.er .tname { fill: var(--ink); font: 600 12.5px var(--font-mono); }
+.er .tcol { fill: var(--muted); font: 11px var(--font-mono); }
+.er .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+.er .edge.cycle { stroke: var(--warn); stroke-width: 2; stroke-dasharray: 6 4; }
+.er .edge.nofk { stroke: var(--bad); stroke-dasharray: 3 4; }
+.er .elabel { fill: var(--muted); font: 11px var(--font-body); }
+.er .elabel.warn { fill: var(--warn); font-weight: 700; }
+.er .elabel.bad { fill: var(--bad); }
+.er .arrowhead { fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12.5px; color: var(--muted); margin: 6px 0 0; }
+.legend span::before { content: ""; display: inline-block; width: 26px; height: 0; border-top: 2px solid var(--muted); vertical-align: middle; margin-right: 6px; }
+.legend .l-cycle::before { border-top: 2px dashed var(--warn); }
+.legend .l-nofk::before { border-top: 2px dotted var(--bad); }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px; margin: 12px 0; }
+details summary { cursor: pointer; font-weight: 700; }
+.note { color: var(--muted); font-size: 13px; }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: minmax(0,1fr); gap: 0; padding-block: 24px 64px; padding-inline: 16px; }
+  nav.toc { display: none; }
+  .verdict dl { grid-template-columns: minmax(0,1fr); gap: 2px 0; }
+  .verdict dd { margin-bottom: 10px; }
+  .buckets, .shots { grid-template-columns: minmax(0,1fr); }
+  h1 { font-size: 24px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Responsive report content and print overrides. */
+main, nav { overflow-wrap: anywhere; }
+.partband h2.title { border: 0; padding: 0; margin: 2px 0 0; }
+.report-section > h3 { border-top: 1px solid var(--line); margin: 52px 0 14px; padding-top: 14px; font-size: 21px; text-wrap: balance; }
+.partband + .report-section > h3 { border-top: 0; margin-top: 28px; }
+.report-section.verdict > h3 { border: 0; margin: 0 0 8px; padding: 0; font-size: 17px; }
+.report-section h4 { font-size: 16px; margin: 28px 0 8px; }
+.report-section .bucket h4 { margin: 0 0 6px; font-size: 15px; }
+.er svg { min-width: 0; }
+.tbl table { table-layout: fixed; }
+.tbl th, .tbl td { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 520px) {
+  th, td { padding: 6px; }
+}
+@media print {
+  :root, :root[data-theme], :root:not([data-theme="light"]) {
+    color-scheme: light;
+    --bg: #fff; --surface: #fff; --ink: #141917; --muted: #414944;
+    --line: #aab3ae; --accent: #1f5f53; --accent-soft: #e3efeb;
+    --ok: #2c6e3f; --ok-bg: #e5f2e8; --warn: #674300; --warn-bg: #fbf0d9;
+    --bad: #a3322a; --bad-bg: #f9e3e0; --code-bg: #f0f2f0;
+  }
+  .wrap { display: block; padding: 0; }
+  main { max-width: none; }
+  nav.toc, .code button { display: none; }
+  h1, h2, h3, h4, .partband { break-after: avoid; }
+  .bucket, .er, figure, tr, ol.steps > li { break-inside: avoid; }
+  .tbl, .er, .code pre { overflow: visible; }
+  .code pre { max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }
+  thead { display: table-header-group; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="toc" aria-label="目次">
+<p class="part"><a href="#business">第1部　ビジネス向け</a></p>
+<ol>
+<li><a href="#verdict">結論</a></li>
+<li><a href="#impact">影響の整理</a></li>
+</ol>
+<p class="part"><a href="#developer">第2部　開発者向け</a></p>
+<ol>
+<li><a href="#diagram">関係図</a></li>
+<li><a href="#details">詳細な影響表</a></li>
+<li><a href="#structure">構造変更の要否</a></li>
+<li><a href="#decisions">決めること</a></li>
+<li><a href="#steps">作業手順</a></li>
+<li><a href="#code">実行するコード</a></li>
+<li><a href="#outside">システム外で必要な作業</a></li>
+<li><a href="#verification">検証ログ</a></li>
+<li><a href="#evidence">根拠一覧</a></li>
+</ol>
+</nav>
+<main>
+<header>
+<div class="eyebrow">技術調査レポート</div>
+<h1></h1>
+<p class="meta"><!-- 対象範囲などを記入 --></p>
+</header>
+<div class="partband" id="business"><div class="label">第1部</div><h2 class="title">ビジネス向け</h2></div>
+<section class="report-section verdict" id="verdict">
+<h3>結論</h3>
+<dl><!-- 問いを dt、判定と一文の理由を dd に記入 --></dl>
+</section>
+<section class="report-section" id="impact">
+<h3>影響の整理</h3>
+<div class="buckets">
+  <article class="bucket del"><h4><span class="chip bad">消える・変わる</span></h4><!-- 影響を記入 --></article>
+  <article class="bucket keep"><h4><span class="chip ok">残る・影響なし</span></h4><!-- 影響を記入 --></article>
+  <article class="bucket sep"><h4><span class="chip warn">別途対応</span></h4><!-- 影響を記入 --></article>
+  <article class="bucket backup"><h4><span class="chip info">バックアップ等に残る</span></h4><!-- 影響を記入 --></article>
+</div>
+<p><a href="#developer">開発者向けの詳細へ</a></p>
+</section>
+<div class="partband" id="developer"><div class="label">第2部</div><h2 class="title">開発者向け</h2></div>
+<section class="report-section" id="diagram">
+<h3>関係図</h3>
+<div class="er"><!-- インラインSVG --></div>
+</section>
+<section class="report-section" id="details">
+<h3>詳細な影響表</h3>
+<div class="tbl"><table><thead><tr><th scope="col">対象</th><th scope="col">変更と影響</th><th scope="col">確認状況</th><th scope="col">根拠</th></tr></thead><tbody><!-- 影響の行 --></tbody></table></div>
+</section>
+<section class="report-section" id="structure">
+<h3>構造変更の要否</h3>
+<!-- 要否と根拠 -->
+</section>
+<section class="report-section" id="decisions">
+<h3>決めること</h3>
+<!-- 選択肢・推奨・各案の影響 -->
+</section>
+<section class="report-section" id="steps">
+<h3>作業手順</h3>
+<!-- 作業前提 --><ol class="steps"><!-- 操作・確認・戻し方を li に記入 --></ol>
+</section>
+<section class="report-section" id="code">
+<h3>実行するコード</h3>
+<!-- 任意。省略時は目次からも外す -->
+<h4>事前確認</h4><div class="code"><pre><code></code></pre></div>
+<h4>本作業</h4><div class="code"><pre><code></code></pre></div>
+<h4>事後確認</h4><div class="code"><pre><code></code></pre></div>
+</section>
+<section class="report-section" id="outside">
+<h3>システム外で必要な作業</h3>
+<!-- 対象・対応・担当・確認点 -->
+</section>
+<section class="report-section" id="verification">
+<h3>検証ログ</h3>
+<!-- 任意。省略時は目次からも外す --><ol><!-- V1、V2… --></ol>
+</section>
+<section class="report-section" id="evidence">
+<h3>根拠一覧</h3>
+<ol><!-- 根拠 ID、パスと行番号、クエリ、チケット --></ol>
+</section>
+</main>
+</div>
+</body>
+</html>
