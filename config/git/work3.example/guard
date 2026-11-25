@@ -1,0 +1,9 @@
+[dotfiles]
+  preCheckout = /<path/to/dotfiles>/git-hooks/alembic-pre-checkout
+[dotfiles "alembicGuard"]
+  appDir = <path/to/api>
+  versionsDir = <path/to/api>/migration/versions
+  dbService = db
+  appService = app
+  dbUser = postgres
+  dbName = postgres

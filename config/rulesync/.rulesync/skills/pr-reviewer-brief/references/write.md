@@ -43,8 +43,8 @@ pr-reviewer-brief skill の段階 2。段階 1 が集めた `<作業ディレク
     状態を対象とする。画面がある場合は表示部分から API・取得処理をたどり、画面のない API・ジョブ・migration は入口とモデル・スキーマから、読み書きする元テーブル・中間テーブル・外部キーを調べる。
     DB の変更がない PR でも、関係する表示部分に DB 由来のデータがあれば ER 図を必ず載せる。
     Mermaid の `erDiagram` ソース（HTML・SVG・コードフェンスは含めない）を `data_model.tables` に、画面の表示項目との対応は `mapping` に入れる。
-  - **書く前に必ず追跡する**: (1) 変更ファイルの mutation・fetch・生成クライアントなど API 呼び出しを列挙し、段階 1 の `api_calls.json` と照合する。(2) 各呼び出しを where-api のルーター → usecase → CRUD → モデル・スキーマまで辿る。(3) 結果を `data_model.trace` に残す。
-    `trace` は `[{"entry": "web/foo.ts:20 の mutation", "steps": ["where-api/router.py:10", "usecase.py:30", "crud.py:40", "models.py:50"], "result": "addresses を読み書きする"}]` の配列。
+  - **書く前に必ず追跡する**: (1) 変更ファイルの mutation・fetch・生成クライアントなど API 呼び出しを列挙し、段階 1 の `api_calls.json` と照合する。(2) 各呼び出しを example-api のルーター → usecase → CRUD → モデル・スキーマまで辿る。(3) 結果を `data_model.trace` に残す。
+    `trace` は `[{"entry": "web/foo.ts:20 の mutation", "steps": ["example-api/router.py:10", "usecase.py:30", "crud.py:40", "models.py:50"], "result": "addresses を読み書きする"}]` の配列。
     画面なしでは API・ジョブ・migration の入口から同様に追跡する。追加された入口が base に無ければ、head から既存処理へ辿り、base のモデル・スキーマと照合する。
   - フロントから API を呼ぶ処理が 1 つでもあればバックエンドの DB に到達するとみなし、ER 図を必須とする。
     **「テーブル・API を変更していない」は ER 図を省く理由にならない**。既存の呼び出しや diff 外の関連処理も対象にする。

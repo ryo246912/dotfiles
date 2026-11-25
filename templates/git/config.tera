@@ -68,16 +68,18 @@
   email = 73044070+ryo246912@users.noreply.github.com
   name = ryo246912
   signingkey = 08BF9A27112516E5
+[include]
+  path = ~/.config/git/work3/config
 {% if os() == "macos" %}
 [include]
-  path = ~/.config/git/config.secret
+  path = ~/.config/git/private
 [includeIf "gitdir:~/work/"]
-  path = ~/.config/git/config.work.secret
+  path = ~/.config/git/work.private
 [includeIf "gitdir:~/Programming/work3/"]
-  path = ~/.config/git/config.work3.secret
+  path = ~/.config/git/work3.private
 {% else %}
 [include]
-  path = ~/.config/git/config.work.secret
+  path = ~/.config/git/work.private
 {% endif %}
 
 [secrets]

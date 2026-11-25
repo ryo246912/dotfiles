@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+# Compare file identities so symlinks and repeated PATH entries are safe.
+remaining=${PATH-}
+while :; do
+  candidate=${remaining%%:*}
+  candidate=${candidate:-.}/git
+  if [[ -f "$candidate" && -x "$candidate" && ! "$candidate" -ef "$0" ]]; then
+    real_git=$candidate
+    break
+  fi
+  [[ "$remaining" == *:* ]] || break
+  remaining=${remaining#*:}
+done
+
+if [[ -z "${real_git:-}" ]]; then
+  printf '%s\n' 'git wrapper: git executable missing from PATH' >&2
+  exit 127
+fi
+
+run_pre_checkout() (
+  # Append command-line config with the same quoting and precedence as Git.
+  add_config() {
+    local quoted=${1//\'/\'\\\'\'}
+    export GIT_CONFIG_PARAMETERS="${GIT_CONFIG_PARAMETERS:+$GIT_CONFIG_PARAMETERS }'$quoted'"
+  }
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -C)
+        [[ $# -ge 2 ]] || return 0
+        case "$2" in
+          '') ;;
+          /*) cd -P -- "$2" 2>/dev/null || return 0 ;;
+          *) cd -P -- "./$2" 2>/dev/null || return 0 ;;
+        esac
+        shift 2 ;;
+      -c)
+        [[ $# -ge 2 ]] || return 0
+        add_config "$2"
+        shift 2 ;;
+      --no-pager|-P|--paginate|-p|--no-optional-locks)
+        shift ;;
+      checkout|switch)
+        local hook
+        hook=$("$real_git" config --type=path --get dotfiles.preCheckout 2>/dev/null) || return 0
+        [[ -n "$hook" ]] || return 0
+        GIT_PRE_CHECKOUT=0 DOTFILES_GIT_EXECUTABLE="$real_git" "$hook" "$@"
+        return $? ;;
+      *) return 0 ;;
+    esac
+  done
+)
+
+# Resolve relative PATH entries before processing any -C options.
+case "$real_git" in
+  /*) ;;
+  *) real_git="$PWD/$real_git" ;;
+esac
+
+if [[ "${GIT_PRE_CHECKOUT:-}" != 0 ]]; then
+  run_pre_checkout "$@" || exit $?
+fi
+exec "$real_git" "$@"

@@ -1,7 +1,7 @@
-# ~/.config/git/config.work3.secret のサンプル。
+# ~/.config/git/work3.private のサンプル。
 # 実ファイルは .gitignore で除外しているためコミット対象外。
 # 初回セットアップ時にコピーして値を実際のものに置き換える:
-#   cp config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
+#   cp config/git/work3.private.example ~/.config/git/work3.private
 #
 # templates/git/config.tera から以下のタイミングで読み込まれる:
 #   - macOS: [includeIf "gitdir:~/Programming/work3/"]

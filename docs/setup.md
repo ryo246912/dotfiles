@@ -176,20 +176,20 @@
   - [ ] ホストの git 署名用の GPG 設定
     - ホストで直接コミットするときの署名。`gpg --import` を含む以下の GPG 設定は sandbox の署名には使わない。
 
-    - [ ] secret設定ファイルの作成
+    - [ ] 非公開設定ファイルの作成
       - サンプルをコピーし、`machineId`を自分の値に編集する
 
       ```sh
-      cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
-      nvim ~/.config/git/config.secret
+      cp ~/dotfiles/config/git/private.example ~/.config/git/private
+      nvim ~/.config/git/private
       ```
 
       - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
       ```sh
-      cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
-      cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
-      nvim ~/.config/git/config.work3.secret
+      cp ~/dotfiles/config/git/work.private.example ~/.config/git/work.private
+      cp ~/dotfiles/config/git/work3.private.example ~/.config/git/work3.private
+      nvim ~/.config/git/work3.private
       ```
 
       - 各値の確認方法
@@ -391,7 +391,7 @@
 
 - [ ] （work ホストのみ）git 管理外の work 用ファイルを用意する
   - 雛形をコピーしてプレースホルダを書き換える（コピー先は gitignore 済みかリポジトリ外）。
-    git の secret ファイルは上の「git」で用意済み
+    git の非公開設定ファイルは上の「git」で用意済み
 
     | 用途                        | 雛形                                         | コピー先                                         | 対象             |
     | --------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |

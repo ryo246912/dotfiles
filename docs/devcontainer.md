@@ -310,18 +310,18 @@ fatal: unable to access '.../gitconfig-host': Too many levels of symbolic links
 > コンテナ内の mount が読めることは保証しません
 > （この PR では実際に「ホスト側は正常なのにコンテナ内のパスだけ壊れる」事象を踏んでいます）。
 
-#### ネストした include（`*.secret`）は実体化しない
+#### ネストした include（非公開設定）は実体化しない
 
 ホストの gitconfig はさらに別のファイルを include しています。
 
 ```ini
 [include]
-  path = ~/.config/git/config.secret
+  path = ~/.config/git/private
 [includeIf "gitdir:~/work/"]
-  path = ~/.config/git/config.work.secret
+  path = ~/.config/git/work.private
 ```
 
-これらは**実体化も mount もしません**。リポジトリに入っているのは `.sample` だけで、
+これらは**実体化も mount もしません**。リポジトリに入っているのは `.example` だけで、
 実ファイルはホスト固有の秘密情報です（`~/.config/gh` を渡さないのと同じ理由）。
 
 コンテナ内にこのパスは存在しませんが、**include 先が「無い」または「リンク切れ」の場合、
