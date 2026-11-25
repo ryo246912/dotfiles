@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title></title>
+<title>レポート名を記入</title>
 <style>
-/* Layout: one reading column (~48rem) with a sticky index on wide screens. Part 1 (biz) reads as plain prose and cards; Part 2 (dev) carries tables, ER diagram and SQL, each scrolling inside its own box */
+/* Layout: one reading column (~48rem) with a sticky index on wide screens. Part 1 (biz) reads as plain prose and cards; Part 2 (dev) carries tables, ER diagrams and code, each scrolling inside its own box */
 :root {
   --bg: #f6f7f5;
   --surface: #ffffff;
@@ -38,27 +38,23 @@
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.75; margin: 0; }
 .wrap { max-width: 70rem; margin: 0 auto; padding-inline: 20px; padding-block: 40px 80px; display: grid; grid-template-columns: 13rem minmax(0, 1fr); gap: 48px; }
-nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; }
+nav.toc { overflow-wrap: anywhere; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; }
 nav.toc .part { font-size: 11px; letter-spacing: .08em; color: var(--muted); margin: 14px 0 6px; font-weight: 700; }
 nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 nav.toc a { color: var(--muted); text-decoration: none; }
 nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); }
-main { min-width: 0; max-width: 50rem; }
+main { min-width: 0; max-width: 50rem; overflow-wrap: anywhere; }
 header .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--muted); }
 h1 { font-size: 30px; line-height: 1.35; margin: 6px 0 10px; text-wrap: balance; }
-h2 { font-size: 21px; margin: 52px 0 14px; padding-top: 14px; border-top: 1px solid var(--line); text-wrap: balance; }
-h3 { font-size: 16px; margin: 28px 0 8px; }
 p, li { max-width: 46rem; }
 .meta { color: var(--muted); font-size: 13px; }
 a { color: var(--accent); }
 code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
 .partband { margin: 64px 0 0; padding: 18px 20px; border-radius: 6px; background: var(--accent-soft); }
 .partband .label { font-size: 12px; letter-spacing: .1em; font-weight: 700; color: var(--accent); }
-.partband .title { font-size: 22px; font-weight: 700; margin-top: 2px; }
+.partband .title { font-size: 22px; font-weight: 700; margin: 2px 0 0; }
 .partband p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
-.partband + h2 { border-top: 0; margin-top: 28px; }
 .verdict { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: 18px 20px; margin: 24px 0; }
-.verdict h2 { border: 0; margin: 0 0 8px; padding: 0; font-size: 17px; }
 .verdict dl { display: grid; grid-template-columns: 11rem minmax(0,1fr); gap: 12px 16px; margin: 0; }
 .verdict dt { font-weight: 700; }
 .verdict dd { margin: 0; }
@@ -69,7 +65,7 @@ code { font-family: var(--font-mono); font-size: .88em; background: var(--code-b
 .chip.info { color: var(--accent); background: var(--accent-soft); }
 .buckets { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
 .bucket { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; min-width: 0; }
-.bucket h3 { margin: 0 0 6px; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bucket h4 { margin: 0 0 6px; font-size: 15px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .bucket ul { margin: 0; padding-left: 1.1em; font-size: 14px; }
 .bucket p { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
 .bucket.del { border-top: 3px solid var(--bad); }
@@ -86,7 +82,7 @@ figcaption { font-size: 13px; color: var(--muted); margin-top: 8px; }
 .tbl { overflow-x: auto; margin: 12px 0 20px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
 table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
 th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
-th { font-weight: 700; background: var(--accent-soft); white-space: nowrap; }
+th { font-weight: 700; background: var(--accent-soft); }
 tr:last-child td { border-bottom: 0; }
 td.n { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 ol.steps { list-style: none; padding: 0; margin: 16px 0; display: grid; gap: 14px; counter-reset: s; }
@@ -99,7 +95,7 @@ ol.steps ul { margin: 6px 0 0; padding-left: 1.2em; }
 .code button { position: absolute; top: 8px; right: 8px; font: inherit; font-size: 12px; padding: 3px 10px; border-radius: 4px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 .code button:focus-visible, nav.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .er { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin: 12px 0; }
-.er svg { display: block; min-width: 860px; width: 100%; height: auto; }
+.er svg { display: block; min-width: var(--diagram-min-width, 22rem); width: 100%; height: auto; }
 .er .zone-del { fill: var(--bad-bg); }
 .er .zone-keep { fill: var(--ok-bg); }
 .er .zone-label { fill: var(--ink); font: 700 13px var(--font-body); }
@@ -132,14 +128,10 @@ details summary { cursor: pointer; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
 
 /* Responsive report content and print overrides. */
-main, nav { overflow-wrap: anywhere; }
-.partband h2.title { border: 0; padding: 0; margin: 2px 0 0; }
 .report-section > h3 { border-top: 1px solid var(--line); margin: 52px 0 14px; padding-top: 14px; font-size: 21px; text-wrap: balance; }
 .partband + .report-section > h3 { border-top: 0; margin-top: 28px; }
 .report-section.verdict > h3 { border: 0; margin: 0 0 8px; padding: 0; font-size: 17px; }
-.report-section h4 { font-size: 16px; margin: 28px 0 8px; }
-.report-section .bucket h4 { margin: 0 0 6px; font-size: 15px; }
-.er svg { min-width: var(--diagram-min-width, 22rem); }
+.report-section h4:not(.bucket h4) { font-size: 16px; margin: 28px 0 8px; }
 .tbl table { table-layout: fixed; min-width: 34rem; }
 .tbl th, .tbl td { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 520px) {
