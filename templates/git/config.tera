@@ -74,12 +74,12 @@
 [include]
   path = ~/.config/git/private
 [includeIf "gitdir:~/work/"]
-  path = ~/.config/git/work.private
+  path = ~/.config/git/config.work.secret
 [includeIf "gitdir:~/Programming/work3/"]
   path = ~/.config/git/work3.private
 {% else %}
 [include]
-  path = ~/.config/git/work.private
+  path = ~/.config/git/config.work.secret
 {% endif %}
 
 [secrets]

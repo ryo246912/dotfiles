@@ -189,9 +189,9 @@
       - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
       ```sh
-      cp -n ~/dotfiles/config/git/work.private.example ~/.config/git/work.private
+      cp -n ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
       cp -n ~/dotfiles/config/git/work3.private.example ~/.config/git/work3.private
-      nvim ~/.config/git/work.private ~/.config/git/work3.private
+      nvim ~/.config/git/config.work.secret ~/.config/git/work3.private
       ```
 
       - 各値の確認方法

@@ -1,5 +1,5 @@
 [dotfiles]
-  preCheckout = /<path/to/dotfiles>/git-hooks/alembic-pre-checkout
+  preCheckout = /<path/to/dotfiles>/config/git/alembic-pre-checkout
 [dotfiles "alembicGuard"]
   # appDir と versionsDir はリポジトリルートからの相対パス。
   appDir = <path/to/api>

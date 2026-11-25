@@ -17,7 +17,6 @@ mise*.lock
 !templates/
 !templates/**
 config/git/private
-config/git/work.private
 config/git/work3.private
 /config/git/work3/
 # Keep legacy local copies ignored during migration.

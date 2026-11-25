@@ -32,7 +32,7 @@ dotfiles 内に設定済みの `config/git/work3/` がある場合は、雛形�
 post-checkout:
   commands:
     alembic-guard:
-      run: '"/<path/to/dotfiles>/git-hooks/alembic-pre-checkout" {1} {2} {3}'
+      run: '"/<path/to/dotfiles>/config/git/alembic-pre-checkout" {1} {2} {3}'
 ```
 
 一時的に検査を省く場合は `ALEMBIC_GUARD=0` を付けます。切替前の呼び出しだけを

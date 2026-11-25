@@ -318,7 +318,7 @@ fatal: unable to access '.../gitconfig-host': Too many levels of symbolic links
 [include]
   path = ~/.config/git/private
 [includeIf "gitdir:~/work/"]
-  path = ~/.config/git/work.private
+  path = ~/.config/git/config.work.secret
 ```
 
 これらは**実体化も mount もしません**。リポジトリに入っているのは `.example` だけで、
