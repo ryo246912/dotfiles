@@ -1,4 +1,12 @@
+[includeIf "hasconfig:remote.*.url:git@github.com:<org>/<repo>"]
+  path = guard
 [includeIf "hasconfig:remote.*.url:git@github.com:<org>/<repo>.git"]
   path = guard
-[includeIf "hasconfig:remote.*.url:https://github.com/<org>/<repo>*"]
+[includeIf "hasconfig:remote.*.url:ssh://git@github.com/<org>/<repo>"]
+  path = guard
+[includeIf "hasconfig:remote.*.url:ssh://git@github.com/<org>/<repo>.git"]
+  path = guard
+[includeIf "hasconfig:remote.*.url:https://github.com/<org>/<repo>"]
+  path = guard
+[includeIf "hasconfig:remote.*.url:https://github.com/<org>/<repo>.git"]
   path = guard

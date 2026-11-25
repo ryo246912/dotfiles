@@ -2,24 +2,25 @@
 set -uo pipefail
 
 [[ "${ALEMBIC_GUARD:-}" != 0 ]] || exit 0
-git_cmd=${DOTFILES_GIT_EXECUTABLE:-git}
+git_cmd=git
 
 resolve_target() {
-  local subcommand=$1 target= creating=0 guess=1
+  local subcommand=$1 target= creating=0 guess=1 detach=0 remote candidate= preferred= count=0 default_remote
   shift
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -b|-B|-c|-C|--orphan)
+      -b|-B|-c|-C|--orphan|--create|--force-create)
         [[ $# -ge 2 && "$creating" == 0 ]] || return 1
         creating=1
         shift ;;
-      --orphan=*|-b?*|-B?*|-c?*|-C?*)
+      --orphan=*|--create=*|--force-create=*|-b?*|-B?*|-c?*|-C?*)
         [[ "$creating" == 0 ]] || return 1
         creating=1 ;;
       --no-guess|--no-track) guess=0 ;;
       --guess) guess=1 ;;
-      --detach|-d|-f|--force|-m|--merge|-q|--quiet|--progress|--no-progress|--track|-t|--track=direct|--track=inherit|--discard-changes|--ignore-other-worktrees|--recurse-submodules|--no-recurse-submodules) ;;
-      --) return 1 ;;
+      --detach|-d) detach=1 ;;
+      --conflict=merge|--conflict=diff3|--conflict=zdiff3|-f|--force|-m|--merge|-q|--quiet|--progress|--no-progress|--track|-t|--track=direct|--track=inherit|--discard-changes|--ignore-other-worktrees|--recurse-submodules|--no-recurse-submodules) ;;
+      --) [[ $# == 1 ]] || return 1; break ;;
       -) [[ -z "$target" ]] || return 1; target='@{-1}' ;;
       -*) return 1 ;;
       *) [[ -z "$target" ]] || return 1; target=$1 ;;
@@ -28,14 +29,31 @@ resolve_target() {
   done
 
   [[ -n "$target" ]] || return 1
+  if [[ "$creating" == 0 && "$detach" == 0 ]]; then
+    "$git_cmd" rev-parse -q --verify --end-of-options "refs/heads/${target}^{commit}" 2>/dev/null && return 0
+  fi
   "$git_cmd" rev-parse -q --verify --end-of-options "${target}^{commit}" 2>/dev/null && return 0
 
   # A guessed tracking branch must be a remote-tracking ref.
-  [[ "$guess" == 1 && "$creating" == 0 && "$target" != '@{-1}' ]] || return 1
+  [[ "$guess" == 1 && "$detach" == 0 && "$creating" == 0 && "$target" != '@{-1}' ]] || return 1
   if [[ "$subcommand" == checkout && -e "$target" ]]; then
     return 1
   fi
-  "$git_cmd" rev-parse -q --verify --end-of-options "refs/remotes/origin/${target}^{commit}" 2>/dev/null
+  [[ $("$git_cmd" config --type=bool --get checkout.guess) != false ]] || return 1
+  default_remote=$("$git_cmd" config --get checkout.defaultRemote)
+  while IFS= read -r remote; do
+    [[ -n "$remote" ]] || continue
+    local resolved
+    resolved=$("$git_cmd" rev-parse -q --verify --end-of-options "refs/remotes/$remote/${target}^{commit}" 2>/dev/null) || continue
+    candidate=$resolved
+    ((count += 1))
+    [[ "$remote" != "$default_remote" ]] || preferred=$resolved
+  done < <("$git_cmd" remote)
+  if [[ -n "$preferred" || "$count" == 1 ]]; then
+    printf '%s\n' "${preferred:-$candidate}"
+  else
+    return 1
+  fi
 }
 
 case "${1:-}" in
@@ -65,13 +83,14 @@ versions_dir=$(guard_config versionsDir) || exit 0
 [[ -n "$app_dir" && -n "$versions_dir" ]] || exit 0
 root=$("$git_cmd" rev-parse --show-toplevel) || exit 0
 cd -- "$root" || exit 0
+[[ "$app_dir" == /* ]] || app_dir="$root/$app_dir"
 
 "$git_cmd" --literal-pathspecs diff --quiet "$prev" "$new" -- "$versions_dir" 2>/dev/null
 [[ $? == 1 ]] || exit 0
 
 # Read revision declarations, including type annotations and merge parents.
 list_graph() {
-  "$git_cmd" --literal-pathspecs grep -E '^(revision|down_revision)[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null | awk '
+  "$git_cmd" --literal-pathspecs grep --no-color --no-line-number --no-column -E '^(revision|down_revision)[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null | awk '
     {
       i = index($0, ".py:"); if (!i) next
       file = substr($0, 1, i + 2); body = substr($0, i + 4)
@@ -168,9 +187,9 @@ done
     printf '  ALEMBIC_GUARD=0 git checkout %q\n' "$prev_ref"
   fi
   if [[ -n "$downgrade_to" ]]; then
-    printf '  (cd %q && docker compose run --rm %q alembic downgrade %q)\n' "$root/$app_dir" "${app_service:-app}" "$downgrade_to"
+    printf '  (cd %q && docker compose run --rm %q alembic downgrade %q)\n' "$app_dir" "${app_service:-app}" "$downgrade_to"
   else
-    printf '  (cd %q && docker compose run --rm %q alembic downgrade <revision>)\n' "$root/$app_dir" "${app_service:-app}"
+    printf '  (cd %q && docker compose run --rm %q alembic downgrade <revision>)\n' "$app_dir" "${app_service:-app}"
   fi
   if [[ "$mode" == pre ]]; then
     printf 'DB を維持したまま切り替える場合は、先頭に ALEMBIC_GUARD=0 を付けてください。\n'
