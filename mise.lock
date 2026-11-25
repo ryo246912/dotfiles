@@ -109,27 +109,27 @@ url = "https://github.com/mvdan/sh/releases/download/v3.14.1/shfmt_v3.14.1_darwi
 url_api = "https://api.github.com/repos/mvdan/sh/releases/assets/547320930"
 
 [[tools."aqua:secretlint/secretlint"]]
-version = "14.0.1"
+version = "14.1.0"
 backend = "aqua:secretlint/secretlint"
-specifiers = ["14.0.1"]
+specifiers = ["14.1.0"]
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-arm64"]
-checksum = "sha256:2c7a8d6001aff8342895b35008f94f55bc49bb4cd9f6c3b8b637998a82558a2f"
+checksum = "sha256:1f1badd2bae06277dd5350b0d5a61e24d02a69c428fcd59517201baf7ecd356e"
 checksum_source = "mise-versions"
-url = "https://github.com/secretlint/secretlint/releases/download/v14.0.1/secretlint-14.0.1-linux-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/754111095"
+url = "https://github.com/secretlint/secretlint/releases/download/v14.1.0/secretlint-14.1.0-linux-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/777780638"
 
 [tools."aqua:secretlint/secretlint"."platforms.linux-x64"]
-checksum = "sha256:4fe869e7fe3d1bb3bf24003bea6b556d3a6d5343c393ca85301cae70c935fa98"
+checksum = "sha256:4437b0efc90f0078210a8310b17e4fa415cb240064a93994d368c43a1f1f24e3"
 checksum_source = "mise-versions"
-url = "https://github.com/secretlint/secretlint/releases/download/v14.0.1/secretlint-14.0.1-linux-x64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/754111102"
+url = "https://github.com/secretlint/secretlint/releases/download/v14.1.0/secretlint-14.1.0-linux-x64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/777780643"
 
 [tools."aqua:secretlint/secretlint"."platforms.macos-arm64"]
-checksum = "sha256:533830b60fb38b7746b5a0d0949d74667479c58fc3fcc60951014de76fab7c42"
+checksum = "sha256:9cec68dff44486948e74691008167cbc08586b3862509d015c5dd76719f43293"
 checksum_source = "mise-versions"
-url = "https://github.com/secretlint/secretlint/releases/download/v14.0.1/secretlint-14.0.1-darwin-arm64"
-url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/754111101"
+url = "https://github.com/secretlint/secretlint/releases/download/v14.1.0/secretlint-14.1.0-darwin-arm64"
+url_api = "https://api.github.com/repos/secretlint/secretlint/releases/assets/777780644"
 
 [[tools."aqua:suzuki-shunsuke/ghalint"]]
 version = "1.6.0"
