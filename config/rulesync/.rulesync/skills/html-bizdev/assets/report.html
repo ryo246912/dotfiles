@@ -139,8 +139,8 @@ main, nav { overflow-wrap: anywhere; }
 .report-section.verdict > h3 { border: 0; margin: 0 0 8px; padding: 0; font-size: 17px; }
 .report-section h4 { font-size: 16px; margin: 28px 0 8px; }
 .report-section .bucket h4 { margin: 0 0 6px; font-size: 15px; }
-.er svg { min-width: 0; }
-.tbl table { table-layout: fixed; }
+.er svg { min-width: var(--diagram-min-width, 22rem); }
+.tbl table { table-layout: fixed; min-width: 34rem; }
 .tbl th, .tbl td { white-space: normal; overflow-wrap: anywhere; }
 @media (max-width: 520px) {
   th, td { padding: 6px; }
@@ -159,6 +159,7 @@ main, nav { overflow-wrap: anywhere; }
   h1, h2, h3, h4, .partband { break-after: avoid; }
   .bucket, .er, figure, tr, ol.steps > li { break-inside: avoid; }
   .tbl, .er, .code pre { overflow: visible; }
+  .er svg, .tbl table { min-width: 0; }
   .code pre { max-height: none; white-space: pre-wrap; overflow-wrap: anywhere; }
   thead { display: table-header-group; }
 }
@@ -208,12 +209,12 @@ main, nav { overflow-wrap: anywhere; }
 </section>
 <div class="partband" id="developer"><div class="label">第2部</div><h2 class="title">開発者向け</h2></div>
 <section class="report-section" id="diagram">
-<h3>関係図</h3>
-<div class="er"><!-- インラインSVG --></div>
+<h3 id="diagram-heading">関係図</h3>
+<div class="er" role="group" aria-labelledby="diagram-heading" tabindex="0"><!-- インラインSVG。必要に応じて図の最小幅を指定 --></div>
 </section>
 <section class="report-section" id="details">
-<h3>詳細な影響表</h3>
-<div class="tbl"><table><thead><tr><th scope="col">対象</th><th scope="col">変更と影響</th><th scope="col">確認状況</th><th scope="col">根拠</th></tr></thead><tbody><!-- 影響の行 --></tbody></table></div>
+<h3 id="details-heading">詳細な影響表</h3>
+<div class="tbl" role="group" aria-labelledby="details-heading" tabindex="0"><table><thead><tr><th scope="col">対象</th><th scope="col">変更と影響</th><th scope="col">確認状況</th><th scope="col">根拠</th></tr></thead><tbody><!-- 影響の行 --></tbody></table></div>
 </section>
 <section class="report-section" id="structure">
 <h3>構造変更の要否</h3>
