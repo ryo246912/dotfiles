@@ -93,6 +93,7 @@
     "pr-brief": "name-only",
     "pr-crit": "name-only",
     "pr-fix": "name-only",
+    "pr-library-review": "name-only",
     "pr-lessons-review": "name-only",
     "pr-mobile-review": "name-only",
     "pr-reviewer-all-review": "name-only",
