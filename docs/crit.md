@@ -213,7 +213,7 @@ crit push --event request-changes -m "未対応の指摘があります"
 前節の「推奨するPR review loop」は**自分のPR**についた指摘をagentに直させる流れです。ここでは**reviewerとして**
 他人のPRを読む流れを扱います。PRへcheckoutし、agentが裏取りした指摘候補をcritのUIに並べ、UI上で壁打ちしてから、
 通常は選んだ指摘を**未submit（PENDING）のdraft review**として投稿し、GitHubの画面からsubmitできます。
-「submitして」または `--submit` を明示すると、選んだ指摘と確認済みのレビュー本文を直接公開します。既定の種別はCommentです。
+「submitして」または `--submit` を明示すると、投稿する No が決まり次第、追加の文面確認を挟まず公開します。既定の種別はCommentです。
 
 この流れは`pr-crit` skill（`config/rulesync/.rulesync/skills/pr-crit/SKILL.md`、rulesyncでglobal配布）にまとめています。
 agentに`/pr-crit 123`（Codexでは`$pr-crit 123`）のように頼むと、以下を順に進めます。指摘の区分（must / should / imo /
@@ -241,7 +241,7 @@ python3 <skills>/pr-reviewer-all-review/scripts/post_draft_review.py --repo owne
 python3 <skills>/pr-reviewer-all-review/scripts/post_draft_review.py --repo owner/name --pr 123 --input draft.json
 ```
 
-公開を指定された場合は、入力JSONに確認済みのレビュー本文を `body` として追加し、検査と投稿の両方のコマンドに `--submit` を付けます。
+公開を指定された場合は、入力JSONにレビュー全体の本文を `body` として追加し、検査と投稿の両方のコマンドに `--submit` を付けます。
 詳細は共通手順の[公開指定がある場合](../config/rulesync/.rulesync/skills/pr-reviewer-all-review/references/draft-review.md#公開指定がある場合)を参照してください。
 
 壁打ちは**Finish Reviewの往復**で行います。Finish Reviewを押すたびに、未resolveのcommentとreplyがまとめて起動元の

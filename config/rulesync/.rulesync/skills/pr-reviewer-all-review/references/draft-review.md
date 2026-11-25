@@ -44,14 +44,14 @@ python3 <pr-reviewer-all-review skill のディレクトリ>/scripts/post_draft_
 ### 公開指定がある場合
 
 「submitして」（「submit シテ」などの表記も含む）または `--submit` が明示されたときに使う。「投稿して」の場合は通常どおり draft を作る。
-指摘の選択と投稿文面の確認は公開時も行う。確認済みのレビュー全体の本文を JSON の `body` に入れる。
+投稿する No が確定していれば、ユーザーの明示した公開指定を投稿の承認として扱う。選ばれた指摘とユーザーが指定した文面の変更を反映し、レビュー全体の本文を JSON の `body` に入れる。本文案の提示や追加の OK を待たず、検査が通ったら公開する。
 既定の種別は Comment。Approve / Request changes はユーザーが種別を明示したときだけ選ぶ。
 
 通常のコマンドに `--submit` を加える。種別を指定された場合は `--submit APPROVE` または `--submit REQUEST_CHANGES` を使う。
 公開前の検査では、同じ入力・種別に `--dry-run` も付ける。
 既存の PENDING がある場合は公開操作を止めてユーザーに伝える。
 
-`comments.json` の例。公開する場合は確認済みのレビュー本文を `body` に入れる（draft では省略可）。
+`comments.json` の例。公開する場合はレビュー全体の本文を `body` に入れる（draft では省略可）。
 
 ```json
 {
