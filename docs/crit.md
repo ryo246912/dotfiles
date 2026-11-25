@@ -213,7 +213,7 @@ crit push --event request-changes -m "未対応の指摘があります"
 前節の「推奨するPR review loop」は**自分のPR**についた指摘をagentに直させる流れです。ここでは**reviewerとして**
 他人のPRを読む流れを扱います。PRへcheckoutし、agentが裏取りした指摘候補をcritのUIに並べ、UI上で壁打ちしてから、
 通常は選んだ指摘を**未submit（PENDING）のdraft review**として投稿し、GitHubの画面からsubmitできます。
-「submitして」または `--submit` を明示すると、投稿する No が決まり次第、追加の文面確認を挟まず公開します。既定の種別はCommentです。
+公開指示に `submit` を使うと（`submit` 単独や開始時の `--submit` も含む）、投稿する No が決まり次第、追加の文面確認を挟まず公開します。既定の種別はCommentです。
 
 この流れは`pr-crit` skill（`config/rulesync/.rulesync/skills/pr-crit/SKILL.md`、rulesyncでglobal配布）にまとめています。
 agentに`/pr-crit 123`（Codexでは`$pr-crit 123`）のように頼むと、以下を順に進めます。指摘の区分（must / should / imo /

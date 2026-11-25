@@ -3,7 +3,7 @@ name: pr-crit
 description: >-
   他人の GitHub PR を crit の UI でレビューする skill。PR へ checkout し、指摘候補（must/should/imo/nit/Q）を
   裏取りしたうえで crit のインラインコメントとして並べ、`crit pr` の UI でユーザーと壁打ちする。選ばれた指摘だけを
-  通常は draft レビューとして投稿し、「submitして」または `--submit` の明示があれば公開する。「crit で PR をレビューしたい」
+  通常は draft レビューとして投稿し、ユーザーの公開指示に `submit` があれば公開する。「crit で PR をレビューしたい」
   「PR を crit で見て壁打ちしたい」と crit を使う指定があるときに使う。crit を使わない PR レビューは pr-reviewer-all-review、
   自分の PR に付いた指摘への対応は pr-fix を使う。
 targets:
@@ -15,7 +15,7 @@ targets:
 
 レビュアーとして他人の PR を読み、**指摘候補を crit に並べる → UI で壁打ちする → ユーザーが選ぶ → draft を作るか公開する**
 までを進める。pr-reviewer-all-review skill と同じ観点・書式で進め、壁打ちの場を crit の UI にしたもの。
-「submitして」（「submit シテ」などの表記も含む）または `--submit` が明示された場合は、投稿する No が決まり次第、追加の文面確認を挟まず公開する。通常は draft と本文例を作る。
+ユーザーがレビューの公開指示に `submit` を使った場合（`submit` 単独や開始時の `--submit` も含む）は、投稿する No が決まり次第、追加の文面確認を挟まず公開する。通常は draft と本文例を作る。
 
 全体の流れ:
 
@@ -116,7 +116,7 @@ crit comment --json --file <comments.json> --author 'Claude Code'
 
 > crit の UI で各指摘にリプライして、質問・反論・文面の相談をしてください。気になる行には新しいコメントも付けられます。
 > 書き終えたら Finish Review を押してください。何往復でもできます。
-> 壁打ちを終えるときは、コメントなしで Finish Review するか「投稿に進む」「submitして」と伝えてください。
+> 壁打ちを終えるときは、コメントなしで Finish Review するか「投稿に進む」か `submit`と伝えてください。
 
 ### 壁打ちのやり方: Finish Review を往復する
 
