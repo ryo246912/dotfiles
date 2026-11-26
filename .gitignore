@@ -16,6 +16,7 @@ mise*.lock
 # 追加しても git add で無視されないようにするため）。
 !templates/
 !templates/**
+/config/git/work3/
 config/git/config.secret
 config/git/config.work.secret
 config/git/config.work3.secret

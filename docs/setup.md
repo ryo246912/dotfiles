@@ -177,20 +177,20 @@
   - [ ] ホストの git 署名用の GPG 設定
     - ホストで直接コミットするときの署名。`gpg --import` を含む以下の GPG 設定は sandbox の署名には使わない。
 
-    - [ ] secret設定ファイルの作成
+    - [ ] 非公開設定ファイルの作成
       - サンプルをコピーし、`machineId`を自分の値に編集する
 
       ```sh
-      cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
+      cp -n ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
       nvim ~/.config/git/config.secret
       ```
 
       - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
       ```sh
-      cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
-      cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
-      nvim ~/.config/git/config.work3.secret
+      cp -n ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
+      cp -n ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
+      nvim ~/.config/git/config.work.secret ~/.config/git/config.work3.secret
       ```
 
       - 各値の確認方法
@@ -392,14 +392,17 @@
 
 - [ ] （work ホストのみ）git 管理外の work 用ファイルを用意する
   - 雛形をコピーしてプレースホルダを書き換える（コピー先は gitignore 済みかリポジトリ外）。
-    git の secret ファイルは上の「git」で用意済み
+    git の非公開設定ファイルは上の「git」で用意済み
 
-    | 用途                        | 雛形                                         | コピー先                                         | 対象             |
-    | --------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
-    | AWS の SSO・aws-vault 設定  | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
-    | sandbox の許可ドメイン      | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
-    | sandbox から使う MCP サーバ | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
-    | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
+    | 用途                         | 雛形                                         | コピー先                                         | 対象             |
+    | ---------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
+    | AWS の SSO・aws-vault 設定   | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
+    | sandbox の許可ドメイン       | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
+    | sandbox から使う MCP サーバ  | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
+    | Alembic の切替前検査（任意） | `config/git/work3.example/`                  | `~/.config/git/work3/`                           | work3            |
+    | 仕事用の環境変数など         | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
+
+  - Alembic の切替前検査（Git 2.36 以上）では、雛形の `config` と `guard` をコピーする。`config` の URL を対象リポジトリで `git config --get remote.origin.url` が返す1件に置き換え、`guard` に実際のパスと、Compose の DB サービス名（`dbService`）、DB ユーザー（`dbUser`）、DB 名（`dbName`）を設定する。既存の個人設定に `git()` があれば削除し、`mise bootstrap dotfiles apply` 後に対話型 zsh を起動する。検査は直接の `git checkout` / `git switch` で有効になり、`ALEMBIC_GUARD=0` で省略できる。
 
   - AWS: プロファイル名（`XXX`）・`sso_account_id`・`sso_start_url` を書き換える
     - `sso_start_url`: AWS access portal の URL（`https://xxx.awsapps.com/start`）。社内の案内か管理者から受け取る
@@ -534,6 +537,7 @@
 | AWS の SSO・aws-vault                    | `aws/config.example`（配置後は `~/.aws/config.example`）                                             | work2 / work3 の `~/.aws/config` に SSO セッション、アカウント、ロールとプロファイルを設定する。[初期設定](#初期設定)を参照                                                                                           |
 | Sandbox の許可ドメイン                   | `config/sbx/allow-domains.work3.txt.example`                                                         | 同じディレクトリの `allow-domains.work3.txt` に必要なドメインを記入する。[Sandbox の設定](docker-sandboxes.md)を参照                                                                                                  |
 | Sandbox の MCP サーバー                  | `config/sbx/mcp.work2.yml.example` / `config/sbx/mcp.work3.yml.example`                              | 同じディレクトリの `mcp.work2.yml` / `mcp.work3.yml` に社内 URL、リポジトリパスなどを設定する。[Sandbox の設定](docker-sandboxes.md)を参照                                                                            |
+| Alembic の切替前検査                     | `config/git/work3.example/`                                                                          | `~/.config/git/work3/` に `config` と `guard` をコピーし、対象リポジトリの URL、パス、DB の接続先を設定する。[初期設定](#初期設定)を参照                                                                              |
 | 仕事用のシェル環境変数                   | なし                                                                                                 | 必要に応じて `~/.zshrc.secret` / `~/.zprofile.secret` を作る。[初期設定](#初期設定)を参照                                                                                                                             |
 | 仕事用のレビュー教訓の収集対象           | `config/agent-lessons/targets.work.yml.example`                                                      | `~/.config/agent-lessons/targets.work.yml` にリポジトリとチーム収集の有無を設定する。[収集対象の設定](agent-lessons.md#収集対象targetsyml-と-targetsnameyml)を参照                                                    |
 | 作者向けレビューのリポジトリ別追加段階   | `config/rulesync/.rulesync/skills/pr-author-all-review/work3.md.example`                             | 同じディレクトリの `work3.md` に対象リポジトリ、スキル、変更ファイルの条件を記入し、Rulesync で配布する。[リポジトリ別の追加レビュー](agent-lessons.md#リポジトリ別の追加レビュー)を参照                              |

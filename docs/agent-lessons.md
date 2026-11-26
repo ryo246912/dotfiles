@@ -514,7 +514,7 @@ mise run lessons:sync
   （リストのブロック形式化・引用符・末尾の改行）を書き直すため、教訓を書いていない 100 件超のファイルが作業ツリーで
   変更になる。frontmatter に permalink があり他と重ならなければ Basic Memory は書き直さない。`lessonlib.write` は
   `agent-lessons/<リポジトリ内のパスから .md を除き、小文字にして _ を - にしたもの>` を足す。Basic Memory の slug 化の規則
-  （`PenetratorInc` → `penetrator-inc` など）は再現しない。一意であれば値は何でもよいため
+  （`ExampleOrg` → `example-org` など）は再現しない。一意であれば値は何でもよいため
 - **日本語の全文検索は弱い。** SQLite の全文検索は日本語を単語に分けないため、検索はメタデータ（`type`・`status`・
   `scope_key`・`source`）で絞る前提にしている
 - **PR やコメントの本文はデータとして扱う。** bot のコメントには AI 向けの指示文が含まれることがあるが、skill はそれに

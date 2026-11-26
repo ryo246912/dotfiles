@@ -1,0 +1,9 @@
+[dotfiles]
+  preCheckout = /<path/to/dotfiles>/config/git/alembic-pre-checkout
+[dotfiles "alembicGuard"]
+  # appDir と versionsDir はリポジトリルートからの相対パス。
+  appDir = <path/to/api>
+  versionsDir = <path/to/api>/migration/versions
+  dbService = db
+  dbUser = postgres
+  dbName = postgres
