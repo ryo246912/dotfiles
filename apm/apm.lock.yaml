@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-14T01:25:28.923283+00:00'
+generated_at: '2026-11-26T12:01:49.354033+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1584,6 +1584,366 @@ dependencies:
     .claude/skills/html-wireframe/SKILL.md: sha256:b1d649ef9052f2ed8baabaf483ed527208a2e481281ed3925ec8b84ba641d4c1
     .claude/skills/html-wireframe/agents/openai.yaml: sha256:37e5a68fe60467559528ea8096b698f8be562c7e497813df02883dcc71dd3629
   content_hash: sha256:97cdf1d6abaef20857992e0841cfe5a19bbda1144d8de0d2bcdc0bca80952983
+- repo_url: soudai/postgresql-use-improve-agents-skill
+  name: postgresql-skills
+  host: github.com
+  resolved_commit: c82595419a024abebef9d0b332f2bdd9b03b1664
+  version: 0.1.1
+  package_type: skill_bundle
+  deployed_files:
+  - .agents/skills/postgres-config-tuning
+  - .agents/skills/postgres-config-tuning/SKILL.md
+  - .agents/skills/postgres-config-tuning/agents/openai.yaml
+  - .agents/skills/postgres-config-tuning/references/apply-and-verify.md
+  - .agents/skills/postgres-config-tuning/references/parameters.md
+  - .agents/skills/postgres-config-tuning/scripts/review_config.py
+  - .agents/skills/postgres-config-tuning/sql/settings.sql
+  - .agents/skills/postgres-performance-diagnostics
+  - .agents/skills/postgres-performance-diagnostics/SKILL.md
+  - .agents/skills/postgres-performance-diagnostics/agents/openai.yaml
+  - .agents/skills/postgres-performance-diagnostics/references/collection.md
+  - .agents/skills/postgres-performance-diagnostics/references/io-memory.md
+  - .agents/skills/postgres-performance-diagnostics/references/locking.md
+  - .agents/skills/postgres-performance-diagnostics/references/maintenance-replication.md
+  - .agents/skills/postgres-performance-diagnostics/references/query-tuning.md
+  - .agents/skills/postgres-performance-diagnostics/references/validation.md
+  - .agents/skills/postgres-performance-diagnostics/references/wait-events.md
+  - .agents/skills/postgres-performance-diagnostics/scripts/analyze.py
+  - .agents/skills/postgres-performance-diagnostics/scripts/analyze_logs.py
+  - .agents/skills/postgres-performance-diagnostics/scripts/analyze_plan.py
+  - .agents/skills/postgres-performance-diagnostics/scripts/analyze_trace.py
+  - .agents/skills/postgres-performance-diagnostics/scripts/collect.py
+  - .agents/skills/postgres-performance-diagnostics/scripts/compare_intervals.py
+  - .agents/skills/postgres-performance-diagnostics/scripts/sample_activity.py
+  - .agents/skills/postgres-performance-diagnostics/sql/activity.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/analyze_progress.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/archiver.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/autovacuum_scores.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/bgwriter.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/checkpointer.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/conflicts.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/create_index_progress.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/database.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/database_ages.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/foreign_keys.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/index_io.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/indexes.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/inspect_relation.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/io.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/lock_stats.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/locks.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/pgss.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/pgss_info.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/prepared.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/queries.json
+  - .agents/skills/postgres-performance-diagnostics/sql/receiver.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/recovery.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/recovery_prefetch.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/recovery_state.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/replication.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/replication_slots.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/slots.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/subscription_relations.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/subscription_stats.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/subscriptions.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/table_io.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/tables.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/vacuum_progress.sql
+  - .agents/skills/postgres-performance-diagnostics/sql/wal.sql
+  - .agents/skills/postgres-schema-review
+  - .agents/skills/postgres-schema-review/SKILL.md
+  - .agents/skills/postgres-schema-review/agents/openai.yaml
+  - .agents/skills/postgres-schema-review/assets/contract.example.json
+  - .agents/skills/postgres-schema-review/assets/evidence.example.json
+  - .agents/skills/postgres-schema-review/references/evidence.md
+  - .agents/skills/postgres-schema-review/references/refactoring.md
+  - .agents/skills/postgres-schema-review/references/rules.md
+  - .agents/skills/postgres-schema-review/scripts/collect.py
+  - .agents/skills/postgres-schema-review/scripts/lifecycle.py
+  - .agents/skills/postgres-schema-review/scripts/review.py
+  - .agents/skills/postgres-schema-review/scripts/structure.py
+  - .agents/skills/postgres-security-review
+  - .agents/skills/postgres-security-review/SKILL.md
+  - .agents/skills/postgres-security-review/agents/openai.yaml
+  - .agents/skills/postgres-security-review/references/access.md
+  - .agents/skills/postgres-security-review/references/authentication.md
+  - .agents/skills/postgres-security-review/references/changes.md
+  - .agents/skills/postgres-security-review/references/evidence.md
+  - .agents/skills/postgres-security-review/references/validation.md
+  - .agents/skills/postgres-security-review/scripts/access.py
+  - .agents/skills/postgres-security-review/scripts/advisories.py
+  - .agents/skills/postgres-security-review/scripts/collect.py
+  - .agents/skills/postgres-security-review/scripts/environment.py
+  - .agents/skills/postgres-security-review/scripts/queries.py
+  - .agents/skills/postgres-security-review/scripts/report.py
+  - .agents/skills/postgres-security-review/scripts/review.py
+  - .agents/skills/postgres-workload-validation
+  - .agents/skills/postgres-workload-validation/SKILL.md
+  - .agents/skills/postgres-workload-validation/references/replay.md
+  - .agents/skills/postgres-workload-validation/scripts/compare_runs.py
+  - .claude/skills/postgres-config-tuning
+  - .claude/skills/postgres-config-tuning/SKILL.md
+  - .claude/skills/postgres-config-tuning/agents/openai.yaml
+  - .claude/skills/postgres-config-tuning/references/apply-and-verify.md
+  - .claude/skills/postgres-config-tuning/references/parameters.md
+  - .claude/skills/postgres-config-tuning/scripts/review_config.py
+  - .claude/skills/postgres-config-tuning/sql/settings.sql
+  - .claude/skills/postgres-performance-diagnostics
+  - .claude/skills/postgres-performance-diagnostics/SKILL.md
+  - .claude/skills/postgres-performance-diagnostics/agents/openai.yaml
+  - .claude/skills/postgres-performance-diagnostics/references/collection.md
+  - .claude/skills/postgres-performance-diagnostics/references/io-memory.md
+  - .claude/skills/postgres-performance-diagnostics/references/locking.md
+  - .claude/skills/postgres-performance-diagnostics/references/maintenance-replication.md
+  - .claude/skills/postgres-performance-diagnostics/references/query-tuning.md
+  - .claude/skills/postgres-performance-diagnostics/references/validation.md
+  - .claude/skills/postgres-performance-diagnostics/references/wait-events.md
+  - .claude/skills/postgres-performance-diagnostics/scripts/analyze.py
+  - .claude/skills/postgres-performance-diagnostics/scripts/analyze_logs.py
+  - .claude/skills/postgres-performance-diagnostics/scripts/analyze_plan.py
+  - .claude/skills/postgres-performance-diagnostics/scripts/analyze_trace.py
+  - .claude/skills/postgres-performance-diagnostics/scripts/collect.py
+  - .claude/skills/postgres-performance-diagnostics/scripts/compare_intervals.py
+  - .claude/skills/postgres-performance-diagnostics/scripts/sample_activity.py
+  - .claude/skills/postgres-performance-diagnostics/sql/activity.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/analyze_progress.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/archiver.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/autovacuum_scores.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/bgwriter.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/checkpointer.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/conflicts.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/create_index_progress.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/database.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/database_ages.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/foreign_keys.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/index_io.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/indexes.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/inspect_relation.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/io.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/lock_stats.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/locks.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/pgss.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/pgss_info.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/prepared.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/queries.json
+  - .claude/skills/postgres-performance-diagnostics/sql/receiver.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/recovery.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/recovery_prefetch.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/recovery_state.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/replication.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/replication_slots.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/slots.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/subscription_relations.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/subscription_stats.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/subscriptions.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/table_io.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/tables.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/vacuum_progress.sql
+  - .claude/skills/postgres-performance-diagnostics/sql/wal.sql
+  - .claude/skills/postgres-schema-review
+  - .claude/skills/postgres-schema-review/SKILL.md
+  - .claude/skills/postgres-schema-review/agents/openai.yaml
+  - .claude/skills/postgres-schema-review/assets/contract.example.json
+  - .claude/skills/postgres-schema-review/assets/evidence.example.json
+  - .claude/skills/postgres-schema-review/references/evidence.md
+  - .claude/skills/postgres-schema-review/references/refactoring.md
+  - .claude/skills/postgres-schema-review/references/rules.md
+  - .claude/skills/postgres-schema-review/scripts/collect.py
+  - .claude/skills/postgres-schema-review/scripts/lifecycle.py
+  - .claude/skills/postgres-schema-review/scripts/review.py
+  - .claude/skills/postgres-schema-review/scripts/structure.py
+  - .claude/skills/postgres-security-review
+  - .claude/skills/postgres-security-review/SKILL.md
+  - .claude/skills/postgres-security-review/agents/openai.yaml
+  - .claude/skills/postgres-security-review/references/access.md
+  - .claude/skills/postgres-security-review/references/authentication.md
+  - .claude/skills/postgres-security-review/references/changes.md
+  - .claude/skills/postgres-security-review/references/evidence.md
+  - .claude/skills/postgres-security-review/references/validation.md
+  - .claude/skills/postgres-security-review/scripts/access.py
+  - .claude/skills/postgres-security-review/scripts/advisories.py
+  - .claude/skills/postgres-security-review/scripts/collect.py
+  - .claude/skills/postgres-security-review/scripts/environment.py
+  - .claude/skills/postgres-security-review/scripts/queries.py
+  - .claude/skills/postgres-security-review/scripts/report.py
+  - .claude/skills/postgres-security-review/scripts/review.py
+  - .claude/skills/postgres-workload-validation
+  - .claude/skills/postgres-workload-validation/SKILL.md
+  - .claude/skills/postgres-workload-validation/references/replay.md
+  - .claude/skills/postgres-workload-validation/scripts/compare_runs.py
+  deployed_file_hashes:
+    .agents/skills/postgres-config-tuning/SKILL.md: sha256:377ca9195f2a685d23555992edc067dae7ac1c926ab7ddf18056b4e03e8e935e
+    .agents/skills/postgres-config-tuning/agents/openai.yaml: sha256:a48cf9e9ab42c1494136746fd0baf836c5ad45b9203c596d0a9c32b4874492f2
+    .agents/skills/postgres-config-tuning/references/apply-and-verify.md: sha256:60b6cfde775f956f43a0f903e0a473ccb990b33468df1cef778b45deb0bbf92f
+    .agents/skills/postgres-config-tuning/references/parameters.md: sha256:ffc3fa403fb7d6f8bc1e2d53dc2a10bb49d234e8c440e4fc0ea84ab65fad9af1
+    .agents/skills/postgres-config-tuning/scripts/review_config.py: sha256:9c0e3d3f8480223487dbfa618c2b31fd47200c30be9affbc7b81d0b89bf56af6
+    .agents/skills/postgres-config-tuning/sql/settings.sql: sha256:f5003ec44bbde73c45307674331af72889c96586868d95fb1fba18b84c9484de
+    .agents/skills/postgres-performance-diagnostics/SKILL.md: sha256:17148e10d908e99808f693c4175eb556b78ac286d0b658bed6c2feb3ae9896ab
+    .agents/skills/postgres-performance-diagnostics/agents/openai.yaml: sha256:a68c3b132248f92f8c14e79d82a4b27f7188dd6df40658c235d939c725f554d3
+    .agents/skills/postgres-performance-diagnostics/references/collection.md: sha256:b5ed7f80ecfc24af86bdfdb13d53d6c6916fcf3544125716f21c65ef5d3aad81
+    .agents/skills/postgres-performance-diagnostics/references/io-memory.md: sha256:0178ef285d1953b696fb7c481dabc0f0b23cf78d97d2b82ddedc6aeb61af916c
+    .agents/skills/postgres-performance-diagnostics/references/locking.md: sha256:64cedc1f6bab42407e71667623465393543932eda62f82df03c6fc44227b0e11
+    .agents/skills/postgres-performance-diagnostics/references/maintenance-replication.md: sha256:e226ed4bb46e48031df53a95115d67d66de81a31151b5cc0626d8d3f03d70c76
+    .agents/skills/postgres-performance-diagnostics/references/query-tuning.md: sha256:2f0236558c275008e2d0c9131c214034ccd57d377fb9fd8517f8b31d6cce1493
+    .agents/skills/postgres-performance-diagnostics/references/validation.md: sha256:9031470c98db7d61862844a2d968134235da63df2b95a8bed4e8e8fb442ad60c
+    .agents/skills/postgres-performance-diagnostics/references/wait-events.md: sha256:7bcfa0f63e9714fbc102869144a7802e1bede6ca5607b344cffe66c551c03762
+    .agents/skills/postgres-performance-diagnostics/scripts/analyze.py: sha256:f132eac24867e2829c6c816baf3cccfbc77e6819dd8cea5b7be8614dfee25e39
+    .agents/skills/postgres-performance-diagnostics/scripts/analyze_logs.py: sha256:a39a57afd2b88efc07b5609015a6ff27c1a2a94c35c78abad0716f4b84eb3813
+    .agents/skills/postgres-performance-diagnostics/scripts/analyze_plan.py: sha256:db8f972cec72cee9d49d7a949aa69902173123db555cd52636138a08c59d1930
+    .agents/skills/postgres-performance-diagnostics/scripts/analyze_trace.py: sha256:6736b2ae61b8448cbb6df7fc5f354979981dba7c74193aadac4d399f452ff8b6
+    .agents/skills/postgres-performance-diagnostics/scripts/collect.py: sha256:bd2f2c9f767bf2ff02cdb40e4f58ef0fd2f9e9b32c65db82238d3c75f86f0332
+    .agents/skills/postgres-performance-diagnostics/scripts/compare_intervals.py: sha256:5ea4090612321a70e276ec0eb0d87a4619adbd175c162249e481bb702d1db8ec
+    .agents/skills/postgres-performance-diagnostics/scripts/sample_activity.py: sha256:bf0edcb98f1d006579b54a52f7c79d16399b987d115b0b45b567260bc81207d9
+    .agents/skills/postgres-performance-diagnostics/sql/activity.sql: sha256:66797050ccf3a21c11ed87c939f079e76adb8b51d75075cec25ba31ea9da22bf
+    .agents/skills/postgres-performance-diagnostics/sql/analyze_progress.sql: sha256:e03dbc32fd052694d47696793a29eb566caa0b9fd284aae952161f0aae252090
+    .agents/skills/postgres-performance-diagnostics/sql/archiver.sql: sha256:0ebec30c3482ac745b90a83848e9fabe08ebd0db7c95b6f8c555ed2d833fc15b
+    .agents/skills/postgres-performance-diagnostics/sql/autovacuum_scores.sql: sha256:08355650c47b516b86ac6e7eb19b19a75ea35a2d343f8ce48eb31fc7ffdc870d
+    .agents/skills/postgres-performance-diagnostics/sql/bgwriter.sql: sha256:c8283402349b757fa3b9c1c4c4f199574550ca7fa4f32f63ad77ab407c56fd7f
+    .agents/skills/postgres-performance-diagnostics/sql/checkpointer.sql: sha256:4799ce3abfd2481871c654498694d4b33b879bb18023f69a3168299a733adcd8
+    .agents/skills/postgres-performance-diagnostics/sql/conflicts.sql: sha256:84d45198704fec79eab5b69ca96beafc89dee86d1b940f9b97d0ee5a40a558e7
+    .agents/skills/postgres-performance-diagnostics/sql/create_index_progress.sql: sha256:b333caced62782081c4f7f0d9d65b9ea5981501779f30984b42faeea2d25a668
+    .agents/skills/postgres-performance-diagnostics/sql/database.sql: sha256:855d4ae70f32179db22eeaafc8952c1cd10556e158007b5e4b806fdb871579ed
+    .agents/skills/postgres-performance-diagnostics/sql/database_ages.sql: sha256:ea0d4d53f37838e3a41c64ca7ab5169d0d6c4b5ddc332786278493ece3004900
+    .agents/skills/postgres-performance-diagnostics/sql/foreign_keys.sql: sha256:4228c832c6086265ccd2fd6734aa49e4f2f0f57ee8f5e56b3ee6b6b35c254e1d
+    .agents/skills/postgres-performance-diagnostics/sql/index_io.sql: sha256:6f2f0f7ef3411b73021266c743871f09cbd753a4106f7831083e1d1de20bcfa1
+    .agents/skills/postgres-performance-diagnostics/sql/indexes.sql: sha256:ddb7ef8a21971c4821b0653f281b725cfe1f937dd46ee8fa1be927156e24ce95
+    .agents/skills/postgres-performance-diagnostics/sql/inspect_relation.sql: sha256:eb3e6559c1ad7f2f20ef88c5c0de2bd67f4fe0aa1428362269c235d8c991f84f
+    .agents/skills/postgres-performance-diagnostics/sql/io.sql: sha256:c1c40d5728a2de52aa665b23cf19ba5712409f05e6e258a5ec3c131f1fd8d3ca
+    .agents/skills/postgres-performance-diagnostics/sql/lock_stats.sql: sha256:020c60b7fcf3f3db5f69716996584e0507987c746c7781c08a1b831a86179620
+    .agents/skills/postgres-performance-diagnostics/sql/locks.sql: sha256:a38de26999ff1236a51db0085d7be95bfbfcabc4806ae208b038fb64a85ebb5c
+    .agents/skills/postgres-performance-diagnostics/sql/pgss.sql: sha256:7fed247518d598216393d3e64b4b446020cd5f513872e1e71daffba217169adc
+    .agents/skills/postgres-performance-diagnostics/sql/pgss_info.sql: sha256:0e64ac7b61ac91d4d80ec00d9b9263fc023879a5144c6719b544612f15ae2c70
+    .agents/skills/postgres-performance-diagnostics/sql/prepared.sql: sha256:6fa6a640580ad1910a5ce2ff863a610f90b72872a86b04aea295071f698d1cca
+    .agents/skills/postgres-performance-diagnostics/sql/queries.json: sha256:fed3a08a704cc723cdee5f44e7990c149a6bc2aea6448f9509054b797af89c14
+    .agents/skills/postgres-performance-diagnostics/sql/receiver.sql: sha256:9a072a9e2b9c025a37e504d45470543e48410eca21924b49afc8c85ea5c866c7
+    .agents/skills/postgres-performance-diagnostics/sql/recovery.sql: sha256:b70f1e32f893840c86f3f6ac85d027444c9bfb1b27fc055a2518fdd52a945376
+    .agents/skills/postgres-performance-diagnostics/sql/recovery_prefetch.sql: sha256:db77525976205918e3987cd042eaef94a9f0409f685a3529ac7743b9ce3503c5
+    .agents/skills/postgres-performance-diagnostics/sql/recovery_state.sql: sha256:5f7b20c04d2ee507a14c0f55def65d70c426078b122c3a2bfe1721ee83b720d1
+    .agents/skills/postgres-performance-diagnostics/sql/replication.sql: sha256:de85a6d7836e3875a73177c6607e8d6506d44d54306b0bc592727ba84520101d
+    .agents/skills/postgres-performance-diagnostics/sql/replication_slots.sql: sha256:a4ce28dc14bf585a13edc5364050fe346ead7d869d6c614a6770855d9100f23e
+    .agents/skills/postgres-performance-diagnostics/sql/slots.sql: sha256:47d248be1c9865949ccba841157c0e77563c7884e45a65b43a41d6ee1abe7d41
+    .agents/skills/postgres-performance-diagnostics/sql/subscription_relations.sql: sha256:b3858a7baf31f53daaf2cde9d6af4305f3ba956ccfc7e1715ee7f9268b937e08
+    .agents/skills/postgres-performance-diagnostics/sql/subscription_stats.sql: sha256:886eed1d1bb29be7e7cf1fadef140f1e69ed301d6b6ea1b9fa3346723d6db83e
+    .agents/skills/postgres-performance-diagnostics/sql/subscriptions.sql: sha256:10596a50911bd352c8389243e8c586945eabdcba602c03e4281dfacd6d1d9830
+    .agents/skills/postgres-performance-diagnostics/sql/table_io.sql: sha256:1b4791fdbe71ce1238a857bd331880d8ccc153761ee781decf7257cf28a45dea
+    .agents/skills/postgres-performance-diagnostics/sql/tables.sql: sha256:13e11c8a555218027e4a1256b4c3991b4fa0c3535991d915df85523d3160a8f6
+    .agents/skills/postgres-performance-diagnostics/sql/vacuum_progress.sql: sha256:aeface739dbe6756083d7a760610c2b02f0fe387fd7ac2c0112f96487a81cdff
+    .agents/skills/postgres-performance-diagnostics/sql/wal.sql: sha256:c640898489f0c71a9dddbc21dbae2b1ea0f1c16243cbee9538baa268bdfee06b
+    .agents/skills/postgres-schema-review/SKILL.md: sha256:ffd6ae96e6340094485190786e0a727bfec9820d8bb1657cae13747228d06ea6
+    .agents/skills/postgres-schema-review/agents/openai.yaml: sha256:c67c4471dd53dfa78b958048f91e95ec157fa9c2ccba31046cea551372196388
+    .agents/skills/postgres-schema-review/assets/contract.example.json: sha256:1a47295c239923ccbaa895929f756f09771039cc7ed5cc49e42ca3c284c659ea
+    .agents/skills/postgres-schema-review/assets/evidence.example.json: sha256:d3763a58842c20d064fbc4feca22747be0b051c734a2bf9b14e49467c46fe1b0
+    .agents/skills/postgres-schema-review/references/evidence.md: sha256:46fe6d89d75c6d8c6b98f2c4aaf64806f9aebc886a5ec9b71365d5a95392bb92
+    .agents/skills/postgres-schema-review/references/refactoring.md: sha256:62d19f2b1dbb3aff13711c8ccade7c42b7a1d58a9c358caa61d0091a4823f532
+    .agents/skills/postgres-schema-review/references/rules.md: sha256:c072676bc5ba7a6c5b208880ef5f6cffae18dc4ef5f00989d4f0b7337a53cc7d
+    .agents/skills/postgres-schema-review/scripts/collect.py: sha256:459ad24f69ec5ae30560791fecc86767c13ca6791f682855d5d7b6c1e853f419
+    .agents/skills/postgres-schema-review/scripts/lifecycle.py: sha256:4cf393fc391c8dcd0102a642447604d779b1b4a02acdb7d76890a6665a03aa8e
+    .agents/skills/postgres-schema-review/scripts/review.py: sha256:cd227990757c887eaa74e633860829afc50ec6daa12afcc13e10cdae14fb94c6
+    .agents/skills/postgres-schema-review/scripts/structure.py: sha256:6465b1d57cc3ee88d0ed1fc6aa9c346536951c2eb723dc3011164febc62c9fa3
+    .agents/skills/postgres-security-review/SKILL.md: sha256:dbd62a068b480ba46fdd4044c0743982d7d5beeb188ee0eb37b36a5d633713bc
+    .agents/skills/postgres-security-review/agents/openai.yaml: sha256:7b703e396224c3ab486ac25df0726d5eac574c2392f7058ebc0b75a235feb44b
+    .agents/skills/postgres-security-review/references/access.md: sha256:9ace1f29e950eb131af7a34589bee2ccad7781873ee12b2914cad43eef0667d5
+    .agents/skills/postgres-security-review/references/authentication.md: sha256:9338b374bb6e2b16321cb6f43d99a848a80d5ed4c288d5c37e45eeb71bd424c0
+    .agents/skills/postgres-security-review/references/changes.md: sha256:6507141823aacb3a35bc26b173b746979dc5b55137a16f71e377f1f9a535413c
+    .agents/skills/postgres-security-review/references/evidence.md: sha256:9284effeeef10693b376bffa9f147fb0ad0684a8a6d4071ba892cd0e3b711216
+    .agents/skills/postgres-security-review/references/validation.md: sha256:53d4bc3651ea344496fbf0aa79894a1d94f934252936e9c78addc99238f87e7c
+    .agents/skills/postgres-security-review/scripts/access.py: sha256:d1642af4f3fadcbedfa9cd01635a70c0dbb173a37465e1209049d42eef7a9861
+    .agents/skills/postgres-security-review/scripts/advisories.py: sha256:9c90008cc81cb2103b84926d188aad5e73adf36ade392efccd815b318210f0b2
+    .agents/skills/postgres-security-review/scripts/collect.py: sha256:e187ad952fc64ff22b04ebbd9caca4f294912aff8b1bc4028f78d2279e6f3aa0
+    .agents/skills/postgres-security-review/scripts/environment.py: sha256:ca9c02ef1a073aa78f340b31adb8a021569c2924f78b85b9bec6d1accdea89ca
+    .agents/skills/postgres-security-review/scripts/queries.py: sha256:ef669f4495588cc06c62b39797fe966f210c34efcf41a62e33e285374c64e36f
+    .agents/skills/postgres-security-review/scripts/report.py: sha256:c178992a6d5481469ef27b0823cbe0f4b616677c541ef5884c62b2560f331895
+    .agents/skills/postgres-security-review/scripts/review.py: sha256:460164ce46e53aac79cf101b0349813099f3ba77a27f9b9c16d75a94a9fc5f31
+    .agents/skills/postgres-workload-validation/SKILL.md: sha256:d40cdaba68cb7859b958960748f776eb21f57b1476d9178956cf1cd326a13e59
+    .agents/skills/postgres-workload-validation/references/replay.md: sha256:1d5d701b997e3ed438eeffb10879ca75b5661307ab4c544aa2dea2fa86be570a
+    .agents/skills/postgres-workload-validation/scripts/compare_runs.py: sha256:ac97e01f00bde4e922b41f9619d9857ee46f5622b7c209bfdec130402b59ce2c
+    .claude/skills/postgres-config-tuning/SKILL.md: sha256:377ca9195f2a685d23555992edc067dae7ac1c926ab7ddf18056b4e03e8e935e
+    .claude/skills/postgres-config-tuning/agents/openai.yaml: sha256:a48cf9e9ab42c1494136746fd0baf836c5ad45b9203c596d0a9c32b4874492f2
+    .claude/skills/postgres-config-tuning/references/apply-and-verify.md: sha256:60b6cfde775f956f43a0f903e0a473ccb990b33468df1cef778b45deb0bbf92f
+    .claude/skills/postgres-config-tuning/references/parameters.md: sha256:ffc3fa403fb7d6f8bc1e2d53dc2a10bb49d234e8c440e4fc0ea84ab65fad9af1
+    .claude/skills/postgres-config-tuning/scripts/review_config.py: sha256:9c0e3d3f8480223487dbfa618c2b31fd47200c30be9affbc7b81d0b89bf56af6
+    .claude/skills/postgres-config-tuning/sql/settings.sql: sha256:f5003ec44bbde73c45307674331af72889c96586868d95fb1fba18b84c9484de
+    .claude/skills/postgres-performance-diagnostics/SKILL.md: sha256:17148e10d908e99808f693c4175eb556b78ac286d0b658bed6c2feb3ae9896ab
+    .claude/skills/postgres-performance-diagnostics/agents/openai.yaml: sha256:a68c3b132248f92f8c14e79d82a4b27f7188dd6df40658c235d939c725f554d3
+    .claude/skills/postgres-performance-diagnostics/references/collection.md: sha256:b5ed7f80ecfc24af86bdfdb13d53d6c6916fcf3544125716f21c65ef5d3aad81
+    .claude/skills/postgres-performance-diagnostics/references/io-memory.md: sha256:0178ef285d1953b696fb7c481dabc0f0b23cf78d97d2b82ddedc6aeb61af916c
+    .claude/skills/postgres-performance-diagnostics/references/locking.md: sha256:64cedc1f6bab42407e71667623465393543932eda62f82df03c6fc44227b0e11
+    .claude/skills/postgres-performance-diagnostics/references/maintenance-replication.md: sha256:e226ed4bb46e48031df53a95115d67d66de81a31151b5cc0626d8d3f03d70c76
+    .claude/skills/postgres-performance-diagnostics/references/query-tuning.md: sha256:2f0236558c275008e2d0c9131c214034ccd57d377fb9fd8517f8b31d6cce1493
+    .claude/skills/postgres-performance-diagnostics/references/validation.md: sha256:9031470c98db7d61862844a2d968134235da63df2b95a8bed4e8e8fb442ad60c
+    .claude/skills/postgres-performance-diagnostics/references/wait-events.md: sha256:7bcfa0f63e9714fbc102869144a7802e1bede6ca5607b344cffe66c551c03762
+    .claude/skills/postgres-performance-diagnostics/scripts/analyze.py: sha256:f132eac24867e2829c6c816baf3cccfbc77e6819dd8cea5b7be8614dfee25e39
+    .claude/skills/postgres-performance-diagnostics/scripts/analyze_logs.py: sha256:a39a57afd2b88efc07b5609015a6ff27c1a2a94c35c78abad0716f4b84eb3813
+    .claude/skills/postgres-performance-diagnostics/scripts/analyze_plan.py: sha256:db8f972cec72cee9d49d7a949aa69902173123db555cd52636138a08c59d1930
+    .claude/skills/postgres-performance-diagnostics/scripts/analyze_trace.py: sha256:6736b2ae61b8448cbb6df7fc5f354979981dba7c74193aadac4d399f452ff8b6
+    .claude/skills/postgres-performance-diagnostics/scripts/collect.py: sha256:bd2f2c9f767bf2ff02cdb40e4f58ef0fd2f9e9b32c65db82238d3c75f86f0332
+    .claude/skills/postgres-performance-diagnostics/scripts/compare_intervals.py: sha256:5ea4090612321a70e276ec0eb0d87a4619adbd175c162249e481bb702d1db8ec
+    .claude/skills/postgres-performance-diagnostics/scripts/sample_activity.py: sha256:bf0edcb98f1d006579b54a52f7c79d16399b987d115b0b45b567260bc81207d9
+    .claude/skills/postgres-performance-diagnostics/sql/activity.sql: sha256:66797050ccf3a21c11ed87c939f079e76adb8b51d75075cec25ba31ea9da22bf
+    .claude/skills/postgres-performance-diagnostics/sql/analyze_progress.sql: sha256:e03dbc32fd052694d47696793a29eb566caa0b9fd284aae952161f0aae252090
+    .claude/skills/postgres-performance-diagnostics/sql/archiver.sql: sha256:0ebec30c3482ac745b90a83848e9fabe08ebd0db7c95b6f8c555ed2d833fc15b
+    .claude/skills/postgres-performance-diagnostics/sql/autovacuum_scores.sql: sha256:08355650c47b516b86ac6e7eb19b19a75ea35a2d343f8ce48eb31fc7ffdc870d
+    .claude/skills/postgres-performance-diagnostics/sql/bgwriter.sql: sha256:c8283402349b757fa3b9c1c4c4f199574550ca7fa4f32f63ad77ab407c56fd7f
+    .claude/skills/postgres-performance-diagnostics/sql/checkpointer.sql: sha256:4799ce3abfd2481871c654498694d4b33b879bb18023f69a3168299a733adcd8
+    .claude/skills/postgres-performance-diagnostics/sql/conflicts.sql: sha256:84d45198704fec79eab5b69ca96beafc89dee86d1b940f9b97d0ee5a40a558e7
+    .claude/skills/postgres-performance-diagnostics/sql/create_index_progress.sql: sha256:b333caced62782081c4f7f0d9d65b9ea5981501779f30984b42faeea2d25a668
+    .claude/skills/postgres-performance-diagnostics/sql/database.sql: sha256:855d4ae70f32179db22eeaafc8952c1cd10556e158007b5e4b806fdb871579ed
+    .claude/skills/postgres-performance-diagnostics/sql/database_ages.sql: sha256:ea0d4d53f37838e3a41c64ca7ab5169d0d6c4b5ddc332786278493ece3004900
+    .claude/skills/postgres-performance-diagnostics/sql/foreign_keys.sql: sha256:4228c832c6086265ccd2fd6734aa49e4f2f0f57ee8f5e56b3ee6b6b35c254e1d
+    .claude/skills/postgres-performance-diagnostics/sql/index_io.sql: sha256:6f2f0f7ef3411b73021266c743871f09cbd753a4106f7831083e1d1de20bcfa1
+    .claude/skills/postgres-performance-diagnostics/sql/indexes.sql: sha256:ddb7ef8a21971c4821b0653f281b725cfe1f937dd46ee8fa1be927156e24ce95
+    .claude/skills/postgres-performance-diagnostics/sql/inspect_relation.sql: sha256:eb3e6559c1ad7f2f20ef88c5c0de2bd67f4fe0aa1428362269c235d8c991f84f
+    .claude/skills/postgres-performance-diagnostics/sql/io.sql: sha256:c1c40d5728a2de52aa665b23cf19ba5712409f05e6e258a5ec3c131f1fd8d3ca
+    .claude/skills/postgres-performance-diagnostics/sql/lock_stats.sql: sha256:020c60b7fcf3f3db5f69716996584e0507987c746c7781c08a1b831a86179620
+    .claude/skills/postgres-performance-diagnostics/sql/locks.sql: sha256:a38de26999ff1236a51db0085d7be95bfbfcabc4806ae208b038fb64a85ebb5c
+    .claude/skills/postgres-performance-diagnostics/sql/pgss.sql: sha256:7fed247518d598216393d3e64b4b446020cd5f513872e1e71daffba217169adc
+    .claude/skills/postgres-performance-diagnostics/sql/pgss_info.sql: sha256:0e64ac7b61ac91d4d80ec00d9b9263fc023879a5144c6719b544612f15ae2c70
+    .claude/skills/postgres-performance-diagnostics/sql/prepared.sql: sha256:6fa6a640580ad1910a5ce2ff863a610f90b72872a86b04aea295071f698d1cca
+    .claude/skills/postgres-performance-diagnostics/sql/queries.json: sha256:fed3a08a704cc723cdee5f44e7990c149a6bc2aea6448f9509054b797af89c14
+    .claude/skills/postgres-performance-diagnostics/sql/receiver.sql: sha256:9a072a9e2b9c025a37e504d45470543e48410eca21924b49afc8c85ea5c866c7
+    .claude/skills/postgres-performance-diagnostics/sql/recovery.sql: sha256:b70f1e32f893840c86f3f6ac85d027444c9bfb1b27fc055a2518fdd52a945376
+    .claude/skills/postgres-performance-diagnostics/sql/recovery_prefetch.sql: sha256:db77525976205918e3987cd042eaef94a9f0409f685a3529ac7743b9ce3503c5
+    .claude/skills/postgres-performance-diagnostics/sql/recovery_state.sql: sha256:5f7b20c04d2ee507a14c0f55def65d70c426078b122c3a2bfe1721ee83b720d1
+    .claude/skills/postgres-performance-diagnostics/sql/replication.sql: sha256:de85a6d7836e3875a73177c6607e8d6506d44d54306b0bc592727ba84520101d
+    .claude/skills/postgres-performance-diagnostics/sql/replication_slots.sql: sha256:a4ce28dc14bf585a13edc5364050fe346ead7d869d6c614a6770855d9100f23e
+    .claude/skills/postgres-performance-diagnostics/sql/slots.sql: sha256:47d248be1c9865949ccba841157c0e77563c7884e45a65b43a41d6ee1abe7d41
+    .claude/skills/postgres-performance-diagnostics/sql/subscription_relations.sql: sha256:b3858a7baf31f53daaf2cde9d6af4305f3ba956ccfc7e1715ee7f9268b937e08
+    .claude/skills/postgres-performance-diagnostics/sql/subscription_stats.sql: sha256:886eed1d1bb29be7e7cf1fadef140f1e69ed301d6b6ea1b9fa3346723d6db83e
+    .claude/skills/postgres-performance-diagnostics/sql/subscriptions.sql: sha256:10596a50911bd352c8389243e8c586945eabdcba602c03e4281dfacd6d1d9830
+    .claude/skills/postgres-performance-diagnostics/sql/table_io.sql: sha256:1b4791fdbe71ce1238a857bd331880d8ccc153761ee781decf7257cf28a45dea
+    .claude/skills/postgres-performance-diagnostics/sql/tables.sql: sha256:13e11c8a555218027e4a1256b4c3991b4fa0c3535991d915df85523d3160a8f6
+    .claude/skills/postgres-performance-diagnostics/sql/vacuum_progress.sql: sha256:aeface739dbe6756083d7a760610c2b02f0fe387fd7ac2c0112f96487a81cdff
+    .claude/skills/postgres-performance-diagnostics/sql/wal.sql: sha256:c640898489f0c71a9dddbc21dbae2b1ea0f1c16243cbee9538baa268bdfee06b
+    .claude/skills/postgres-schema-review/SKILL.md: sha256:ffd6ae96e6340094485190786e0a727bfec9820d8bb1657cae13747228d06ea6
+    .claude/skills/postgres-schema-review/agents/openai.yaml: sha256:c67c4471dd53dfa78b958048f91e95ec157fa9c2ccba31046cea551372196388
+    .claude/skills/postgres-schema-review/assets/contract.example.json: sha256:1a47295c239923ccbaa895929f756f09771039cc7ed5cc49e42ca3c284c659ea
+    .claude/skills/postgres-schema-review/assets/evidence.example.json: sha256:d3763a58842c20d064fbc4feca22747be0b051c734a2bf9b14e49467c46fe1b0
+    .claude/skills/postgres-schema-review/references/evidence.md: sha256:46fe6d89d75c6d8c6b98f2c4aaf64806f9aebc886a5ec9b71365d5a95392bb92
+    .claude/skills/postgres-schema-review/references/refactoring.md: sha256:62d19f2b1dbb3aff13711c8ccade7c42b7a1d58a9c358caa61d0091a4823f532
+    .claude/skills/postgres-schema-review/references/rules.md: sha256:c072676bc5ba7a6c5b208880ef5f6cffae18dc4ef5f00989d4f0b7337a53cc7d
+    .claude/skills/postgres-schema-review/scripts/collect.py: sha256:459ad24f69ec5ae30560791fecc86767c13ca6791f682855d5d7b6c1e853f419
+    .claude/skills/postgres-schema-review/scripts/lifecycle.py: sha256:4cf393fc391c8dcd0102a642447604d779b1b4a02acdb7d76890a6665a03aa8e
+    .claude/skills/postgres-schema-review/scripts/review.py: sha256:cd227990757c887eaa74e633860829afc50ec6daa12afcc13e10cdae14fb94c6
+    .claude/skills/postgres-schema-review/scripts/structure.py: sha256:6465b1d57cc3ee88d0ed1fc6aa9c346536951c2eb723dc3011164febc62c9fa3
+    .claude/skills/postgres-security-review/SKILL.md: sha256:dbd62a068b480ba46fdd4044c0743982d7d5beeb188ee0eb37b36a5d633713bc
+    .claude/skills/postgres-security-review/agents/openai.yaml: sha256:7b703e396224c3ab486ac25df0726d5eac574c2392f7058ebc0b75a235feb44b
+    .claude/skills/postgres-security-review/references/access.md: sha256:9ace1f29e950eb131af7a34589bee2ccad7781873ee12b2914cad43eef0667d5
+    .claude/skills/postgres-security-review/references/authentication.md: sha256:9338b374bb6e2b16321cb6f43d99a848a80d5ed4c288d5c37e45eeb71bd424c0
+    .claude/skills/postgres-security-review/references/changes.md: sha256:6507141823aacb3a35bc26b173b746979dc5b55137a16f71e377f1f9a535413c
+    .claude/skills/postgres-security-review/references/evidence.md: sha256:9284effeeef10693b376bffa9f147fb0ad0684a8a6d4071ba892cd0e3b711216
+    .claude/skills/postgres-security-review/references/validation.md: sha256:53d4bc3651ea344496fbf0aa79894a1d94f934252936e9c78addc99238f87e7c
+    .claude/skills/postgres-security-review/scripts/access.py: sha256:d1642af4f3fadcbedfa9cd01635a70c0dbb173a37465e1209049d42eef7a9861
+    .claude/skills/postgres-security-review/scripts/advisories.py: sha256:9c90008cc81cb2103b84926d188aad5e73adf36ade392efccd815b318210f0b2
+    .claude/skills/postgres-security-review/scripts/collect.py: sha256:e187ad952fc64ff22b04ebbd9caca4f294912aff8b1bc4028f78d2279e6f3aa0
+    .claude/skills/postgres-security-review/scripts/environment.py: sha256:ca9c02ef1a073aa78f340b31adb8a021569c2924f78b85b9bec6d1accdea89ca
+    .claude/skills/postgres-security-review/scripts/queries.py: sha256:ef669f4495588cc06c62b39797fe966f210c34efcf41a62e33e285374c64e36f
+    .claude/skills/postgres-security-review/scripts/report.py: sha256:c178992a6d5481469ef27b0823cbe0f4b616677c541ef5884c62b2560f331895
+    .claude/skills/postgres-security-review/scripts/review.py: sha256:460164ce46e53aac79cf101b0349813099f3ba77a27f9b9c16d75a94a9fc5f31
+    .claude/skills/postgres-workload-validation/SKILL.md: sha256:d40cdaba68cb7859b958960748f776eb21f57b1476d9178956cf1cd326a13e59
+    .claude/skills/postgres-workload-validation/references/replay.md: sha256:1d5d701b997e3ed438eeffb10879ca75b5661307ab4c544aa2dea2fa86be570a
+    .claude/skills/postgres-workload-validation/scripts/compare_runs.py: sha256:ac97e01f00bde4e922b41f9619d9857ee46f5622b7c209bfdec130402b59ce2c
+  content_hash: sha256:415ffbc5f6be73cbb67bd5b2e998be9abe6f3b0f0ebeb45b0fca022489ae917f
+  declared_license: MIT
 - repo_url: tomasz-tomczyk/crit
   name: crit
   host: github.com
@@ -4949,6 +5309,816 @@ deployments:
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
 - kind: project-relative
   target: claude
+  value: .claude/skills/postgres-config-tuning
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-config-tuning/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:377ca9195f2a685d23555992edc067dae7ac1c926ab7ddf18056b4e03e8e935e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-config-tuning/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a48cf9e9ab42c1494136746fd0baf836c5ad45b9203c596d0a9c32b4874492f2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-config-tuning/references/apply-and-verify.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:60b6cfde775f956f43a0f903e0a473ccb990b33468df1cef778b45deb0bbf92f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-config-tuning/references/parameters.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ffc3fa403fb7d6f8bc1e2d53dc2a10bb49d234e8c440e4fc0ea84ab65fad9af1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-config-tuning/scripts/review_config.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9c0e3d3f8480223487dbfa618c2b31fd47200c30be9affbc7b81d0b89bf56af6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-config-tuning/sql/settings.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:f5003ec44bbde73c45307674331af72889c96586868d95fb1fba18b84c9484de
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:17148e10d908e99808f693c4175eb556b78ac286d0b658bed6c2feb3ae9896ab
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a68c3b132248f92f8c14e79d82a4b27f7188dd6df40658c235d939c725f554d3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/references/collection.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b5ed7f80ecfc24af86bdfdb13d53d6c6916fcf3544125716f21c65ef5d3aad81
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/references/io-memory.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:0178ef285d1953b696fb7c481dabc0f0b23cf78d97d2b82ddedc6aeb61af916c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/references/locking.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:64cedc1f6bab42407e71667623465393543932eda62f82df03c6fc44227b0e11
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/references/maintenance-replication.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:e226ed4bb46e48031df53a95115d67d66de81a31151b5cc0626d8d3f03d70c76
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/references/query-tuning.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:2f0236558c275008e2d0c9131c214034ccd57d377fb9fd8517f8b31d6cce1493
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/references/validation.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9031470c98db7d61862844a2d968134235da63df2b95a8bed4e8e8fb442ad60c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/references/wait-events.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:7bcfa0f63e9714fbc102869144a7802e1bede6ca5607b344cffe66c551c03762
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/scripts/analyze.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:f132eac24867e2829c6c816baf3cccfbc77e6819dd8cea5b7be8614dfee25e39
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/scripts/analyze_logs.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a39a57afd2b88efc07b5609015a6ff27c1a2a94c35c78abad0716f4b84eb3813
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/scripts/analyze_plan.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:db8f972cec72cee9d49d7a949aa69902173123db555cd52636138a08c59d1930
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/scripts/analyze_trace.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6736b2ae61b8448cbb6df7fc5f354979981dba7c74193aadac4d399f452ff8b6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/scripts/collect.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:bd2f2c9f767bf2ff02cdb40e4f58ef0fd2f9e9b32c65db82238d3c75f86f0332
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/scripts/compare_intervals.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:5ea4090612321a70e276ec0eb0d87a4619adbd175c162249e481bb702d1db8ec
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/scripts/sample_activity.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:bf0edcb98f1d006579b54a52f7c79d16399b987d115b0b45b567260bc81207d9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/activity.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:66797050ccf3a21c11ed87c939f079e76adb8b51d75075cec25ba31ea9da22bf
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/analyze_progress.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:e03dbc32fd052694d47696793a29eb566caa0b9fd284aae952161f0aae252090
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/archiver.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:0ebec30c3482ac745b90a83848e9fabe08ebd0db7c95b6f8c555ed2d833fc15b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/autovacuum_scores.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:08355650c47b516b86ac6e7eb19b19a75ea35a2d343f8ce48eb31fc7ffdc870d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/bgwriter.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c8283402349b757fa3b9c1c4c4f199574550ca7fa4f32f63ad77ab407c56fd7f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/checkpointer.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:4799ce3abfd2481871c654498694d4b33b879bb18023f69a3168299a733adcd8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/conflicts.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:84d45198704fec79eab5b69ca96beafc89dee86d1b940f9b97d0ee5a40a558e7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/create_index_progress.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b333caced62782081c4f7f0d9d65b9ea5981501779f30984b42faeea2d25a668
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/database.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:855d4ae70f32179db22eeaafc8952c1cd10556e158007b5e4b806fdb871579ed
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/database_ages.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ea0d4d53f37838e3a41c64ca7ab5169d0d6c4b5ddc332786278493ece3004900
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/foreign_keys.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:4228c832c6086265ccd2fd6734aa49e4f2f0f57ee8f5e56b3ee6b6b35c254e1d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/index_io.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6f2f0f7ef3411b73021266c743871f09cbd753a4106f7831083e1d1de20bcfa1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/indexes.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ddb7ef8a21971c4821b0653f281b725cfe1f937dd46ee8fa1be927156e24ce95
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/inspect_relation.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:eb3e6559c1ad7f2f20ef88c5c0de2bd67f4fe0aa1428362269c235d8c991f84f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/io.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c1c40d5728a2de52aa665b23cf19ba5712409f05e6e258a5ec3c131f1fd8d3ca
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/lock_stats.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:020c60b7fcf3f3db5f69716996584e0507987c746c7781c08a1b831a86179620
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/locks.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a38de26999ff1236a51db0085d7be95bfbfcabc4806ae208b038fb64a85ebb5c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/pgss.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:7fed247518d598216393d3e64b4b446020cd5f513872e1e71daffba217169adc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/pgss_info.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:0e64ac7b61ac91d4d80ec00d9b9263fc023879a5144c6719b544612f15ae2c70
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/prepared.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6fa6a640580ad1910a5ce2ff863a610f90b72872a86b04aea295071f698d1cca
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/queries.json
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:fed3a08a704cc723cdee5f44e7990c149a6bc2aea6448f9509054b797af89c14
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/receiver.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9a072a9e2b9c025a37e504d45470543e48410eca21924b49afc8c85ea5c866c7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/recovery.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b70f1e32f893840c86f3f6ac85d027444c9bfb1b27fc055a2518fdd52a945376
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/recovery_prefetch.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:db77525976205918e3987cd042eaef94a9f0409f685a3529ac7743b9ce3503c5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/recovery_state.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:5f7b20c04d2ee507a14c0f55def65d70c426078b122c3a2bfe1721ee83b720d1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/replication.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:de85a6d7836e3875a73177c6607e8d6506d44d54306b0bc592727ba84520101d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/replication_slots.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a4ce28dc14bf585a13edc5364050fe346ead7d869d6c614a6770855d9100f23e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/slots.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:47d248be1c9865949ccba841157c0e77563c7884e45a65b43a41d6ee1abe7d41
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/subscription_relations.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b3858a7baf31f53daaf2cde9d6af4305f3ba956ccfc7e1715ee7f9268b937e08
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/subscription_stats.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:886eed1d1bb29be7e7cf1fadef140f1e69ed301d6b6ea1b9fa3346723d6db83e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/subscriptions.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:10596a50911bd352c8389243e8c586945eabdcba602c03e4281dfacd6d1d9830
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/table_io.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:1b4791fdbe71ce1238a857bd331880d8ccc153761ee781decf7257cf28a45dea
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/tables.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:13e11c8a555218027e4a1256b4c3991b4fa0c3535991d915df85523d3160a8f6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/vacuum_progress.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:aeface739dbe6756083d7a760610c2b02f0fe387fd7ac2c0112f96487a81cdff
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-performance-diagnostics/sql/wal.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c640898489f0c71a9dddbc21dbae2b1ea0f1c16243cbee9538baa268bdfee06b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ffd6ae96e6340094485190786e0a727bfec9820d8bb1657cae13747228d06ea6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c67c4471dd53dfa78b958048f91e95ec157fa9c2ccba31046cea551372196388
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/assets/contract.example.json
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:1a47295c239923ccbaa895929f756f09771039cc7ed5cc49e42ca3c284c659ea
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/assets/evidence.example.json
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:d3763a58842c20d064fbc4feca22747be0b051c734a2bf9b14e49467c46fe1b0
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/references/evidence.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:46fe6d89d75c6d8c6b98f2c4aaf64806f9aebc886a5ec9b71365d5a95392bb92
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/references/refactoring.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:62d19f2b1dbb3aff13711c8ccade7c42b7a1d58a9c358caa61d0091a4823f532
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/references/rules.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c072676bc5ba7a6c5b208880ef5f6cffae18dc4ef5f00989d4f0b7337a53cc7d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/scripts/collect.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:459ad24f69ec5ae30560791fecc86767c13ca6791f682855d5d7b6c1e853f419
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/scripts/lifecycle.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:4cf393fc391c8dcd0102a642447604d779b1b4a02acdb7d76890a6665a03aa8e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/scripts/review.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:cd227990757c887eaa74e633860829afc50ec6daa12afcc13e10cdae14fb94c6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-schema-review/scripts/structure.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6465b1d57cc3ee88d0ed1fc6aa9c346536951c2eb723dc3011164febc62c9fa3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:dbd62a068b480ba46fdd4044c0743982d7d5beeb188ee0eb37b36a5d633713bc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:7b703e396224c3ab486ac25df0726d5eac574c2392f7058ebc0b75a235feb44b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/references/access.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9ace1f29e950eb131af7a34589bee2ccad7781873ee12b2914cad43eef0667d5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/references/authentication.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9338b374bb6e2b16321cb6f43d99a848a80d5ed4c288d5c37e45eeb71bd424c0
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/references/changes.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6507141823aacb3a35bc26b173b746979dc5b55137a16f71e377f1f9a535413c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/references/evidence.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9284effeeef10693b376bffa9f147fb0ad0684a8a6d4071ba892cd0e3b711216
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/references/validation.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:53d4bc3651ea344496fbf0aa79894a1d94f934252936e9c78addc99238f87e7c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/scripts/access.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:d1642af4f3fadcbedfa9cd01635a70c0dbb173a37465e1209049d42eef7a9861
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/scripts/advisories.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9c90008cc81cb2103b84926d188aad5e73adf36ade392efccd815b318210f0b2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/scripts/collect.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:e187ad952fc64ff22b04ebbd9caca4f294912aff8b1bc4028f78d2279e6f3aa0
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/scripts/environment.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ca9c02ef1a073aa78f340b31adb8a021569c2924f78b85b9bec6d1accdea89ca
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/scripts/queries.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ef669f4495588cc06c62b39797fe966f210c34efcf41a62e33e285374c64e36f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/scripts/report.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c178992a6d5481469ef27b0823cbe0f4b616677c541ef5884c62b2560f331895
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-security-review/scripts/review.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:460164ce46e53aac79cf101b0349813099f3ba77a27f9b9c16d75a94a9fc5f31
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-workload-validation
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-workload-validation/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:d40cdaba68cb7859b958960748f776eb21f57b1476d9178956cf1cd326a13e59
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-workload-validation/references/replay.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:1d5d701b997e3ed438eeffb10879ca75b5661307ab4c544aa2dea2fa86be570a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/postgres-workload-validation/scripts/compare_runs.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ac97e01f00bde4e922b41f9619d9857ee46f5622b7c209bfdec130402b59ce2c
+- kind: project-relative
+  target: claude
   value: .claude/skills/prompt-master
   runtime: null
   scope: project
@@ -8034,6 +9204,816 @@ deployments:
   - dietrichgebert/ponytail
   active_owner: dietrichgebert/ponytail
   content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-config-tuning
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-config-tuning/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:377ca9195f2a685d23555992edc067dae7ac1c926ab7ddf18056b4e03e8e935e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-config-tuning/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a48cf9e9ab42c1494136746fd0baf836c5ad45b9203c596d0a9c32b4874492f2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-config-tuning/references/apply-and-verify.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:60b6cfde775f956f43a0f903e0a473ccb990b33468df1cef778b45deb0bbf92f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-config-tuning/references/parameters.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ffc3fa403fb7d6f8bc1e2d53dc2a10bb49d234e8c440e4fc0ea84ab65fad9af1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-config-tuning/scripts/review_config.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9c0e3d3f8480223487dbfa618c2b31fd47200c30be9affbc7b81d0b89bf56af6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-config-tuning/sql/settings.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:f5003ec44bbde73c45307674331af72889c96586868d95fb1fba18b84c9484de
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:17148e10d908e99808f693c4175eb556b78ac286d0b658bed6c2feb3ae9896ab
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a68c3b132248f92f8c14e79d82a4b27f7188dd6df40658c235d939c725f554d3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/references/collection.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b5ed7f80ecfc24af86bdfdb13d53d6c6916fcf3544125716f21c65ef5d3aad81
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/references/io-memory.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:0178ef285d1953b696fb7c481dabc0f0b23cf78d97d2b82ddedc6aeb61af916c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/references/locking.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:64cedc1f6bab42407e71667623465393543932eda62f82df03c6fc44227b0e11
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/references/maintenance-replication.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:e226ed4bb46e48031df53a95115d67d66de81a31151b5cc0626d8d3f03d70c76
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/references/query-tuning.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:2f0236558c275008e2d0c9131c214034ccd57d377fb9fd8517f8b31d6cce1493
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/references/validation.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9031470c98db7d61862844a2d968134235da63df2b95a8bed4e8e8fb442ad60c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/references/wait-events.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:7bcfa0f63e9714fbc102869144a7802e1bede6ca5607b344cffe66c551c03762
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/scripts/analyze.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:f132eac24867e2829c6c816baf3cccfbc77e6819dd8cea5b7be8614dfee25e39
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/scripts/analyze_logs.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a39a57afd2b88efc07b5609015a6ff27c1a2a94c35c78abad0716f4b84eb3813
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/scripts/analyze_plan.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:db8f972cec72cee9d49d7a949aa69902173123db555cd52636138a08c59d1930
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/scripts/analyze_trace.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6736b2ae61b8448cbb6df7fc5f354979981dba7c74193aadac4d399f452ff8b6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/scripts/collect.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:bd2f2c9f767bf2ff02cdb40e4f58ef0fd2f9e9b32c65db82238d3c75f86f0332
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/scripts/compare_intervals.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:5ea4090612321a70e276ec0eb0d87a4619adbd175c162249e481bb702d1db8ec
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/scripts/sample_activity.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:bf0edcb98f1d006579b54a52f7c79d16399b987d115b0b45b567260bc81207d9
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/activity.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:66797050ccf3a21c11ed87c939f079e76adb8b51d75075cec25ba31ea9da22bf
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/analyze_progress.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:e03dbc32fd052694d47696793a29eb566caa0b9fd284aae952161f0aae252090
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/archiver.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:0ebec30c3482ac745b90a83848e9fabe08ebd0db7c95b6f8c555ed2d833fc15b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/autovacuum_scores.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:08355650c47b516b86ac6e7eb19b19a75ea35a2d343f8ce48eb31fc7ffdc870d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/bgwriter.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c8283402349b757fa3b9c1c4c4f199574550ca7fa4f32f63ad77ab407c56fd7f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/checkpointer.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:4799ce3abfd2481871c654498694d4b33b879bb18023f69a3168299a733adcd8
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/conflicts.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:84d45198704fec79eab5b69ca96beafc89dee86d1b940f9b97d0ee5a40a558e7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/create_index_progress.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b333caced62782081c4f7f0d9d65b9ea5981501779f30984b42faeea2d25a668
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/database.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:855d4ae70f32179db22eeaafc8952c1cd10556e158007b5e4b806fdb871579ed
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/database_ages.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ea0d4d53f37838e3a41c64ca7ab5169d0d6c4b5ddc332786278493ece3004900
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/foreign_keys.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:4228c832c6086265ccd2fd6734aa49e4f2f0f57ee8f5e56b3ee6b6b35c254e1d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/index_io.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6f2f0f7ef3411b73021266c743871f09cbd753a4106f7831083e1d1de20bcfa1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/indexes.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ddb7ef8a21971c4821b0653f281b725cfe1f937dd46ee8fa1be927156e24ce95
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/inspect_relation.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:eb3e6559c1ad7f2f20ef88c5c0de2bd67f4fe0aa1428362269c235d8c991f84f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/io.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c1c40d5728a2de52aa665b23cf19ba5712409f05e6e258a5ec3c131f1fd8d3ca
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/lock_stats.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:020c60b7fcf3f3db5f69716996584e0507987c746c7781c08a1b831a86179620
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/locks.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a38de26999ff1236a51db0085d7be95bfbfcabc4806ae208b038fb64a85ebb5c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/pgss.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:7fed247518d598216393d3e64b4b446020cd5f513872e1e71daffba217169adc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/pgss_info.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:0e64ac7b61ac91d4d80ec00d9b9263fc023879a5144c6719b544612f15ae2c70
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/prepared.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6fa6a640580ad1910a5ce2ff863a610f90b72872a86b04aea295071f698d1cca
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/queries.json
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:fed3a08a704cc723cdee5f44e7990c149a6bc2aea6448f9509054b797af89c14
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/receiver.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9a072a9e2b9c025a37e504d45470543e48410eca21924b49afc8c85ea5c866c7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/recovery.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b70f1e32f893840c86f3f6ac85d027444c9bfb1b27fc055a2518fdd52a945376
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/recovery_prefetch.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:db77525976205918e3987cd042eaef94a9f0409f685a3529ac7743b9ce3503c5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/recovery_state.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:5f7b20c04d2ee507a14c0f55def65d70c426078b122c3a2bfe1721ee83b720d1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/replication.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:de85a6d7836e3875a73177c6607e8d6506d44d54306b0bc592727ba84520101d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/replication_slots.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:a4ce28dc14bf585a13edc5364050fe346ead7d869d6c614a6770855d9100f23e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/slots.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:47d248be1c9865949ccba841157c0e77563c7884e45a65b43a41d6ee1abe7d41
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/subscription_relations.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:b3858a7baf31f53daaf2cde9d6af4305f3ba956ccfc7e1715ee7f9268b937e08
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/subscription_stats.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:886eed1d1bb29be7e7cf1fadef140f1e69ed301d6b6ea1b9fa3346723d6db83e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/subscriptions.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:10596a50911bd352c8389243e8c586945eabdcba602c03e4281dfacd6d1d9830
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/table_io.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:1b4791fdbe71ce1238a857bd331880d8ccc153761ee781decf7257cf28a45dea
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/tables.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:13e11c8a555218027e4a1256b4c3991b4fa0c3535991d915df85523d3160a8f6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/vacuum_progress.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:aeface739dbe6756083d7a760610c2b02f0fe387fd7ac2c0112f96487a81cdff
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-performance-diagnostics/sql/wal.sql
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c640898489f0c71a9dddbc21dbae2b1ea0f1c16243cbee9538baa268bdfee06b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ffd6ae96e6340094485190786e0a727bfec9820d8bb1657cae13747228d06ea6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c67c4471dd53dfa78b958048f91e95ec157fa9c2ccba31046cea551372196388
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/assets/contract.example.json
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:1a47295c239923ccbaa895929f756f09771039cc7ed5cc49e42ca3c284c659ea
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/assets/evidence.example.json
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:d3763a58842c20d064fbc4feca22747be0b051c734a2bf9b14e49467c46fe1b0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/references/evidence.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:46fe6d89d75c6d8c6b98f2c4aaf64806f9aebc886a5ec9b71365d5a95392bb92
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/references/refactoring.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:62d19f2b1dbb3aff13711c8ccade7c42b7a1d58a9c358caa61d0091a4823f532
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/references/rules.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c072676bc5ba7a6c5b208880ef5f6cffae18dc4ef5f00989d4f0b7337a53cc7d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/scripts/collect.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:459ad24f69ec5ae30560791fecc86767c13ca6791f682855d5d7b6c1e853f419
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/scripts/lifecycle.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:4cf393fc391c8dcd0102a642447604d779b1b4a02acdb7d76890a6665a03aa8e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/scripts/review.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:cd227990757c887eaa74e633860829afc50ec6daa12afcc13e10cdae14fb94c6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-schema-review/scripts/structure.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6465b1d57cc3ee88d0ed1fc6aa9c346536951c2eb723dc3011164febc62c9fa3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:dbd62a068b480ba46fdd4044c0743982d7d5beeb188ee0eb37b36a5d633713bc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:7b703e396224c3ab486ac25df0726d5eac574c2392f7058ebc0b75a235feb44b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/references/access.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9ace1f29e950eb131af7a34589bee2ccad7781873ee12b2914cad43eef0667d5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/references/authentication.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9338b374bb6e2b16321cb6f43d99a848a80d5ed4c288d5c37e45eeb71bd424c0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/references/changes.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:6507141823aacb3a35bc26b173b746979dc5b55137a16f71e377f1f9a535413c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/references/evidence.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9284effeeef10693b376bffa9f147fb0ad0684a8a6d4071ba892cd0e3b711216
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/references/validation.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:53d4bc3651ea344496fbf0aa79894a1d94f934252936e9c78addc99238f87e7c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/scripts/access.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:d1642af4f3fadcbedfa9cd01635a70c0dbb173a37465e1209049d42eef7a9861
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/scripts/advisories.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:9c90008cc81cb2103b84926d188aad5e73adf36ade392efccd815b318210f0b2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/scripts/collect.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:e187ad952fc64ff22b04ebbd9caca4f294912aff8b1bc4028f78d2279e6f3aa0
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/scripts/environment.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ca9c02ef1a073aa78f340b31adb8a021569c2924f78b85b9bec6d1accdea89ca
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/scripts/queries.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ef669f4495588cc06c62b39797fe966f210c34efcf41a62e33e285374c64e36f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/scripts/report.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:c178992a6d5481469ef27b0823cbe0f4b616677c541ef5884c62b2560f331895
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-security-review/scripts/review.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:460164ce46e53aac79cf101b0349813099f3ba77a27f9b9c16d75a94a9fc5f31
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-workload-validation
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-workload-validation/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:d40cdaba68cb7859b958960748f776eb21f57b1476d9178956cf1cd326a13e59
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-workload-validation/references/replay.md
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:1d5d701b997e3ed438eeffb10879ca75b5661307ab4c544aa2dea2fa86be570a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/postgres-workload-validation/scripts/compare_runs.py
+  runtime: null
+  scope: project
+  owners:
+  - soudai/postgresql-use-improve-agents-skill
+  active_owner: soudai/postgresql-use-improve-agents-skill
+  content_hash: sha256:ac97e01f00bde4e922b41f9619d9857ee46f5622b7c209bfdec130402b59ce2c
 - kind: project-relative
   target: codex
   value: .agents/skills/prompt-master
