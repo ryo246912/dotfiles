@@ -1337,7 +1337,7 @@ devcontainer との違いは 2 点です。
 | ----------------------------- | -------------------------------------------------------------------------------------------- |
 | `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                           |
 | `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                           |
-| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す       |
+| `~/.crit-host-port` の記録    | `SBX_CRIT_HOST_PORT` が数字なら記録し、空や `-` なら古い記録を削除する                       |
 | NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記） |
 | `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                             |
 
@@ -1366,10 +1366,15 @@ devcontainer との違いは 2 点です。
 > - 更新は他のツールと同じく template の再ビルド（`mise run sandbox:build-template` → `sbx-agent --new`、
 >   devcontainer は rebuild）です。
 
-crit（7842）と plannotator（19433）の **host port は固定せず sbx に採番させます**。
-devcontainer が `appPort: 127.0.0.1::7842` で自動採番していたのと同じ理由で、
-sandbox を複数同時に起動してもポートが衝突しません。割り当てられた port は
-`sbx ports <sandbox>` で確認できます。
+crit（7842）と plannotator（19433）の **host port は既定で sbx が IPv4 ループバックに自動採番します**。
+新規作成時は環境定義の `ports` で `host` を省略します。作成後と再アタッチ時は `sbx ports <sandbox>` を確認し、
+数字の host port がないものを `--publish <sandbox-port>` で再公開します。
+crit の割り当てが反映されるまで短時間再試行し、取得できた数字を sandbox に渡します。
+取得できない場合はホストで `sbx ports <sandbox>` を確認してください。
+
+既存 sandbox の port 記録は、更新したホスト側の `sbx-agent` で再アタッチすると更新されます。
+`sandbox-post-create.sh` と `crit` ラッパーは template に含まれます。両スクリプトの更新を含む新規 sandbox には、
+事前に `mise run sandbox:build-template <agent>` で template を再ビルドします。
 
 ホスト連携が不要な場合は `sbx-agent claude --no-host-bridge` のように agent 名を指定して無効化できます。
 
@@ -1423,14 +1428,14 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### remoteEnv / ポート
 
-| devcontainer                                                                              | sandbox                                                       |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `AI_AGENT` / `TERM`                                                                       | ✅ `kits/common/common.yaml` の `args.*.env`                  |
-| `HOST_USER` / `MISE_TRUSTED_CONFIG_PATHS`                                                 | ✅ `--env` で渡す                                             |
-| `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                             |
-| `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                             |
-| `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbxenv.yaml` の `secrets.github`（`gh auth token`）で代替 |
-| `appPort: 127.0.0.1::7842`（host port 自動採番 + `~/.crit-host-port` 記録）               | ✅ `--publish 7842` で採番させ、`sbx ports` で調べて渡す      |
+| devcontainer                                                                              | sandbox                                                                 |
+| ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `AI_AGENT` / `TERM`                                                                       | ✅ `kits/common/common.yaml` の `args.*.env`                            |
+| `HOST_USER` / `MISE_TRUSTED_CONFIG_PATHS`                                                 | ✅ `--env` で渡す                                                       |
+| `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                                       |
+| `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                                       |
+| `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbxenv.yaml` の `secrets.github`（`gh auth token`）で代替           |
+| `appPort: 127.0.0.1::7842`（host port 自動採番 + `~/.crit-host-port` 記録）               | ✅ `host` 省略で自動採番し、再アタッチ時は必要に応じて `--publish 7842` |
 
 ### postCreateCommand（`post-create.sh`）
 
@@ -1446,12 +1451,12 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### postStartCommand（`post-start.sh`）
 
-| devcontainer でやっていたこと    | sandbox                                                                 |
-| -------------------------------- | ----------------------------------------------------------------------- |
-| `mise trust`                     | ✅ 不要。`MISE_TRUSTED_CONFIG_PATHS=/mise:<workspace>` で代替           |
-| `mac-host` への SSH config 生成  | ✅ `sandbox-post-create.sh` で生成                                      |
-| crit の host port 取得・記録     | ✅ ホスト側で `sbx ports` → `SBX_CRIT_HOST_PORT`                        |
-| crit の host port をホストへ通知 | ⚠️ 記録はするが mac-host への通知は省略（`sbx ports` で確認できるため） |
+| devcontainer でやっていたこと    | sandbox                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| `mise trust`                     | ✅ 不要。`MISE_TRUSTED_CONFIG_PATHS=/mise:<workspace>` で代替                  |
+| `mac-host` への SSH config 生成  | ✅ `sandbox-post-create.sh` で生成                                             |
+| crit の host port 取得・記録     | ✅ 公開後に `sbx ports` を再確認し、数字の port を `SBX_CRIT_HOST_PORT` で渡す |
+| crit の host port をホストへ通知 | ⚠️ 記録はするが mac-host への通知は省略（`sbx ports` で確認できるため）        |
 
 ### コンテナ内でできていたこと
 
