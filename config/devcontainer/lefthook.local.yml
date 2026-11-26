@@ -9,26 +9,39 @@ glob_matcher: doublestar
 pre-commit:
   jobs:
     - name: stash files (ai-only)
-      only: &ai-only
+      only:
         - run: test -n "${AI_AGENT:-}"
       run: |
         marker="$(git rev-parse --git-path lefthook-pre-commit-stash)"
+        # 中断された過去の実行のマーカーが残っていると、後続の stash pop が今回の stash と取り違えるため消す。
+        rm -f "$marker"
+        # 過去の実行で復元できなかった stash が残っている場合は、変更を見失わないよう先に復元させる。
+        leftover="$(git stash list --format='%h %s' | grep ': lefthook-pre-commit$' || true)"
+        if [ -n "$leftover" ]; then
+          echo "❌ [ai-only] 以前のpre-commitで退避した変更が復元されずに残っています。" >&2
+          echo "$leftover" >&2
+          # hook 実行中は Lefthook 自身の "lefthook auto backup" stash があり stash@{N} の番号がずれるため、番号は表示しない。
+          echo "   git stash list で該当する stash@{N} を確認し、git stash pop --index stash@{N} で復元してください。" >&2
+          exit 1
+        fi
         before="$(git rev-parse --verify -q refs/stash || true)"
         # bind mount された生成物ディレクトリ（.venv 等）が未追跡に見えると stash -u が削除しようとして
         # "Device or resource busy" で失敗する。グローバル gitignore で無視しておくこと（docs/devcontainer.md 参照）。
         rc=0
         git stash push --keep-index --include-untracked -q -m "lefthook-pre-commit" || rc=$?
         after="$(git rev-parse --verify -q refs/stash || true)"
-        # stash が失敗しても途中まで作られている場合がある。マーカーを必ず書き、
-        # 後続の stash pop で未追跡ファイルを復元できるようにしてから失敗を返す。
+        # マーカーは「今回の実行で stash 処理を行った」印。後続の lint / stash pop はマーカーがある場合だけ実行する。
+        # 退避する変更が無ければ空で書く。stash が失敗しても途中まで作られている場合があるため、
+        # 作られていれば必ず ref を書き、後続の stash pop で未追跡ファイルを復元できるようにしてから失敗を返す。
         if [ "$before" != "$after" ]; then
           printf '%s\n' "$after" > "$marker"
         else
-          rm -f "$marker"
+          : > "$marker"
         fi
         exit "$rc"
     - name: lint (ai-only)
-      only: *ai-only
+      only: &ai-stashed
+        - run: test -n "${AI_AGENT:-}" && test -f "$(git rev-parse --git-path lefthook-pre-commit-stash)"
       group:
         parallel: true
         jobs:
@@ -78,17 +91,71 @@ pre-commit:
             run: mise run lint:typescript
             fail_text: "❌ [ai-only] TypeScript/JavaScript lint, format, or type check failed."
     - name: stash pop (ai-only)
-      only: *ai-only
+      only: *ai-stashed
       run: |
         marker="$(git rev-parse --git-path lefthook-pre-commit-stash)"
-        if [ -f "$marker" ]; then
-          expected="$(cat "$marker")"
-          current="$(git rev-parse --verify -q refs/stash || true)"
-          if [ "$current" != "$expected" ]; then
-            echo "❌ [ai-only] Lefthookが作成したstashを特定できません。" >&2
-            exit 1
-          fi
-          git reset --hard -q
-          git stash pop --index -q
+        expected="$(cat "$marker")"
+        if [ -z "$expected" ]; then
           rm -f "$marker"
+          exit 0
+        fi
+        current="$(git rev-parse --verify -q refs/stash || true)"
+        if [ "$current" != "$expected" ]; then
+          rm -f "$marker"
+          echo "❌ [ai-only] Lefthookが作成したstashを特定できません（$expected）。" >&2
+          echo "   git stash list で lefthook-pre-commit を確認して復元してください。" >&2
+          exit 1
+        fi
+        # stash 後に hook 実行中に加えられた変更（lint の自動修正や並行して動く別プロセスの編集）は stash に含まれない。
+        # 消さずに退避してから復元する。
+        backup="$(git rev-parse --git-path lefthook-pre-commit-backup)/$(date +%Y%m%d-%H%M%S)-$$"
+        backup_failed() {
+          echo "❌ [ai-only] hook実行中に変更されたファイルを $backup へ退避できませんでした。" >&2
+          echo "   git reset --hard は行わずに中断します。stash（$expected）自体はそのまま残っています。" >&2
+          echo "   hook実行中の変更は作業ツリー（途中まで退避済みの分は $backup）にあります。" >&2
+          exit 1
+        }
+        # 退避はすべて git reset --hard より前に行い、失敗したら reset / 復元へ進まない。
+        # hook 実行中に git add された変更は、stash 時点の index（$expected^2）との差分として staged.patch に、
+        # 未ステージの変更は index との差分として tracked.patch に保存する。
+        if ! git diff --cached --quiet "$expected^2"; then
+          mkdir -p "$backup" && git diff --cached --binary "$expected^2" > "$backup/staged.patch" || backup_failed
+        fi
+        if ! git diff --quiet; then
+          mkdir -p "$backup" && git diff --binary > "$backup/tracked.patch" || backup_failed
+        fi
+        # lint 等が stash 内の未追跡ファイルと同じパス（またはその親ディレクトリの位置）にファイル・ディレクトリ・
+        # シンボリックリンクを作っていると、pop が "already exists, no checkout" で失敗して stash が残る。
+        # stash の内容で上書きされるものだけ先に退避する。親がシンボリックリンクの場合はリンク先をたどらず、
+        # リンク自体を退避する（リポジトリ外のファイルを動かさないため）。
+        if git rev-parse --verify -q "$expected^3" >/dev/null; then
+          git ls-tree -r -z --name-only "$expected^3" | xargs -0 -r sh -c '
+            b="$1"; shift
+            move() { mkdir -p "$b/untracked/$(dirname "$1")" && mv -- "$1" "$b/untracked/$1" || exit 1; }
+            for f; do
+              p=""; rest="$f"
+              while :; do
+                c="${rest%%/*}"
+                p="${p:+$p/}$c"
+                if [ "$c" = "$rest" ]; then
+                  if [ -e "$p" ] || [ -L "$p" ]; then move "$p"; fi
+                  break
+                fi
+                rest="${rest#*/}"
+                if [ -L "$p" ] || { [ -e "$p" ] && [ ! -d "$p" ]; }; then move "$p"; break; fi
+                [ -d "$p" ] || break
+              done
+            done
+          ' _ "$backup" || backup_failed
+        fi
+        if [ -d "$backup" ]; then
+          echo "⚠️ [ai-only] hook実行中に変更されたファイルを $backup に退避しました（staged.patch / tracked.patch / untracked/）。" >&2
+          echo "   必要なら git apply で staged.patch → tracked.patch の順に適用し、untracked/ からコピーして戻してください。" >&2
+        fi
+        git reset --hard -q
+        rm -f "$marker"
+        if ! git stash pop --index -q; then
+          echo "❌ [ai-only] stashの復元に失敗しました。退避した変更は stash（$expected）に残っています。" >&2
+          echo "   原因を解消してから git stash list で lefthook-pre-commit を確認し、git stash pop --index stash@{N} で復元してください。" >&2
+          exit 1
         fi
