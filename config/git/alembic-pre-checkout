@@ -65,17 +65,12 @@ resolve_target() {
 }
 
 case "${1:-}" in
-  checkout|switch)
-    mode=pre
-    new=$(resolve_target "$@") || exit 0
-    prev=$(git rev-parse --verify HEAD 2>/dev/null) || exit 0 ;;
-  *)
-    [[ $# == 3 && "$3" == 1 ]] || exit 0
-    mode=post
-    prev=$1
-    new=$2 ;;
+  checkout|switch) ;;
+  *) exit 0 ;;
 esac
 
+new=$(resolve_target "$@") || exit 0
+prev=$(git rev-parse --verify HEAD 2>/dev/null) || exit 0
 [[ "$prev" != "$new" ]] || exit 0
 git_dir=$(git rev-parse --git-dir 2>/dev/null) || exit 0
 if [[ -d "$git_dir/rebase-merge" || -d "$git_dir/rebase-apply" || -f "$git_dir/BISECT_LOG" ]]; then
@@ -96,34 +91,19 @@ cd -- "$root" || exit 0
 git --literal-pathspecs diff --quiet "$prev" "$new" -- "$versions_dir" 2>/dev/null
 [[ $? == 1 ]] || exit 0
 
-# Read revision declarations, including type annotations and merge parents.
-list_graph() {
-  git --literal-pathspecs grep --no-color --no-line-number --no-column -E '^(revision|down_revision)[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null | awk '
-    {
-      i = index($0, ".py:"); if (!i) next
-      file = substr($0, 1, i + 2); body = substr($0, i + 4)
-      eq = index(body, "="); if (!eq) next
-      key = substr(body, 1, eq - 1); sub(/[:[:space:]].*/, "", key)
-      rest = substr(body, eq + 1); sub(/#.*/, "", rest)
-      ids = ""
-      while (match(rest, /["\047][0-9A-Za-z_]+["\047]/)) {
-        ids = ids (ids == "" ? "" : " ") substr(rest, RSTART + 1, RLENGTH - 2)
-        rest = substr(rest, RSTART + RLENGTH)
-      }
-      if (key == "revision" && ids != "") rev[file] = ids
-      if (key == "down_revision") down[file] = ids
-    }
-    END { for (f in rev) printf "%s\t%s\n", rev[f], down[f] }'
+# Read revision assignments without importing migration modules.
+list_revisions() {
+  git --literal-pathspecs grep -h --no-color --no-line-number --no-column -E \
+    '^revision[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null |
+    sed -nE "s/^revision[^=]*=[[:space:]]*[\"']([[:alnum:]_]+)[\"'].*/\\1/p" |
+    LC_ALL=C sort -u
 }
 
-prev_graph=$(list_graph "$prev")
-new_graph=$(list_graph "$new")
-prev_revs=$(printf '%s\n' "$prev_graph" | cut -f1 | LC_ALL=C sort -u)
-new_revs=$(printf '%s\n' "$new_graph" | cut -f1 | LC_ALL=C sort -u)
+prev_revs=$(list_revisions "$prev")
+new_revs=$(list_revisions "$new")
 [[ "$prev_revs" != "$new_revs" ]] || exit 0
 
 db_service=$(guard_config dbService)
-app_service=$(guard_config appService)
 db_user=$(guard_config dbUser)
 db_name=$(guard_config dbName)
 
@@ -141,60 +121,10 @@ if [[ -z "$db_revs" ]]; then
   exit 0
 fi
 
-in_new() { grep -Fxq -- "$1" <<< "$new_revs"; }
-
-common_ancestor() {
-  awk -F '\t' -v start="$1" -v revisions="$new_revs" '
-    { parents[$1] = $2 }
-    END {
-      n = split(revisions, ids, "\n")
-      for (i = 1; i <= n; i++) present[ids[i]] = 1
-      queue[1] = start; tail = 1; seen[start] = 1
-      for (head = 1; head <= tail; head++) {
-        id = queue[head]
-        if (present[id]) { print id; exit }
-        n = split(parents[id], ids, " ")
-        for (i = 1; i <= n; i++)
-          if (!(ids[i] in seen)) { seen[ids[i]] = 1; queue[++tail] = ids[i] }
-      }
-    }' <<< "$prev_graph"
-}
-
-missing=
-downgrade_to=
-while IFS= read -r rev; do
-  [[ -n "$rev" ]] || continue
-  in_new "$rev" && continue
-  ancestor=$(common_ancestor "$rev")
-  if [[ -z "$missing" ]]; then
-    downgrade_to=$ancestor
-  elif [[ "$ancestor" != "$downgrade_to" ]]; then
-    downgrade_to=
-  fi
-  missing+="  $rev → 共通祖先 ${ancestor:-（特定できず。alembic history で確認）}"$'\n'
-done <<< "$db_revs"
+missing=$(LC_ALL=C comm -23 \
+  <(printf '%s\n' "$db_revs" | LC_ALL=C sort -u) <(printf '%s\n' "$new_revs"))
 [[ -n "$missing" ]] || exit 0
 
-{
-  printf '[alembic-guard] 切替先に存在しない DB revision を検出しました。\n%s' "$missing"
-  if [[ "$mode" == pre ]]; then
-    printf '切替を中止しました。今のブランチで downgrade してから切り替えてください。\n'
-  else
-    prev_ref=$(git rev-parse --abbrev-ref '@{-1}' 2>/dev/null)
-    if [[ -z "$prev_ref" || $(git rev-parse --verify "$prev_ref" 2>/dev/null) != "$prev" ]]; then
-      prev_ref=$prev
-    fi
-    new_ref=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || new_ref=$new
-    printf '切替元へ戻り、downgrade してから %q に切り替え直してください。\n' "$new_ref"
-    printf '  ALEMBIC_GUARD=0 git checkout %q\n' "$prev_ref"
-  fi
-  if [[ -n "$downgrade_to" ]]; then
-    printf '  (cd %q && docker compose run --rm %q alembic downgrade %q)\n' "$app_dir" "${app_service:-app}" "$downgrade_to"
-  else
-    printf '  (cd %q && docker compose run --rm %q alembic downgrade <revision>)\n' "$app_dir" "${app_service:-app}"
-  fi
-  if [[ "$mode" == pre ]]; then
-    printf 'DB を維持したまま切り替える場合は、先頭に ALEMBIC_GUARD=0 を付けてください。\n'
-  fi
-} >&2
+printf '[alembic-guard] 切替を中止しました。切替先に存在しない DB revision:\n%s\n' "$missing" >&2
+printf '現在のブランチで alembic history を確認し、必要な downgrade を行ってから切り替えてください。\n' >&2
 exit 1

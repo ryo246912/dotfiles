@@ -5,6 +5,5 @@
   appDir = <path/to/api>
   versionsDir = <path/to/api>/migration/versions
   dbService = db
-  appService = app
   dbUser = postgres
   dbName = postgres

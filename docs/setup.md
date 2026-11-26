@@ -403,14 +403,6 @@
     | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
 
   - Alembic の切替前検査（Git 2.36 以上）では、雛形の `config` と `guard` をコピーする。`config` の URL を対象リポジトリで `git config --get remote.origin.url` が返す1件に置き換え、`guard` に実際のパスを設定する。既存の個人設定に `git()` があれば削除し、`mise bootstrap dotfiles apply` 後に対話型 zsh を起動する。検査は直接の `git checkout` / `git switch` で有効になり、`ALEMBIC_GUARD=0` で省略できる。
-    - 切替後も検査する場合は、対象リポジトリの `lefthook-local.yml` で旧 `pre-checkout` 定義を削除し、次のように設定する。
-
-      ```yaml
-      post-checkout:
-        commands:
-          alembic-guard:
-            run: '"/<path/to/dotfiles>/config/git/alembic-pre-checkout" {1} {2} {3}'
-      ```
 
   - AWS: プロファイル名（`XXX`）・`sso_account_id`・`sso_start_url` を書き換える
     - `sso_start_url`: AWS access portal の URL（`https://xxx.awsapps.com/start`）。社内の案内か管理者から受け取る
