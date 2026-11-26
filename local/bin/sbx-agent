@@ -1251,12 +1251,30 @@ run_cmd=(sbx run --name "$SANDBOX_NAME" ${ENV_ARGS[@]+"${ENV_ARGS[@]}"})
 [[ -n "$CLAUDE_AUTH_METHOD" ]] && run_cmd+=(--env "SBX_CLAUDE_AUTH_METHOD=$CLAUDE_AUTH_METHOD")
 [[ -n "$CLAUDE_ACCOUNT" ]] && run_cmd+=(--env "SBX_CLAUDE_ACCOUNT=$CLAUDE_ACCOUNT" --env "SBX_CLAUDE_ORG_ID=$SUBSCRIPTION_ORG_ID")
 [[ -n "$BRANCH" ]] && run_cmd+=(--branch="$BRANCH")
-# OAuth はホストの Claude 設定を共有しない。statusLine だけ CLI の settings で追加し、
-# Sandbox 内の OAuth credential file や built-in settings は置き換えない。
+# OAuth はホストの Claude 設定を共有しない。CLI settings に必要な項目を追加する。
+claude_settings='{}'
 if [[ "$CLAUDE_OAUTH" == true && "$MOUNT_CONFIG" == true && -f "${dotfiles_repo:-}/claude/statusline.sh" ]]; then
-    oauth_settings=$(jq -cn --arg p "$dotfiles_repo/claude/statusline.sh" '{statusLine:{type:"command",command:("bash " + ($p|@sh))}}') || exit 1
-    AGENT_ARGS=(--settings "$oauth_settings" ${AGENT_ARGS[@]+"${AGENT_ARGS[@]}"})
+    claude_settings=$(jq -cn --arg p "$dotfiles_repo/claude/statusline.sh" '{statusLine:{type:"command",command:("bash " + ($p|@sh))}}') || exit 1
 fi
+
+# ccmanager の対象プリセットだけ、起動ごとの会話参照を sandbox 内に記録する。
+# ホストが読むのは同じ sandbox のマーカーと会話末尾だけ。追加マウントは不要。
+if [[ -n "${AI_SESSIONS_PRESET:-}" && -n "${dotfiles_repo:-}" ]]; then
+    session_helper="$dotfiles_repo/local/bin/ai-sessions"
+    if [[ -x "$session_helper" ]] && launch_token=$(python3 -c 'import uuid; print(uuid.uuid4().hex)') \
+        && "$session_helper" register "$launch_token" "$$" "$AI_SESSIONS_PRESET" "$PWD" "$SANDBOX_NAME"; then
+        run_cmd+=(--env "AI_SESSIONS_TOKEN=$launch_token" --env "AI_SESSIONS_SCRIPT=$session_helper")
+        if [[ "$AGENT" == claude ]]; then
+            claude_settings=$(jq -c --arg p "$session_helper" '
+                [{hooks: [{type: "command", command: ("python3 " + ($p|@sh) + " agent-hook"), timeout: 3}]}] as $hook
+                | .hooks = {SessionStart: $hook, UserPromptSubmit: $hook, Stop: $hook}
+            ' <<< "$claude_settings") || exit 1
+        fi
+    else
+        log_warn "AI セッション一覧への登録に失敗しました。セッションは続行します"
+    fi
+fi
+[[ "$claude_settings" != '{}' ]] && AGENT_ARGS=(--settings "$claude_settings" ${AGENT_ARGS[@]+"${AGENT_ARGS[@]}"})
 [[ ${#AGENT_ARGS[@]} -gt 0 ]] && run_cmd+=(-- "${AGENT_ARGS[@]}")
 
 if [[ "$REMOVE_ON_EXIT" == true ]]; then

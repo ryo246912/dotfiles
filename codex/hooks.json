@@ -5,6 +5,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "if [ -n \"${AI_SESSIONS_SCRIPT:-}\" ]; then python3 \"$AI_SESSIONS_SCRIPT\" agent-hook; fi",
+            "timeout": 3
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
             "timeout": 40
           }
@@ -12,6 +21,15 @@
       }
     ],
     "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${AI_SESSIONS_SCRIPT:-}\" ]; then python3 \"$AI_SESSIONS_SCRIPT\" agent-hook; fi",
+            "timeout": 3
+          }
+        ]
+      },
       {
         "hooks": [
           {
@@ -24,6 +42,15 @@
       }
     ],
     "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -n \"${AI_SESSIONS_SCRIPT:-}\" ]; then python3 \"$AI_SESSIONS_SCRIPT\" agent-hook; fi",
+            "timeout": 3
+          }
+        ]
+      },
       {
         "hooks": [
           {
