@@ -393,13 +393,13 @@
   - 雛形をコピーしてプレースホルダを書き換える（コピー先は gitignore 済みかリポジトリ外）。
     git の非公開設定ファイルは上の「git」で用意済み
 
-    | 用途                        | 雛形                                         | コピー先                                         | 対象             |
-    | --------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
-    | AWS の SSO・aws-vault 設定  | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
-    | sandbox の許可ドメイン      | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
-    | sandbox から使う MCP サーバ | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
+    | 用途                         | 雛形                                         | コピー先                                         | 対象             |
+    | ---------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
+    | AWS の SSO・aws-vault 設定   | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
+    | sandbox の許可ドメイン       | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
+    | sandbox から使う MCP サーバ  | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
     | Alembic の切替前検査（任意） | `config/git/work3.example/`                  | `~/.config/git/work3/`                           | work3            |
-    | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
+    | 仕事用の環境変数など         | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
 
   - Alembic の切替前検査（Git 2.36 以上）では、雛形の `config` と `guard` をコピーする。`config` の URL を対象リポジトリで `git config --get remote.origin.url` が返す1件に置き換え、`guard` に実際のパスと、Compose の DB サービス名（`dbService`）、DB ユーザー（`dbUser`）、DB 名（`dbName`）を設定する。既存の個人設定に `git()` があれば削除し、`mise bootstrap dotfiles apply` 後に対話型 zsh を起動する。検査は直接の `git checkout` / `git switch` で有効になり、`ALEMBIC_GUARD=0` で省略できる。
 
