@@ -73,8 +73,8 @@ dependencies:
       command: uvx
       args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=restricted"]
       env:
-        DATABASE_URI: postgresql://<user>@<host>:<port>/<dbname>
-        PGPASSWORD: <password>
+        DATABASE_URI: postgresql://postgres@localhost:15432/postgres
+        PGPASSWORD: postgres
       sbx_options: ["--dir", "~/dotfiles"]
     - name: postgres-write
       registry: false
@@ -82,6 +82,6 @@ dependencies:
       command: uvx
       args: ["--overrides", "config/sbx/postgres-mcp-overrides.txt", "postgres-mcp@0.3.0", "--access-mode=unrestricted"]
       env:
-        DATABASE_URI: postgresql://<user>@<host>:<port>/<dbname>
-        PGPASSWORD: <password>
+        DATABASE_URI: postgresql://postgres@localhost:15432/postgres
+        PGPASSWORD: postgres
       sbx_options: ["--dir", "~/dotfiles"]

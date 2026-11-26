@@ -77,7 +77,7 @@ description = "Check shell script formatting with shfmt"
 run = "shfmt -l $(git ls-files '*.sh')"
 
 ["lint:rulesync"]
-description = "rulesync のソースと生成済みルール・hooks の差分を検査する"
+description = "rulesync のソースと生成済みルール・hooks・skills の差分を検査する"
 run = '''
 set -euo pipefail
 
@@ -92,6 +92,9 @@ cp -R .rulesync "$check_dir/"
 status=0
 for file in CLAUDE.md AGENTS.md .claude/settings.json .codex/hooks.json; do
 	diff -u "$repo_dir/$file" "$check_dir/$file" || status=1
+done
+for dir in .claude/skills .agents/skills; do
+	diff -ruN "$repo_dir/$dir" "$check_dir/$dir" || status=1
 done
 if [ "$status" -ne 0 ]; then
 	echo 'rulesync の生成物に差分があります。リポジトリ直下で rulesync generate を実行してください。' >&2
