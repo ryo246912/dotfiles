@@ -71,6 +71,8 @@
     "lessons-record": "name-only",
     "pr-reviewer-comment": "name-only",
     "pr-reviewer-brief": "name-only",
+    "pr-uiux-review": "name-only",
+    "uiux-option-review": "name-only",
     "pr-reviewer-behavior": "name-only",
     "tmux": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
