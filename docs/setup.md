@@ -177,20 +177,19 @@
     - ホストで直接コミットするときの署名。`gpg --import` を含む以下の GPG 設定は sandbox の署名には使わない。
 
     - [ ] 非公開設定ファイルの作成
-      - 旧設定がある場合は `mise bootstrap dotfiles apply` の前に、旧ファイルの値を新しいファイルに移す。既存の新ファイルは保持する。
       - サンプルをコピーし、`machineId`を自分の値に編集する
 
       ```sh
-      cp -n ~/dotfiles/config/git/private.example ~/.config/git/private
-      nvim ~/.config/git/private
+      cp -n ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
+      nvim ~/.config/git/config.secret
       ```
 
       - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
       ```sh
       cp -n ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
-      cp -n ~/dotfiles/config/git/work3.private.example ~/.config/git/work3.private
-      nvim ~/.config/git/config.work.secret ~/.config/git/work3.private
+      cp -n ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
+      nvim ~/.config/git/config.work.secret ~/.config/git/config.work3.secret
       ```
 
       - 各値の確認方法

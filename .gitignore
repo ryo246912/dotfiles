@@ -16,10 +16,7 @@ mise*.lock
 # 追加しても git add で無視されないようにするため）。
 !templates/
 !templates/**
-config/git/private
-config/git/work3.private
 /config/git/work3/
-# Keep legacy local copies ignored during migration.
 config/git/config.secret
 config/git/config.work.secret
 config/git/config.work3.secret
