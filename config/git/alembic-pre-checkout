@@ -5,7 +5,7 @@ set -uo pipefail
 git_cmd=git
 
 resolve_target() {
-  local subcommand=$1 target= creating=0 guess=1 detach=0 remote candidate= preferred= count=0 default_remote
+  local subcommand=$1 target= creating=0 guess=default detach=0 remote candidate= preferred= count=0 default_remote
   shift
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -20,7 +20,14 @@ resolve_target() {
       --guess) guess=1 ;;
       --detach|-d) detach=1 ;;
       --conflict=merge|--conflict=diff3|--conflict=zdiff3|-f|--force|-m|--merge|-q|--quiet|--progress|--no-progress|--track|-t|--track=direct|--track=inherit|--discard-changes|--ignore-other-worktrees|--recurse-submodules|--no-recurse-submodules) ;;
-      --) [[ $# == 1 ]] || return 1; break ;;
+      --)
+        if [[ "$subcommand" == switch && $# == 2 && -z "$target" ]]; then
+          target=$2
+          [[ "$target" != - ]] || target='@{-1}'
+        else
+          [[ $# == 1 ]] || return 1
+        fi
+        break ;;
       -) [[ -z "$target" ]] || return 1; target='@{-1}' ;;
       -*) return 1 ;;
       *) [[ -z "$target" ]] || return 1; target=$1 ;;
@@ -35,11 +42,13 @@ resolve_target() {
   "$git_cmd" rev-parse -q --verify --end-of-options "${target}^{commit}" 2>/dev/null && return 0
 
   # A guessed tracking branch must be a remote-tracking ref.
-  [[ "$guess" == 1 && "$detach" == 0 && "$creating" == 0 && "$target" != '@{-1}' ]] || return 1
+  [[ "$guess" != 0 && "$detach" == 0 && "$creating" == 0 && "$target" != '@{-1}' ]] || return 1
   if [[ "$subcommand" == checkout && -e "$target" ]]; then
     return 1
   fi
-  [[ $("$git_cmd" config --type=bool --get checkout.guess) != false ]] || return 1
+  if [[ "$guess" == default && $("$git_cmd" config --type=bool --get checkout.guess) == false ]]; then
+    return 1
+  fi
   default_remote=$("$git_cmd" config --get checkout.defaultRemote)
   while IFS= read -r remote; do
     [[ -n "$remote" ]] || continue

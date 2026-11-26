@@ -4,8 +4,11 @@ Git 2.36 以上で利用できます。dotfiles を配置して対話型 zsh を
 `git checkout` と `git switch` の切替前に検査します。既存の個人設定に
 `git()` があれば削除してください。VS Code の Git UI やスクリプトからの操作には、
 リポジトリ側で設定した場合に切替後の検査が使えます。
+切替前検査はサブコマンドを先頭に指定する場合に有効です。`git -C ... checkout`
+や `git -c ... switch` は Git にそのまま渡ります。別ディレクトリで検査するには
+`cd` してから切り替えてください。
 
-初回は以下を実行し、`work3/config` の URL を `git remote -v` に表示される
+初回は以下を実行し、`work3/config` の URL を `git config --get remote.origin.url` で確認した値の
 形式に、`work3/guard` のパスとサービス設定を実際の値に置き換えてください。
 `private` にはサンプルを参考に非公開の Git 設定を記入します。既存の非公開設定を
 移行する場合は、手元の値を引き継いでください。
