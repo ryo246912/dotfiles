@@ -94,9 +94,13 @@ git --literal-pathspecs diff --quiet "$prev" "$new" -- "$versions_dir" 2>/dev/nu
 
 # Read revision assignments without importing migration modules.
 list_revisions() {
-  git --literal-pathspecs grep --no-color --no-line-number --no-column -E \
+  local path declaration
+  git --literal-pathspecs grep -Iz --no-color --no-line-number --no-column -E \
     '^revision[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null |
-    sed -nE "s/^[^:]+:[^:]+\\.py:revision[^=]*=[[:space:]]*\"([^\"]+)\".*/\\1/p; s/^[^:]+:[^:]+\\.py:revision[^=]*=[[:space:]]*'([^']+)'.*/\\1/p" |
+    while IFS= read -r -d '' path && IFS= read -r declaration; do
+      [[ "$path" == *.py ]] && printf '%s\n' "$declaration"
+    done |
+    sed -nE "s/^revision[^=]*=[[:space:]]*\"([^\"]+)\".*/\\1/p; s/^revision[^=]*=[[:space:]]*'([^']+)'.*/\\1/p" |
     LC_ALL=C sort -u
 }
 
