@@ -237,6 +237,11 @@ ls ~/.codex/skills/   # ~/.agents/skills/ に同名の skill があることを�
 
 ### 自作 skill を消しても配布先に残る
 
+改名後は `mise bootstrap dotfiles apply` で新しい名前のリンクを配置してください。
+`mise run rulesync:generate` は生成前に、リポジトリから消えた旧名の下にある mise のリンク切れと
+空ディレクトリを `~/.config/rulesync/.rulesync/skills/` から掃除します。
+旧名の下に手元のファイルが残っている場合は、その内容を確認してから移動してください。
+
 `config/rulesync/.rulesync/skills/` から skill を消しても、`delete: false` のため `~/.claude/skills/` と
 `~/.agents/skills/` の生成物は残ります。手動で削除してください。
 
