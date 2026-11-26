@@ -130,32 +130,41 @@ missing=$(LC_ALL=C comm -23 \
   <(printf '%s\n' "$db_revs" | LC_ALL=C sort -u) <(printf '%s\n' "$new_revs"))
 [[ -n "$missing" ]] || exit 0
 
-# Multi-line tuples are not parsed because the migrations write merge parents on one line.
 list_edges() {
-  local path declaration
-  git --literal-pathspecs grep -Iz --no-color --no-line-number --no-column -E \
+  git --literal-pathspecs grep -Iz -A 20 --no-color --no-line-number --no-column -E \
     '^(down_)?revision[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null |
-    while IFS= read -r -d '' path && IFS= read -r declaration; do
-      [[ "$path" == *.py ]] && printf '%s\t%s\n' "$path" "$declaration"
-    done |
-    awk -F '\t' '
-      {
-        kind = ($2 ~ /^down_revision/) ? "down" : "rev"
-        value = $2
-        sub(/^[^=]*=/, "", value)
-        ids = ""
-        while (match(value, /["\047][^"\047]+["\047]/)) {
-          ids = ids " " substr(value, RSTART + 1, RLENGTH - 2)
-          value = substr(value, RSTART + RLENGTH)
+    tr '\0' '\t' |
+    awk '
+      function take_ids(path, text) {
+        while (match(text, /["\047][^"\047]+["\047]/)) {
+          down[path] = down[path] " " substr(text, RSTART + 1, RLENGTH - 2)
+          text = substr(text, RSTART + RLENGTH)
         }
-        if (kind == "rev") rev[$1] = ids
-        else down[$1] = ids
+      }
+      {
+        tab = index($0, "\t")
+        if (tab == 0) next
+        path = substr($0, 1, tab - 1)
+        line = substr($0, tab + 1)
+        if (path !~ /\.py$/) next
+        if (line ~ /^revision[[:space:]:=]/) {
+          sub(/^[^=]*=/, "", line)
+          if (match(line, /["\047][^"\047]+["\047]/)) rev[path] = substr(line, RSTART + 1, RLENGTH - 2)
+          next
+        }
+        if (line ~ /^down_revision[[:space:]:=]/) {
+          sub(/^[^=]*=/, "", line)
+          depth[path] = 0
+          open[path] = 1
+        }
+        if (!open[path]) next
+        sub(/#.*/, "", line)
+        take_ids(path, line)
+        depth[path] += gsub(/\(/, "", line) - gsub(/\)/, "", line)
+        if (depth[path] <= 0) open[path] = 0
       }
       END {
-        for (path in rev) {
-          sub(/^ /, "", rev[path])
-          if (rev[path] != "") print rev[path] down[path]
-        }
+        for (path in rev) print rev[path] down[path]
       }'
 }
 
