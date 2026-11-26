@@ -1368,7 +1368,7 @@ devcontainer との違いは 2 点です。
 
 crit（7842）と plannotator（19433）の **host port は既定で sbx が IPv4 ループバックに自動採番します**。
 新規作成時は環境定義の `ports` で `host` を省略します。作成後と再アタッチ時は `sbx ports <sandbox>` を確認し、
-数字の host port がないものを `--publish <sandbox-port>` で再公開します。
+数字の host port がないものを `sbx ports <sandbox> --publish <sandbox-port>` で再公開します。
 crit の割り当てが反映されるまで短時間再試行し、取得できた数字を sandbox に渡します。
 取得できない場合はホストで `sbx ports <sandbox>` を確認してください。
 
@@ -1712,7 +1712,6 @@ secrets:
     command: gh auth token
 ports:
   - sandbox: 7842
-    host: 7842
 sandboxOptions:
   memory: 8g
   skills: readonly
