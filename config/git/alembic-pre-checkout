@@ -2,7 +2,6 @@
 set -uo pipefail
 
 [[ "${ALEMBIC_GUARD:-}" != 0 ]] || exit 0
-git_cmd=git
 
 resolve_target() {
   local subcommand=$1 target= creating=0 guess=default detach=0 remote candidate= preferred= count=0 default_remote
@@ -37,27 +36,27 @@ resolve_target() {
 
   [[ -n "$target" ]] || return 1
   if [[ "$creating" == 0 && "$detach" == 0 ]]; then
-    "$git_cmd" rev-parse -q --verify --end-of-options "refs/heads/${target}^{commit}" 2>/dev/null && return 0
+    git rev-parse -q --verify --end-of-options "refs/heads/${target}^{commit}" 2>/dev/null && return 0
   fi
-  "$git_cmd" rev-parse -q --verify --end-of-options "${target}^{commit}" 2>/dev/null && return 0
+  git rev-parse -q --verify --end-of-options "${target}^{commit}" 2>/dev/null && return 0
 
   # A guessed tracking branch must be a remote-tracking ref.
   [[ "$guess" != 0 && "$detach" == 0 && "$creating" == 0 && "$target" != '@{-1}' ]] || return 1
   if [[ "$subcommand" == checkout && -e "$target" ]]; then
     return 1
   fi
-  if [[ "$guess" == default && $("$git_cmd" config --type=bool --get checkout.guess) == false ]]; then
+  if [[ "$guess" == default && $(git config --type=bool --get checkout.guess) == false ]]; then
     return 1
   fi
-  default_remote=$("$git_cmd" config --get checkout.defaultRemote)
+  default_remote=$(git config --get checkout.defaultRemote)
   while IFS= read -r remote; do
     [[ -n "$remote" ]] || continue
     local resolved
-    resolved=$("$git_cmd" rev-parse -q --verify --end-of-options "refs/remotes/$remote/${target}^{commit}" 2>/dev/null) || continue
+    resolved=$(git rev-parse -q --verify --end-of-options "refs/remotes/$remote/${target}^{commit}" 2>/dev/null) || continue
     candidate=$resolved
     ((count += 1))
     [[ "$remote" != "$default_remote" ]] || preferred=$resolved
-  done < <("$git_cmd" remote)
+  done < <(git remote)
   if [[ -n "$preferred" || "$count" == 1 ]]; then
     printf '%s\n' "${preferred:-$candidate}"
   else
@@ -69,7 +68,7 @@ case "${1:-}" in
   checkout|switch)
     mode=pre
     new=$(resolve_target "$@") || exit 0
-    prev=$("$git_cmd" rev-parse --verify HEAD 2>/dev/null) || exit 0 ;;
+    prev=$(git rev-parse --verify HEAD 2>/dev/null) || exit 0 ;;
   *)
     [[ $# == 3 && "$3" == 1 ]] || exit 0
     mode=post
@@ -78,28 +77,28 @@ case "${1:-}" in
 esac
 
 [[ "$prev" != "$new" ]] || exit 0
-git_dir=$("$git_cmd" rev-parse --git-dir 2>/dev/null) || exit 0
+git_dir=$(git rev-parse --git-dir 2>/dev/null) || exit 0
 if [[ -d "$git_dir/rebase-merge" || -d "$git_dir/rebase-apply" || -f "$git_dir/BISECT_LOG" ]]; then
   exit 0
 fi
 
 guard_config() {
-  "$git_cmd" config --get "dotfiles.alembicGuard.$1"
+  git config --get "dotfiles.alembicGuard.$1"
 }
 
 app_dir=$(guard_config appDir) || exit 0
 versions_dir=$(guard_config versionsDir) || exit 0
 [[ -n "$app_dir" && -n "$versions_dir" ]] || exit 0
-root=$("$git_cmd" rev-parse --show-toplevel) || exit 0
+root=$(git rev-parse --show-toplevel) || exit 0
 cd -- "$root" || exit 0
 [[ "$app_dir" == /* ]] || app_dir="$root/$app_dir"
 
-"$git_cmd" --literal-pathspecs diff --quiet "$prev" "$new" -- "$versions_dir" 2>/dev/null
+git --literal-pathspecs diff --quiet "$prev" "$new" -- "$versions_dir" 2>/dev/null
 [[ $? == 1 ]] || exit 0
 
 # Read revision declarations, including type annotations and merge parents.
 list_graph() {
-  "$git_cmd" --literal-pathspecs grep --no-color --no-line-number --no-column -E '^(revision|down_revision)[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null | awk '
+  git --literal-pathspecs grep --no-color --no-line-number --no-column -E '^(revision|down_revision)[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null | awk '
     {
       i = index($0, ".py:"); if (!i) next
       file = substr($0, 1, i + 2); body = substr($0, i + 4)
@@ -161,37 +160,31 @@ common_ancestor() {
     }' <<< "$prev_graph"
 }
 
-missing=()
-ancestors=()
+missing=
+downgrade_to=
 while IFS= read -r rev; do
   [[ -n "$rev" ]] || continue
   in_new "$rev" && continue
-  missing+=("$rev")
-  ancestors+=("$(common_ancestor "$rev")")
-done <<< "$db_revs"
-[[ ${#missing[@]} -gt 0 ]] || exit 0
-
-downgrade_to=${ancestors[0]}
-for ancestor in "${ancestors[@]}"; do
-  if [[ "$ancestor" != "$downgrade_to" ]]; then
+  ancestor=$(common_ancestor "$rev")
+  if [[ -z "$missing" ]]; then
+    downgrade_to=$ancestor
+  elif [[ "$ancestor" != "$downgrade_to" ]]; then
     downgrade_to=
-    break
   fi
-done
+  missing+="  $rev → 共通祖先 ${ancestor:-（特定できず。alembic history で確認）}"$'\n'
+done <<< "$db_revs"
+[[ -n "$missing" ]] || exit 0
 
 {
-  printf '[alembic-guard] 切替先に存在しない DB revision を検出しました。\n'
-  for i in "${!missing[@]}"; do
-    printf '  %s → 共通祖先 %s\n' "${missing[i]}" "${ancestors[i]:-（特定できず。alembic history で確認）}"
-  done
+  printf '[alembic-guard] 切替先に存在しない DB revision を検出しました。\n%s' "$missing"
   if [[ "$mode" == pre ]]; then
     printf '切替を中止しました。今のブランチで downgrade してから切り替えてください。\n'
   else
-    prev_ref=$("$git_cmd" rev-parse --abbrev-ref '@{-1}' 2>/dev/null)
-    if [[ -z "$prev_ref" || $("$git_cmd" rev-parse --verify "$prev_ref" 2>/dev/null) != "$prev" ]]; then
+    prev_ref=$(git rev-parse --abbrev-ref '@{-1}' 2>/dev/null)
+    if [[ -z "$prev_ref" || $(git rev-parse --verify "$prev_ref" 2>/dev/null) != "$prev" ]]; then
       prev_ref=$prev
     fi
-    new_ref=$("$git_cmd" symbolic-ref --quiet --short HEAD 2>/dev/null) || new_ref=$new
+    new_ref=$(git symbolic-ref --quiet --short HEAD 2>/dev/null) || new_ref=$new
     printf '切替元へ戻り、downgrade してから %q に切り替え直してください。\n' "$new_ref"
     printf '  ALEMBIC_GUARD=0 git checkout %q\n' "$prev_ref"
   fi
