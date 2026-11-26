@@ -18,6 +18,10 @@ dependencies:
       registry: false
       transport: http
       url: https://mcp.deepwiki.com/mcp
+    - name: securitycontext
+      registry: false
+      transport: http
+      url: https://mcp.securitycontext.com/
     - name: iconmcp
       registry: false
       transport: http

@@ -13,6 +13,12 @@
 
 上流手順は表の実行内容に限定して適用する。読み取り専用でレビューし、上流のインストーラ、ハーネス、コマンド、生成コード、動的再現、能動的な検査を実行しない。上流への PR データの送信や自動投稿も行わない。
 
+## 依存関係の確認に使う MCP
+
+チェックリストの「依存関係・CI・配布」で、追加・更新された公開依存の確定バージョンを確認する際、利用可能なら SecurityContext の読み取りツール `get_security_context` を呼ぶ。公開パッケージは `type: package`、公開の同梱ネイティブライブラリは `type: library` を指定し、分かっているバージョンは `section: versions/<version>` で照会する。既知の公開 CVE は `type: cve` で参照できる。送信するのはこれらの公開識別子とバージョンだけにし、PR の差分、非公開依存の識別子、ロックファイルや SBOM は手元で読む。リポジトリのスキャン、テンプレートや攻撃コードの取得は行わない。
+
+結果は調査の手掛かりとして使い、指摘前に対象バージョンと影響範囲を公開アドバイザリやメンテナの告知で照合する。対象外、未登録、取得失敗、結果なしを区別し、照会できない場合は公開アドバイザリの確認を続ける。
+
 ## 実行時に読み込むファイル
 
 - [Cloudflare `RECONNAISSANCE.md`](https://raw.githubusercontent.com/cloudflare/security-audit-skill/c1c8a8c1471069fb0e188eeaff69b8e8db6564a8/skills/security-audit/RECONNAISSANCE.md)
