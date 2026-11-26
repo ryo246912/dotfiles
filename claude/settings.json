@@ -70,6 +70,7 @@
     "html-plan": "name-only",
     "html-prototype": "name-only",
     "html-wireframe": "name-only",
+    "impeccable": "name-only",
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
