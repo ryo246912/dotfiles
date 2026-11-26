@@ -99,6 +99,7 @@
     "pr-mobile-review": "name-only",
     "pr-reviewer-all-review": "name-only",
     "pr-spec-review": "name-only",
+    "pr-uiux-review": "name-only",
     "prompt-master": "user-invocable-only",
     "silent-failure-hunter": "name-only",
     "suggest-rules": "user-invocable-only",
@@ -112,6 +113,7 @@
     "terminal-browser": "name-only",
     "tmux": "name-only",
     "uat-test-design": "user-invocable-only",
+    "uiux-option-review": "name-only",
     "understand": "user-invocable-only",
     "vercel-react-best-practices": "name-only",
     "web-design-guidelines": "name-only"
