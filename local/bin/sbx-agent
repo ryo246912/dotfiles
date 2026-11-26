@@ -44,7 +44,6 @@
 #   SBX_AGENT_TEMPLATE  既定で使う sandbox template（未指定なら sbx-agent:<agent>。全 agent に効く）
 #   SBX_AGENT_STATIC_MCP  --static-mcp の既定値（`,` 区切り。未指定なら読み込まない）
 #   SBX_AGENT_SIGNING_KEY  コミット署名に使う SSH 鍵（既定 ~/.ssh/id_ed25519。GitHub に Signing key として登録した鍵）
-#   INSTALL_LOCAL_LEFTHOOK  1 のとき sandbox 作成時に lefthook.local.yml を配置して hook をインストールする（既定: 無効）
 #   CLAUDE_CODE_ENABLE_CFC  明示された値だけ Claude sandbox へ転送（既定値なし）
 #
 # sandbox を作成したときの呼び出しを ${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh に
@@ -362,7 +361,17 @@ fi
 case "$AGENT" in
     claude)
         if [[ "$CLAUDE_OAUTH" != true ]]; then
-            : "${CONFIG_DIR:=${HOME}/.claude}"
+            if [[ -z "$CONFIG_DIR" ]]; then
+                case "$CLAUDE_ACCOUNT" in
+                    "" | account1) CONFIG_DIR="${HOME}/.claude" ;;
+                    account2) CONFIG_DIR="${HOME}/.claude-account2" ;;
+                    work3) CONFIG_DIR="${HOME}/.claude-work3" ;;
+                    *)
+                        log_error "このアカウントでは --config-dir を指定してください: $CLAUDE_ACCOUNT"
+                        exit 1
+                        ;;
+                esac
+            fi
             AGENT_CONFIG_ENV="CLAUDE_CONFIG_DIR"
         fi
         ;;
@@ -437,6 +446,15 @@ fi
 # ---------------------------------------------------------------------------
 log_info "ホスト設定と共有 mount を確認します"
 MOUNTS=()
+# 会話ログは選択したホストアカウントの projects に残す。
+CLAUDE_PROJECTS_HOST=""
+if [[ "$AGENT" == claude ]] && ! [[ "$MOUNT_CONFIG" == true && -n "$AGENT_CONFIG_ENV" && -n "$CONFIG_DIR" ]]; then
+    CLAUDE_PROJECTS_HOST="${CONFIG_DIR:-${HOME}/.claude}/projects"
+    if ! mkdir -p "$CLAUDE_PROJECTS_HOST"; then
+        log_error "会話ログの保存先を作成できません: $CLAUDE_PROJECTS_HOST"
+        exit 1
+    fi
+fi
 add_mount() {
     local spec="$1"
     local path="$spec"
@@ -484,9 +502,8 @@ done
 
 if [[ "$MOUNT_CONFIG" == true ]]; then
     # devcontainer.json の mounts に対応するホスト設定
-    add_mount "${HOME}/.config/git/config:ro"
-    add_mount "${HOME}/.config/git/gitignore:ro"
-    add_mount "${HOME}/.config/git/attributes:ro"
+    # ファイル単位では checkout や設定再生成による inode の置換に追従できない。
+    add_mount "${HOME}/.config/git:ro"
     add_mount "${HOME}/.aws/config:ro"
     add_mount "${HOME}/.agents:ro"
     add_mount "${HOME}/.ssh/known_hosts:ro"
@@ -645,8 +662,6 @@ if [[ "$AGENT" == claude && -n "${CLAUDE_CODE_ENABLE_CFC+x}" ]]; then
     # 明示された値だけ sandbox の環境へ渡し、daemon / worker にも継承させる。
     add_env CLAUDE_CODE_ENABLE_CFC "$CLAUDE_CODE_ENABLE_CFC"
 fi
-# lefthook.local.yml の配置は既定で無効。ホストで INSTALL_LOCAL_LEFTHOOK=1 のときだけ有効にする
-add_env INSTALL_LOCAL_LEFTHOOK "${INSTALL_LOCAL_LEFTHOOK:-0}"
 # workspace の mise 設定を信頼し、非対話実行で trust prompt が出ないようにする
 add_env MISE_TRUSTED_CONFIG_PATHS "/mise:$WORKSPACE"
 if [[ "$HOST_BRIDGE" == true ]]; then
@@ -793,7 +808,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             grep -qxF "$signer_line" "$allowed_signers" || printf '%s\n' "$signer_line" >>"$allowed_signers"
         fi
         if [[ -s "$allowed_signers" ]]; then
-            add_mount "${allowed_signers}:ro"
+            add_mount "${HOME}/.config/git:ro"
             add_git_config gpg.ssh.allowedSignersFile "$allowed_signers"
         fi
     else
@@ -858,7 +873,7 @@ sandbox_host_port() {
 # （sbx exec -d は 0.45.0 で非対応になったので前景で実行する）
 #
 # --no-host-bridge でもスキップしない。初期化スクリプトの中身は nvim 設定の共有・生成物の
-# 分離・lefthook といったホスト連携と無関係な処理も含んでおり、mac-host 関連は
+# 分離といったホスト連携と無関係な処理も含んでおり、mac-host 関連は
 # SBX_HOST_SSH_KEY が無ければスクリプト側で自動的にスキップされる。
 run_post_create() {
     local -a env_args=()
@@ -886,7 +901,7 @@ run_post_create() {
 # 作成したときの呼び出しを、そのまま実行できる bash スクリプトとして記録する。
 # 追加の引数（"$@"）は agent 引数の `--` より前に入るので、--new --setup-only を後から足せる。
 # 記録に失敗しても sandbox 自体は使えるため warning 止まりにする。
-readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY INSTALL_LOCAL_LEFTHOOK)
+readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY)
 record_invocation() {
     local dir="${XDG_STATE_HOME:-${HOME}/.local/state}/sbx-agent" file var
     file="${dir}/${SANDBOX_NAME}.sh"
@@ -1003,6 +1018,23 @@ prepare_env_files() {
         path="${spec%:ro}"
         mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
     done
+    if [[ -n "$CLAUDE_PROJECTS_HOST" ]]; then
+        # 別 target の rw mount で、明示された read-only mount を迂回しない。
+        if ! python3 - "$CLAUDE_PROJECTS_HOST" ${MOUNTS[@]+"${MOUNTS[@]}"} <<'PYPROJECTS'
+import os, sys
+projects = os.path.realpath(sys.argv[1])
+for spec in sys.argv[2:]:
+    if not spec.endswith(":ro"):
+        continue
+    readonly = os.path.realpath(spec[:-3])
+    if os.path.commonpath([projects, readonly]) in (projects, readonly):
+        sys.exit("projects の永続化と read-only mount が競合します: " + spec)
+PYPROJECTS
+        then
+            exit 1
+        fi
+        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$CLAUDE_PROJECTS_HOST" '$m + [{path:$p,target:"/home/agent/.claude/projects",readOnly:false}]') || exit 1
+    fi
     if [[ "$HOST_BRIDGE" == true ]]; then
         PUBLISH_PORTS+=("$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT")
     fi

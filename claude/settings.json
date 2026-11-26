@@ -3,7 +3,8 @@
   "cleanupPeriodDays": 36500,
   "env": {
     "DISABLE_AUTOUPDATER": "1",
-    "AI_AGENT": "1"
+    "AI_AGENT": "1",
+    "CLAUDE_CODE_SHELL": "/opt/homebrew/bin/bash"
   },
   "permissions": {
     "deny": [
@@ -40,47 +41,14 @@
     ]
   },
   "skillOverrides": {
+    "ai-qa-review": "name-only",
+    "android-debug": "name-only",
+    "chrome-capture": "name-only",
     "crit": "on",
     "crit-cli": "on",
-    "ponytail": "on",
-    "ponytail-audit": "on",
-    "ponytail-debt": "on",
-    "ponytail-gain": "on",
-    "ponytail-help": "on",
-    "ponytail-review": "on",
-    "memo": "on",
-    "planning": "on",
-    "pr-author-lessons-review": "on",
-    "plannotator-review": "name-only",
-    "plannotator-annotate": "name-only",
-    "plannotator-last": "name-only",
-    "html": "name-only",
-    "html-diagram": "name-only",
-    "html-plan": "name-only",
-    "html-prototype": "name-only",
-    "html-wireframe": "name-only",
-    "design-artifact": "name-only",
-    "terminal-browser": "name-only",
-    "grill-me": "name-only",
-    "grilling": "name-only",
-    "diagram-design": "name-only",
-    "desloppify": "name-only",
-    "postgres-performance-diagnostics": "name-only",
-    "postgres-config-tuning": "name-only",
-    "postgres-schema-review": "name-only",
-    "postgres-security-review": "name-only",
-    "postgres-workload-validation": "name-only",
-    "pr-reviewer-comment-crit": "name-only",
-    "pr-author-fix": "name-only",
-    "pr-author-all-review": "name-only",
-    "lessons-record": "name-only",
-    "pr-reviewer-comment": "name-only",
-    "pr-reviewer-brief": "name-only",
-    "pr-reviewer-behavior": "name-only",
-    "tmux": "name-only",
     "ctx-agent-history-search": "user-invocable-only",
-    "find-skills": "user-invocable-only",
-    "prompt-master": "user-invocable-only",
+    "design-artifact": "name-only",
+    "desloppify": "name-only",
     "dev-context": "user-invocable-only",
     "dev-debug": "name-only",
     "dev-impl": "name-only",
@@ -92,14 +60,61 @@
     "dev-verify": "name-only",
     "dev-webtest": "user-invocable-only",
     "dev-webtest-plan": "user-invocable-only",
+    "diagram-design": "name-only",
+    "find-skills": "user-invocable-only",
+    "grill-me": "name-only",
+    "grilling": "name-only",
+    "html": "name-only",
+    "html-bizdev": "name-only",
+    "html-diagram": "name-only",
+    "html-plan": "name-only",
+    "html-prototype": "name-only",
+    "html-wireframe": "name-only",
     "ipa-security-check": "user-invocable-only",
     "ipa-security-guide": "user-invocable-only",
     "kairo-implement": "user-invocable-only",
-    "task-breakdown": "user-invocable-only",
-    "uat-test-design": "user-invocable-only",
-    "suggest-rules": "user-invocable-only",
+    "last30days": "user-invocable-only",
     "lessons-harvest": "user-invocable-only",
-    "lessons-review": "user-invocable-only"
+    "lessons-record": "name-only",
+    "lessons-review": "user-invocable-only",
+    "memo": "on",
+    "modern-web-guidance": "name-only",
+    "planning": "on",
+    "plannotator-annotate": "name-only",
+    "plannotator-last": "name-only",
+    "plannotator-review": "name-only",
+    "ponytail": "name-only",
+    "ponytail-audit": "user-invocable-only",
+    "ponytail-debt": "user-invocable-only",
+    "ponytail-gain": "user-invocable-only",
+    "ponytail-help": "user-invocable-only",
+    "ponytail-review": "name-only",
+    "pr-author-all-review": "name-only",
+    "pr-behavior-review": "name-only",
+    "pr-brief": "name-only",
+    "pr-crit": "name-only",
+    "pr-fix": "name-only",
+    "pr-library-review": "name-only",
+    "pr-lessons-review": "name-only",
+    "pr-mobile-review": "name-only",
+    "pr-reviewer-all-review": "name-only",
+    "pr-spec-review": "name-only",
+    "prompt-master": "user-invocable-only",
+    "silent-failure-hunter": "name-only",
+    "suggest-rules": "user-invocable-only",
+    "supabase-postgres-best-practices": "name-only",
+    "postgres-performance-diagnostics": "name-only",
+    "postgres-config-tuning": "name-only",
+    "postgres-schema-review": "name-only",
+    "postgres-security-review": "name-only",
+    "postgres-workload-validation": "name-only",
+    "task-breakdown": "user-invocable-only",
+    "terminal-browser": "name-only",
+    "tmux": "name-only",
+    "uat-test-design": "user-invocable-only",
+    "understand": "user-invocable-only",
+    "vercel-react-best-practices": "name-only",
+    "web-design-guidelines": "name-only"
   },
   "hooks": {
     "SessionStart": [
@@ -119,17 +134,6 @@
             "type": "command",
             "command": "if command -v agent-lessons-context >/dev/null 2>&1; then agent-lessons-context; fi",
             "timeout": 40
-          }
-        ]
-      },
-      {
-        "matcher": "startup|resume|clear|compact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-activate.js'))\"",
-            "timeout": 5,
-            "statusMessage": "Loading ponytail mode..."
           }
         ]
       }
@@ -214,32 +218,6 @@
           {
             "type": "command",
             "command": "jq -j '(.tool_input.file_path | select(endswith(\".sh\"))) + \"\\u0000\"' | xargs -0 -r -- shfmt --write --"
-          }
-        ]
-      }
-    ],
-    "SubagentStart": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-subagent.js'))\"",
-            "timeout": 5,
-            "statusMessage": "Loading ponytail mode..."
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('node:path').join(process.env.CLAUDE_PLUGIN_ROOT.replaceAll(String.fromCharCode(92), '/'), 'hooks/ponytail-mode-tracker.js'))\"",
-            "timeout": 5,
-            "statusMessage": "Tracking ponytail mode..."
           }
         ]
       }
