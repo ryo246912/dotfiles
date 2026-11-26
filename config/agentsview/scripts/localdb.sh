@@ -53,7 +53,12 @@ mkdir -p "$backup_dir"
 # hostから見たURL（composeがpublishしたport）と、container netnsから見たURL
 # （container内のport）は別物である。agentsview CLIはhost側、psqlは
 # container側を使う。ここを混同すると、portを既定から変えたときだけ壊れる。
-host_url="postgres://${db_user}@127.0.0.1:${host_port}/${database}?sslmode=disable"
+# default_query_exec_mode=simple_protocolはagentsview（pgx）だけが読む。
+# agentsview 0.40以降のpg pushは `WITH keys(...) AS (VALUES ($3, ...))` のように
+# 型の文脈が無いplaceholderを送り、CockroachDBは型を推論できず
+# `could not determine data type of placeholder $3 (SQLSTATE 42P18)` で落ちる。
+# simple protocolではpgxが値をliteralへ埋め込むので、CockroachDBが型を決められる。
+host_url="postgres://${db_user}@127.0.0.1:${host_port}/${database}?sslmode=disable&default_query_exec_mode=simple_protocol"
 container_url="postgres://${db_user}@127.0.0.1:26257/${database}?sslmode=disable"
 
 # 後片付けは1つのEXIT trapへ集める。個々の処理でtrapを張り替えると、

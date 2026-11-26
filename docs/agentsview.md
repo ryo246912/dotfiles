@@ -321,7 +321,7 @@ gcloud run services logs read ryo-agentsview \
 
 logの最初のerror行に応じて対処する。
 
-- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0）。
+- **`schema migration failed: database data version N is newer than this agentsview binary's data version M`** — CockroachDBへpushしたAgentsViewが、Cloud Run imageのAgentsViewより新しい。viewerは古いdata versionのbinaryでは新しいarchiveを開けない。`config/agentsview/Dockerfile`の`FROM`をpush側と同じversionへ上げ、**再buildしてdeployする**（tagは`FROM`のversionから作られるため`AGENTSVIEW_SKIP_BUILD=1`は使えない）。data versionとreleaseの対応は`internal/db/db.go`の`const dataVersion`にある（74 = v0.39.0、79 = v0.40.0、88 = v0.41.0、96 = v0.42.0、113 = v0.44.0）。
 - **`/api/v1/sessions/sidebar-index`だけが極端に遅い（`--write-timeout`を延ばしても切れる）** — まず`EXPLAIN ANALYZE`で、時間がどこで消えているかを確定させる。**件数やindexの問題とlock待ちは対処が正反対**なので、ここを飛ばさない。
 
   ```sh
@@ -952,6 +952,34 @@ fnox exec -- mise run agentsview:cockroach:push:remote -- --full --no-vectors
 | localでSQL分析する                        | `localdb.sh sql`でlocal CockroachDBへ接続する（taskは置いていない）。本番へ直接繋ぐ場合はread-only roleを使い、双方向同期はしない      |
 
 `agentsview pg pull`が無い以上、remoteのdataをlocalで扱う経路は「dumpして取り込む」しかない。localもCockroachDBにしているのは、この取り込みでengine差を跨がないようにするためである。dumpはdata-only／column INSERTでexportし、現在のAgentsViewがlocal CockroachDBへ作ったschemaへ、不足rowだけをmergeする。schema DDL・権限・sequenceはdumpから持ち込まない（schemaは常にAgentsViewのmigrationが作る）。
+
+#### AgentsViewのversionを上げたとき
+
+mergeはremoteの列名でINSERTを書き出し、localの現在のschemaへ流す。localは`restore`の先頭の`push`で新しいversionのschemaへmigrateされるが、remoteはpushした時点のschemaのままなので、**remoteのschemaもlocalと同じversionへ揃えてからmergeする**。揃っていないと、列をrename／型変換するmigrationを挟んだversion差でimportが落ちる（例: v0.39 → v0.44では`model_pricing.input_per_mtok`などが`input_microdollars_per_mtok`へrenameされ、値もmicrodollarのBIGINTへ変わる）。
+
+```text
+ERROR:  column "input_per_mtok" does not exist
+stopped: psql closed the pipe (see its error above)
+```
+
+dumpを書き換えて旧列を読み替えることはしない。単位変換やcursor usage eventのkey振り直しまで含むAgentsView自身のmigrationを再実装することになるためである。version更新は次の順で行う。
+
+1. remote schemaをmigrateする。DDLを伴うのでowner roleで1度pushする（pushと同じく`default_query_exec_mode=simple_protocol`を付ける。理由は`scripts/localdb.sh`の`host_url`のcomment）。
+
+   0.39以前から上げる場合は、pushの前に`config/agentsview/migrations/v0.40-microdollars.cockroach.sql`を流す。AgentsViewが自分で行うmoney列のmigrationはCockroachDBでは必ず失敗し（`unknown function: hashtext()`、続いて`ALTER COLUMN TYPE ... is not supported inside a transaction`）、0.45／mainでも直っていないためである。前提と実行方法はfile先頭のcommentにある。
+
+   ```sh
+   fnox exec -- sh -c '
+     AGENTSVIEW_PG_SCHEMA=agentsview \
+     AGENTSVIEW_PG_URL="${AGENTSVIEW_COCKROACH_OWNER_PG_URL}&default_query_exec_mode=simple_protocol" \
+       agentsview pg push --no-vectors
+   '
+   ```
+
+   owner URLに`?`が無い場合は`&`を`?`に読み替える。
+
+2. `config/agentsview/Dockerfile`の`FROM`を同じversionへ上げ、`mise run agentsview:cloudrun:deploy`で再buildしてdeployする。read roleのviewerはmigrateできず、旧imageは新しいschemaを読めないため、1の直後に行う。
+3. `fnox exec -- mise run agentsview:cockroach:merge`を実行する。途中で落ちたmergeが残したrowは`ON CONFLICT DO NOTHING`で吸収されるので、そのまま再実行してよい。
 
 #### local CockroachDBの位置づけ
 
