@@ -98,6 +98,7 @@
     "pr-lessons-review": "name-only",
     "pr-mobile-review": "name-only",
     "pr-reviewer-all-review": "name-only",
+    "pr-security-review": "name-only",
     "pr-spec-review": "name-only",
     "prompt-master": "user-invocable-only",
     "silent-failure-hunter": "name-only",
