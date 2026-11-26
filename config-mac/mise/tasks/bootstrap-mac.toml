@@ -112,6 +112,13 @@ if ! brew list --cask opencode-bar &>/dev/null; then
 else
   echo "opencode-bar is already installed"
 fi
+
+# Homebrew API の orca は Plotly の別製品。公式 tap を明示する。
+if ! brew list --cask stablyai/orca/orca &>/dev/null; then
+  brew install --cask stablyai/orca/orca
+else
+  echo "orca is already installed"
+fi
 '''
 
 ["bootstrap:mac-defaults"]
