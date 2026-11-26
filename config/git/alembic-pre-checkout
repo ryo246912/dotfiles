@@ -130,6 +130,84 @@ missing=$(LC_ALL=C comm -23 \
   <(printf '%s\n' "$db_revs" | LC_ALL=C sort -u) <(printf '%s\n' "$new_revs"))
 [[ -n "$missing" ]] || exit 0
 
+# Multi-line tuples are not parsed because the migrations write merge parents on one line.
+list_edges() {
+  local path declaration
+  git --literal-pathspecs grep -Iz --no-color --no-line-number --no-column -E \
+    '^(down_)?revision[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null |
+    while IFS= read -r -d '' path && IFS= read -r declaration; do
+      [[ "$path" == *.py ]] && printf '%s\t%s\n' "$path" "$declaration"
+    done |
+    awk -F '\t' '
+      {
+        kind = ($2 ~ /^down_revision/) ? "down" : "rev"
+        value = $2
+        sub(/^[^=]*=/, "", value)
+        ids = ""
+        while (match(value, /["\047][^"\047]+["\047]/)) {
+          ids = ids " " substr(value, RSTART + 1, RLENGTH - 2)
+          value = substr(value, RSTART + RLENGTH)
+        }
+        if (kind == "rev") rev[$1] = ids
+        else down[$1] = ids
+      }
+      END {
+        for (path in rev) {
+          sub(/^ /, "", rev[path])
+          if (rev[path] != "") print rev[path] down[path]
+        }
+      }'
+}
+
+# Walk down from the missing revisions until reaching ones the target also has.
+common_revisions() {
+  ALEMBIC_MISSING=$1 ALEMBIC_TARGETS=$2 awk '
+    { parents[$1] = $0; sub(/^[^ ]+ ?/, "", parents[$1]) }
+    function ancestors(rev, seen,    queue, head, tail, current, count, i, list) {
+      head = 1; tail = 0
+      count = split(parents[rev], list, " ")
+      for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      while (head <= tail) {
+        current = queue[head++]
+        if (current in seen) continue
+        seen[current] = 1
+        count = split(parents[current], list, " ")
+        for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      }
+    }
+    END {
+      count = split(ENVIRON["ALEMBIC_TARGETS"], list, "\n")
+      for (i = 1; i <= count; i++) in_target[list[i]] = 1
+      head = 1; tail = 0
+      count = split(ENVIRON["ALEMBIC_MISSING"], list, "\n")
+      for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      while (head <= tail) {
+        current = queue[head++]
+        if (current in visited) continue
+        visited[current] = 1
+        if (current in in_target) { common[current] = 1; continue }
+        count = split(parents[current], list, " ")
+        for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      }
+      for (rev in common) {
+        split("", seen)
+        ancestors(rev, seen)
+        for (other in common) if (other in seen) redundant[other] = 1
+      }
+      for (rev in common) if (!(rev in redundant)) print rev
+    }' | LC_ALL=C sort
+}
+
+common=$(common_revisions "$missing" "$new_revs" < <(list_edges "$prev"))
+
 printf '[alembic-guard] 切替を中止しました。切替先に存在しない DB revision:\n%s\n' "$missing" >&2
-printf '現在のブランチで alembic history を確認し、必要な downgrade を行ってから切り替えてください。\n' >&2
+if [[ -z "$common" ]]; then
+  printf '現在のブランチで alembic history を確認し、必要な downgrade を行ってから切り替えてください。\n' >&2
+elif [[ "$common" != *$'\n'* ]]; then
+  printf '切替先との共通 revision: %s\n' "$common" >&2
+  printf '現在のブランチで alembic downgrade %s を行ってから切り替えてください。\n' "$common" >&2
+else
+  printf '切替先との共通 revision:\n%s\n' "$common" >&2
+  printf '現在のブランチで alembic history を確認し、DB がこれらの revision になるまで downgrade してから切り替えてください。\n' >&2
+fi
 exit 1
