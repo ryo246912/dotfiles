@@ -4,7 +4,7 @@ set -uo pipefail
 [[ "${ALEMBIC_GUARD:-}" != 0 ]] || exit 0
 
 resolve_target() {
-  local subcommand=$1 target= creating=0 guess=default detach=0 remote candidate= preferred= count=0 default_remote
+  local subcommand=$1 target= creating=0 guess=default detach=0 trailing_separator=0 remote candidate= preferred= count=0 default_remote
   shift
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -25,6 +25,7 @@ resolve_target() {
           [[ "$target" != - ]] || target='@{-1}'
         else
           [[ $# == 1 ]] || return 1
+          trailing_separator=1
         fi
         break ;;
       -) [[ -z "$target" ]] || return 1; target='@{-1}' ;;
@@ -42,7 +43,7 @@ resolve_target() {
 
   # A guessed tracking branch must be a remote-tracking ref.
   [[ "$guess" != 0 && "$detach" == 0 && "$creating" == 0 && "$target" != '@{-1}' ]] || return 1
-  if [[ "$subcommand" == checkout && -e "$target" ]]; then
+  if [[ "$subcommand" == checkout && "$trailing_separator" == 0 && -e "$target" ]]; then
     return 1
   fi
   if [[ "$guess" == default && $(git config --type=bool --get checkout.guess) == false ]]; then
@@ -93,9 +94,9 @@ git --literal-pathspecs diff --quiet "$prev" "$new" -- "$versions_dir" 2>/dev/nu
 
 # Read revision assignments without importing migration modules.
 list_revisions() {
-  git --literal-pathspecs grep -h --no-color --no-line-number --no-column -E \
+  git --literal-pathspecs grep --no-color --no-line-number --no-column -E \
     '^revision[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null |
-    sed -nE "s/^revision[^=]*=[[:space:]]*[\"']([[:alnum:]_]+)[\"'].*/\\1/p" |
+    sed -nE "s/^[^:]+:[^:]+\\.py:revision[^=]*=[[:space:]]*\"([^\"]+)\".*/\\1/p; s/^[^:]+:[^:]+\\.py:revision[^=]*=[[:space:]]*'([^']+)'.*/\\1/p" |
     LC_ALL=C sort -u
 }
 
