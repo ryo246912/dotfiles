@@ -12,10 +12,3 @@
 | 8    | インフラ・実行環境         | IaC、IAM、ネットワーク公開範囲、コンテナ権限、サービス間の信頼、環境ごとの既定値、デバッグ設定、ポリシー変更時の移行。                                                         |
 | 9    | ネイティブ・モバイル・IPC  | メモリと整数の境界、所有権と寿命、FFI、ローカル IPC の呼び出し元確認、deep link・WebView・公開コンポーネント、端末内の秘密情報。                                               |
 | 10   | AI・エージェント           | 外部コンテンツと指示の扱い、ツール権限、人による承認、モデル出力の妥当性検査、検索・履歴におけるテナント分離、外部送信するデータの制限。                                       |
-
-## 参考資料
-
-- PR の差分から調査範囲を定め、確認した境界と未確認範囲を記録し、候補の根拠を見直す流れを参考にした。[Cloudflare security-audit-skill](https://github.com/cloudflare/security-audit-skill)
-- 静的なデータフローとフレームワークの保護を確認し、確度に応じて結果を扱う手順を参考にした。[Sentry security-review](https://github.com/getsentry/skills/tree/main/skills/security-review)
-- 公開カードにある防御、クラウド、モバイル、AI、サプライチェーンの範囲を確認項目の見直しに使った。[Vyber07 cyber-security データセットカード](https://huggingface.co/datasets/Vyber07/cyber-security)
-- リリース構成と任意構成を区別し、変更された経路が実際に有効になる条件を確認する手順を参考にした。[Google Mantis](https://github.com/google/mantis) · [mantis-critic](https://github.com/google/mantis/tree/main/skills/mantis-critic)
