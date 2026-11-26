@@ -230,6 +230,7 @@ fi
 "~/.config/mise/conf.d/history-track.toml" = { source = "templates/mise/history-track.toml.tera", mode = "template", template = "tera" }
 "~/.config/rio/config.toml"                = { source = "templates/rio/config.toml.tera", mode = "template", template = "tera" }
 "~/.local"                                 = { source = "local", mode = "symlink-each" }
+"~/.perch/config.toml"                     = { source = "templates/perch/config.toml.tera", mode = "template", template = "tera" }
 "~/.zshenv"                                = { source = "templates/zsh/.zshenv.tera", mode = "template", template = "tera" }
 
 # "~/.config/hunk/extensions" は "~/.config" の symlink-each から exclude し、ディレクトリごと
