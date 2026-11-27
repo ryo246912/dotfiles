@@ -137,13 +137,18 @@ gh run view <run-ID> --log-failed
 `gh event` は preview で Event Streams のアクセス権が必要なため、最初に `gh event --help` で使えるか確認する。
 
 ```bash
-# 例: 最新 head に対するレビュー提出・マージコンフリクト・check suite 完了を待つ（イベントの種類・指定方法は gh event listen --help に従う）
-gh event listen <PR URL> --timeout <待機上限> ...
+# PR の URL は --resource、イベントは --event に完全な種別名で渡す（位置引数は受け付けない。短縮名は無い）
+gh event listen --resource <PR URL> --event com.github.pull_request.review.submitted.v1,com.github.pull_request.state.changed.v1 --timeout <待機上限>
+# CI は check suite の完了イベント（check suite ごとに 1 件届く）
+gh event listen --resource <PR URL> --event com.github.pull_request.check_suite.status.changed.v1 --timeout <待機上限>
 ```
 
-- レビュー提出、マージコンフリクトの発生、head の変更、check suite の完了を待つときに使う。既定は最初の 1 件で終了するので、イベントを受けたら本節の各回の確認（`headRefOid`・`mergeable`・base 先端 SHA・CI・コメントの再取得）を行い、まだ完了条件を満たさなければ再度 `gh event listen` で待つ
+- 上記以外のイベント種別（マージコンフリクトなど）の名前は `gh event listen --help` で確認して指定する。推測で書かない
+- 既定は最初の 1 件で終了する（待機上限に達すると終了コード 8）。イベントを受けたら本節の各回の確認（`headRefOid`・`mergeable`・base 先端 SHA・CI・コメントの再取得）を行い、まだ完了条件を満たさなければ再度 `gh event listen` で待つ
+- イベントは過去分を再配信しない。リスナーをバックグラウンドで起動し、stderr に `Listening for events.` が出てから（再接続後の同じ表示の後も）現在の状態を 1 回取得する。起動と取得を同時に行うと、その間のイベントを取りこぼす
 - `--timeout` には下記の待機上限の残りを指定する。タイムアウトは未着として扱い、成功にしない
 - イベントの内容だけで完了判定しない。受信後は必ず最新の head SHA・`mergeable`・CI・レビューを再取得して判定する（古い SHA へのイベントを現在の head の結果として使わない）
+- イベントでは検出できないものは、定期取得を併用する: PR の会話コメント、commit status 形式の外部 CI（check suite を発生させない）、`mergeable` が `UNKNOWN` から確定する変化
 - `gh` が古い・サブコマンドが無い・アクセス権がない・接続に失敗した場合は、その旨を報告し、下記の定期取得に切り替える。`gh event listen` の失敗を成功扱いしない
 - `--watch` モードの `watch_feedback.py` は別機構のまま使う。修正担当内のレビュー・CI・コンフリクト待ちに限り、この節を適用する
 
