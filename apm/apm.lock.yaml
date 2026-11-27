@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-14T01:25:28.923283+00:00'
+generated_at: '2026-11-27T12:45:40.026533+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1288,6 +1288,356 @@ dependencies:
     .claude/skills/ponytail-review/SKILL.md: sha256:33fe4ebe22a460924e5d4a261e223df22e409cc94ab76182bee9fb91a3ef022e
     .claude/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
   content_hash: sha256:3133b97b1d13e831e316574c3dc9634c219ee209b075874813dc2d25492130fb
+- repo_url: marekkirejczyk/skills
+  name: marekkirejczyk-skills
+  host: github.com
+  resolved_commit: c3b71527d029be4b9cafa953203fdfc043c4066d
+  version: 0.20.0
+  package_type: skill_bundle
+  deployed_files:
+  - .agents/skills/baby-sitting
+  - .agents/skills/baby-sitting/SKILL.md
+  - .agents/skills/baby-sitting/agents/openai.yaml
+  - .agents/skills/baby-sitting/scripts/block.sh
+  - .agents/skills/baby-sitting/scripts/board.sh
+  - .agents/skills/baby-sitting/scripts/threads.sh
+  - .agents/skills/baby-sitting/scripts/watch.sh
+  - .agents/skills/dont-repeat-yourself
+  - .agents/skills/dont-repeat-yourself/SKILL.md
+  - .agents/skills/dont-repeat-yourself/agents/openai.yaml
+  - .agents/skills/eval-report
+  - .agents/skills/eval-report-install-ci
+  - .agents/skills/eval-report-install-ci/SKILL.md
+  - .agents/skills/eval-report-install-ci/agents/openai.yaml
+  - .agents/skills/eval-report/SKILL.md
+  - .agents/skills/eval-report/agents/openai.yaml
+  - .agents/skills/eval-report/reference/input-format.md
+  - .agents/skills/eval-report/scripts/assets/report.css
+  - .agents/skills/eval-report/scripts/assets/report.js
+  - .agents/skills/eval-report/scripts/eval-report.mjs
+  - .agents/skills/eval-report/scripts/lib/command.mjs
+  - .agents/skills/eval-report/scripts/lib/content.mjs
+  - .agents/skills/eval-report/scripts/lib/git.mjs
+  - .agents/skills/eval-report/scripts/lib/html.mjs
+  - .agents/skills/eval-report/scripts/lib/publish.mjs
+  - .agents/skills/eval-report/scripts/lib/report.mjs
+  - .agents/skills/eval-report/scripts/lib/results.mjs
+  - .agents/skills/eval-report/scripts/lib/scope.mjs
+  - .agents/skills/eval-report/scripts/lib/summary.mjs
+  - .agents/skills/eval-report/scripts/reporter.mjs
+  - .agents/skills/eval-report/templates/eval-report.yml
+  - .agents/skills/explain-with-slides
+  - .agents/skills/explain-with-slides/SKILL.md
+  - .agents/skills/explain-with-slides/agents/openai.yaml
+  - .agents/skills/explain-with-slides/reference/pr-mode.md
+  - .agents/skills/explain-with-slides/reference/slide-patterns.md
+  - .agents/skills/explain-with-slides/scripts/bundle-html.mjs
+  - .agents/skills/explain-with-slides/scripts/filters.sh
+  - .agents/skills/explain-with-slides/scripts/gen-code.mjs
+  - .agents/skills/explain-with-slides/scripts/loc.sh
+  - .agents/skills/explain-with-slides/scripts/pr-stats.sh
+  - .agents/skills/explain-with-slides/scripts/preview.mjs
+  - .agents/skills/explain-with-slides/scripts/shoot.mjs
+  - .agents/skills/explain-with-video
+  - .agents/skills/explain-with-video/SKILL.md
+  - .agents/skills/explain-with-video/agents/openai.yaml
+  - .agents/skills/explain-with-video/assets/example/scenes/build.html
+  - .agents/skills/explain-with-video/assets/example/scenes/contents.html
+  - .agents/skills/explain-with-video/assets/example/scenes/cover.html
+  - .agents/skills/explain-with-video/assets/example/scenes/pipeline.html
+  - .agents/skills/explain-with-video/assets/example/scenes/scene.html
+  - .agents/skills/explain-with-video/assets/example/scenes/summary.html
+  - .agents/skills/explain-with-video/assets/example/script.json
+  - .agents/skills/explain-with-video/assets/page.html
+  - .agents/skills/explain-with-video/assets/stage.css
+  - .agents/skills/explain-with-video/assets/stage.js
+  - .agents/skills/explain-with-video/reference/scene-format.md
+  - .agents/skills/explain-with-video/scripts/assemble.mjs
+  - .agents/skills/explain-with-video/scripts/lib.mjs
+  - .agents/skills/explain-with-video/scripts/make.mjs
+  - .agents/skills/explain-with-video/scripts/page.mjs
+  - .agents/skills/explain-with-video/scripts/render.mjs
+  - .agents/skills/explain-with-video/scripts/tts.mjs
+  - .agents/skills/finish-pr
+  - .agents/skills/finish-pr/SKILL.md
+  - .agents/skills/finish-pr/agents/openai.yaml
+  - .agents/skills/finish-pr/scripts/open.sh
+  - .agents/skills/finish-pr/scripts/owners.sh
+  - .agents/skills/finish-pr/scripts/status.sh
+  - .agents/skills/finish-pr/scripts/summary.sh
+  - .agents/skills/finish-pr/scripts/timer.sh
+  - .agents/skills/refactor-evals
+  - .agents/skills/refactor-evals/SKILL.md
+  - .agents/skills/refactor-evals/agents/openai.yaml
+  - .agents/skills/refactor-evals/examples.md
+  - .agents/skills/refactor-evals/harness.md
+  - .agents/skills/refactor-tests
+  - .agents/skills/refactor-tests/SKILL.md
+  - .agents/skills/refactor-tests/agents/openai.yaml
+  - .agents/skills/refactor-tests/browser.md
+  - .agents/skills/refactor-tests/pure-functions.md
+  - .agents/skills/refactor-tests/round-trips.md
+  - .agents/skills/refactor-tests/route-handlers.md
+  - .agents/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  - .agents/skills/refactor-tests/scripts/speed-reporter.mjs
+  - .agents/skills/refactor-tests/scripts/speed-table.mjs
+  - .agents/skills/refactor-tests/services.md
+  - .agents/skills/self-documented-code
+  - .agents/skills/self-documented-code/SKILL.md
+  - .agents/skills/self-documented-code/agents/openai.yaml
+  - .claude/skills/baby-sitting
+  - .claude/skills/baby-sitting/SKILL.md
+  - .claude/skills/baby-sitting/agents/openai.yaml
+  - .claude/skills/baby-sitting/scripts/block.sh
+  - .claude/skills/baby-sitting/scripts/board.sh
+  - .claude/skills/baby-sitting/scripts/threads.sh
+  - .claude/skills/baby-sitting/scripts/watch.sh
+  - .claude/skills/dont-repeat-yourself
+  - .claude/skills/dont-repeat-yourself/SKILL.md
+  - .claude/skills/dont-repeat-yourself/agents/openai.yaml
+  - .claude/skills/eval-report
+  - .claude/skills/eval-report-install-ci
+  - .claude/skills/eval-report-install-ci/SKILL.md
+  - .claude/skills/eval-report-install-ci/agents/openai.yaml
+  - .claude/skills/eval-report/SKILL.md
+  - .claude/skills/eval-report/agents/openai.yaml
+  - .claude/skills/eval-report/reference/input-format.md
+  - .claude/skills/eval-report/scripts/assets/report.css
+  - .claude/skills/eval-report/scripts/assets/report.js
+  - .claude/skills/eval-report/scripts/eval-report.mjs
+  - .claude/skills/eval-report/scripts/lib/command.mjs
+  - .claude/skills/eval-report/scripts/lib/content.mjs
+  - .claude/skills/eval-report/scripts/lib/git.mjs
+  - .claude/skills/eval-report/scripts/lib/html.mjs
+  - .claude/skills/eval-report/scripts/lib/publish.mjs
+  - .claude/skills/eval-report/scripts/lib/report.mjs
+  - .claude/skills/eval-report/scripts/lib/results.mjs
+  - .claude/skills/eval-report/scripts/lib/scope.mjs
+  - .claude/skills/eval-report/scripts/lib/summary.mjs
+  - .claude/skills/eval-report/scripts/reporter.mjs
+  - .claude/skills/eval-report/templates/eval-report.yml
+  - .claude/skills/explain-with-slides
+  - .claude/skills/explain-with-slides/SKILL.md
+  - .claude/skills/explain-with-slides/agents/openai.yaml
+  - .claude/skills/explain-with-slides/reference/pr-mode.md
+  - .claude/skills/explain-with-slides/reference/slide-patterns.md
+  - .claude/skills/explain-with-slides/scripts/bundle-html.mjs
+  - .claude/skills/explain-with-slides/scripts/filters.sh
+  - .claude/skills/explain-with-slides/scripts/gen-code.mjs
+  - .claude/skills/explain-with-slides/scripts/loc.sh
+  - .claude/skills/explain-with-slides/scripts/pr-stats.sh
+  - .claude/skills/explain-with-slides/scripts/preview.mjs
+  - .claude/skills/explain-with-slides/scripts/shoot.mjs
+  - .claude/skills/explain-with-video
+  - .claude/skills/explain-with-video/SKILL.md
+  - .claude/skills/explain-with-video/agents/openai.yaml
+  - .claude/skills/explain-with-video/assets/example/scenes/build.html
+  - .claude/skills/explain-with-video/assets/example/scenes/contents.html
+  - .claude/skills/explain-with-video/assets/example/scenes/cover.html
+  - .claude/skills/explain-with-video/assets/example/scenes/pipeline.html
+  - .claude/skills/explain-with-video/assets/example/scenes/scene.html
+  - .claude/skills/explain-with-video/assets/example/scenes/summary.html
+  - .claude/skills/explain-with-video/assets/example/script.json
+  - .claude/skills/explain-with-video/assets/page.html
+  - .claude/skills/explain-with-video/assets/stage.css
+  - .claude/skills/explain-with-video/assets/stage.js
+  - .claude/skills/explain-with-video/reference/scene-format.md
+  - .claude/skills/explain-with-video/scripts/assemble.mjs
+  - .claude/skills/explain-with-video/scripts/lib.mjs
+  - .claude/skills/explain-with-video/scripts/make.mjs
+  - .claude/skills/explain-with-video/scripts/page.mjs
+  - .claude/skills/explain-with-video/scripts/render.mjs
+  - .claude/skills/explain-with-video/scripts/tts.mjs
+  - .claude/skills/finish-pr
+  - .claude/skills/finish-pr/SKILL.md
+  - .claude/skills/finish-pr/agents/openai.yaml
+  - .claude/skills/finish-pr/scripts/open.sh
+  - .claude/skills/finish-pr/scripts/owners.sh
+  - .claude/skills/finish-pr/scripts/status.sh
+  - .claude/skills/finish-pr/scripts/summary.sh
+  - .claude/skills/finish-pr/scripts/timer.sh
+  - .claude/skills/refactor-evals
+  - .claude/skills/refactor-evals/SKILL.md
+  - .claude/skills/refactor-evals/agents/openai.yaml
+  - .claude/skills/refactor-evals/examples.md
+  - .claude/skills/refactor-evals/harness.md
+  - .claude/skills/refactor-tests
+  - .claude/skills/refactor-tests/SKILL.md
+  - .claude/skills/refactor-tests/agents/openai.yaml
+  - .claude/skills/refactor-tests/browser.md
+  - .claude/skills/refactor-tests/pure-functions.md
+  - .claude/skills/refactor-tests/round-trips.md
+  - .claude/skills/refactor-tests/route-handlers.md
+  - .claude/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  - .claude/skills/refactor-tests/scripts/speed-reporter.mjs
+  - .claude/skills/refactor-tests/scripts/speed-table.mjs
+  - .claude/skills/refactor-tests/services.md
+  - .claude/skills/self-documented-code
+  - .claude/skills/self-documented-code/SKILL.md
+  - .claude/skills/self-documented-code/agents/openai.yaml
+  deployed_file_hashes:
+    .agents/skills/baby-sitting/SKILL.md: sha256:1816888d914f9db6ee3ee97d4d09ca049249458482c06b833c667c0a49999de7
+    .agents/skills/baby-sitting/agents/openai.yaml: sha256:11b4ea84ba58b144a4f04aba741c29e3c2eaf5ab8f6c5bb151d1d09c648d6740
+    .agents/skills/baby-sitting/scripts/block.sh: sha256:f54e35e59b2cd740cc698f6b4217c7dd41d15de5b086b9ac3819e4ee50c41d89
+    .agents/skills/baby-sitting/scripts/board.sh: sha256:0b853015b20f01fd3f4a25b8d0c3563dbcfba3bb32ac43c7648cda81a670838e
+    .agents/skills/baby-sitting/scripts/threads.sh: sha256:96e182addafa790b23ec9400ae63b0aae262857a2e245a2f811ab73fa8488073
+    .agents/skills/baby-sitting/scripts/watch.sh: sha256:1d5a90e96f3d588773e1610861aa07538e364bbfea4bb5e9cfe6cbaca5e7c743
+    .agents/skills/dont-repeat-yourself/SKILL.md: sha256:7b0408da064595df8974de4617567ec2d9275a7361ff7231c9159d4a635e3fe5
+    .agents/skills/dont-repeat-yourself/agents/openai.yaml: sha256:bd1b2ade223c139bf3149c3d99cc31a184255e1541c770a8f6f2d36bdee4d3de
+    .agents/skills/eval-report-install-ci/SKILL.md: sha256:e815a98276ca70f7f1816d7b1327ff822a44da3ce99a2e83f9f5d654d6a9f0b2
+    .agents/skills/eval-report-install-ci/agents/openai.yaml: sha256:c839d5789b158ce2fe00ed97c1af83622b2daca4160510a45f55695821503e1c
+    .agents/skills/eval-report/SKILL.md: sha256:e582de71dddb9450cbe387da0bd74a949c5db63ad07c7b0e5078e74b5bed1f02
+    .agents/skills/eval-report/agents/openai.yaml: sha256:52fded5e60b28c72047a504d013b4bb82fe4fa3dee5d173dfb71caf18887eb13
+    .agents/skills/eval-report/reference/input-format.md: sha256:8607be81eff55d95e09cd4509479ebf8872bece4ec0e50c41dcb713713d8f4ae
+    .agents/skills/eval-report/scripts/assets/report.css: sha256:f7ff39c67d07f1a6e37ca1321c9658aa187327e25b965e23ae9ddab4083f7d45
+    .agents/skills/eval-report/scripts/assets/report.js: sha256:4baa1915e34cc6ebf300fc4bc667eb1f50aa1e439f693f94f842660feaf0292e
+    .agents/skills/eval-report/scripts/eval-report.mjs: sha256:954e04c31fb33b353f9e07c767fc9ad116640b75213c8855dda91bc7d4d0617a
+    .agents/skills/eval-report/scripts/lib/command.mjs: sha256:1e70f333fab498039de6284e07dc13f90204d6f4a6f477cdc871544fd1206e90
+    .agents/skills/eval-report/scripts/lib/content.mjs: sha256:f12260f435ec36359718cfef6015f61a8f674c64508cdfac092edc686951a8df
+    .agents/skills/eval-report/scripts/lib/git.mjs: sha256:5361b3b0a7de48f18b27707614e4ef3b81fee152190d1ea154ea272916f2cca8
+    .agents/skills/eval-report/scripts/lib/html.mjs: sha256:a44ce948463d24d616a6e78f7cdd99e6ade4c2216aa19ccb0ccf702fde9e3b93
+    .agents/skills/eval-report/scripts/lib/publish.mjs: sha256:6d3e072aec25b2bca4c2eb5bac923f3af57b94ae12cd5e92981833da1defaf88
+    .agents/skills/eval-report/scripts/lib/report.mjs: sha256:69bff78e79debf4ec07bd71443df070912e585db913130132df11d6cf9e0a291
+    .agents/skills/eval-report/scripts/lib/results.mjs: sha256:4b6293057b15318cadcc47d8c6ed7450b6aa0179a4e2b741f1c0c173fcb9bcbf
+    .agents/skills/eval-report/scripts/lib/scope.mjs: sha256:b61fd390fe7aedc4970181ad832a94e9a69ca10ab81570cb46023a2f8641d4d1
+    .agents/skills/eval-report/scripts/lib/summary.mjs: sha256:ed296fdee0aeaa36f338e4b5c1eaf639f1bde34ae6869381d899044eae378db2
+    .agents/skills/eval-report/scripts/reporter.mjs: sha256:d76a413b121bb24df77cdc87e7c13b932957df118c8a4b56da06f397b2d2537e
+    .agents/skills/eval-report/templates/eval-report.yml: sha256:134a616e786268bca3e82e90867ebb0b9638d6d3c1c635c782d2bb76f79b73f9
+    .agents/skills/explain-with-slides/SKILL.md: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+    .agents/skills/explain-with-slides/agents/openai.yaml: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+    .agents/skills/explain-with-slides/reference/pr-mode.md: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+    .agents/skills/explain-with-slides/reference/slide-patterns.md: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+    .agents/skills/explain-with-slides/scripts/bundle-html.mjs: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+    .agents/skills/explain-with-slides/scripts/filters.sh: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+    .agents/skills/explain-with-slides/scripts/gen-code.mjs: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+    .agents/skills/explain-with-slides/scripts/loc.sh: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+    .agents/skills/explain-with-slides/scripts/pr-stats.sh: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+    .agents/skills/explain-with-slides/scripts/preview.mjs: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+    .agents/skills/explain-with-slides/scripts/shoot.mjs: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
+    .agents/skills/explain-with-video/SKILL.md: sha256:f7b5ed7e20c5970b510fe5dd924ad6e9f11f7c133a3f64b781af3e12b9cffc8b
+    .agents/skills/explain-with-video/agents/openai.yaml: sha256:1f1a74d116d1187807f7cd942b2128224ec6721d9127493437c4f01ab85d8481
+    .agents/skills/explain-with-video/assets/example/scenes/build.html: sha256:334e27895cc8d8f71cb088a68ac509bb1daf4d7943c0870cb2b9c2f71945de60
+    .agents/skills/explain-with-video/assets/example/scenes/contents.html: sha256:4b48e11bae85961a1b9afac2ff5cf5e4d146f9ff2fa879796b0248b5a2bbee04
+    .agents/skills/explain-with-video/assets/example/scenes/cover.html: sha256:27f8a21f5879e239a78048c5f378eaf2f6c969d55209034b88d4b9806e4251cb
+    .agents/skills/explain-with-video/assets/example/scenes/pipeline.html: sha256:7714c088e5e61b986829a68da1d3d6038bd5c3c6f512ca08391171adca87a57e
+    .agents/skills/explain-with-video/assets/example/scenes/scene.html: sha256:0ec609777974a3eb3824d9c579fd2cfdb29c22e609d88f9e8a25b6417c76dc86
+    .agents/skills/explain-with-video/assets/example/scenes/summary.html: sha256:1e84330d3383713b154f18209f7541eb39267c2fa142cf4dc69c9832b74a2493
+    .agents/skills/explain-with-video/assets/example/script.json: sha256:1518a1ab6d3edd22e3f8b4db8c40b3ad8a3e7172d36195c7a248b154312998dc
+    .agents/skills/explain-with-video/assets/page.html: sha256:2f2710beae681cc3c191f121e1b5d94d62eef7e3b092d46952628b14ca822dc2
+    .agents/skills/explain-with-video/assets/stage.css: sha256:309e0e304d9dd3ffa5c92414951c6a190f9894036a6636e30b617daf00dcecc1
+    .agents/skills/explain-with-video/assets/stage.js: sha256:da7063278cd62dfd39227e0d4dc868d264b6439ac6d16a98674be9e850431b25
+    .agents/skills/explain-with-video/reference/scene-format.md: sha256:e5c18b5a6301da066d65cc446d2182f95747038e67ce25970460dca099c6c54b
+    .agents/skills/explain-with-video/scripts/assemble.mjs: sha256:8334f8a9d625df68a873e809a81c05b2bd6e530167d15d8c965740a549db2564
+    .agents/skills/explain-with-video/scripts/lib.mjs: sha256:013997fa10329d294b33c164dd135ec7bf5b16dc9b7a2d87dc512b46bc925802
+    .agents/skills/explain-with-video/scripts/make.mjs: sha256:3946544f70bcfa7582cf8ecb17c434a3d19ab08a2ed339229da8da767fd05b44
+    .agents/skills/explain-with-video/scripts/page.mjs: sha256:aaa9a2140b070a73f25675a7ea7f635f599feac005008233c28b2fbcd788084f
+    .agents/skills/explain-with-video/scripts/render.mjs: sha256:13c128ed684f9e6e4afdc9f896d0f5f5e8defa1b5795836c61b2ac57949ef965
+    .agents/skills/explain-with-video/scripts/tts.mjs: sha256:25b8b37ab5f1a207229ce77c36ba32a7b1783dfa6216683aea6ef2b95f85158f
+    .agents/skills/finish-pr/SKILL.md: sha256:6d7dba967b5ab261223ef735d2f5f4756e1d7210897cb859b595b1d0e08c239f
+    .agents/skills/finish-pr/agents/openai.yaml: sha256:1b3dbe8bb32a7b38ed04593cfedad487068a24ca7754726aadb70ba39bc6e9da
+    .agents/skills/finish-pr/scripts/open.sh: sha256:a3a47c9b2ee6c2aa40016d0c690348f68b3f2869f22c3752eb3f0bf54c94329f
+    .agents/skills/finish-pr/scripts/owners.sh: sha256:028aafd285d47304155831d9521eca9a9637201c33a86597a771f138a5a30566
+    .agents/skills/finish-pr/scripts/status.sh: sha256:3e456b66d83c8918cc0dc0f6096be50c75ec27471b133ab35dcd2a9ace291cdd
+    .agents/skills/finish-pr/scripts/summary.sh: sha256:eb188deba608a29339f83c25e1f7cd7be7d773a9ba853d89e28ab452fc78b048
+    .agents/skills/finish-pr/scripts/timer.sh: sha256:64efe0bc72fe3f417e42567f661753b7e134b84ed1968858829200c990fa33b1
+    .agents/skills/refactor-evals/SKILL.md: sha256:8337f4f5e1d24846eb05b8aab780041fbb114e2e285239718daa57947cb0c310
+    .agents/skills/refactor-evals/agents/openai.yaml: sha256:094f3ef4fc8eef145235ffa2e534823fbb9a0cade101fa4573edfba3b18237c2
+    .agents/skills/refactor-evals/examples.md: sha256:c36af086b06cfca2d7574b31b7b93406b36c1cbb5ca49c9bc64777fe65b814dc
+    .agents/skills/refactor-evals/harness.md: sha256:fd771d2eb80580d82ca68644b24e95b72afe576522799eb46c6e2b94202cbd8d
+    .agents/skills/refactor-tests/SKILL.md: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+    .agents/skills/refactor-tests/agents/openai.yaml: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+    .agents/skills/refactor-tests/browser.md: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+    .agents/skills/refactor-tests/pure-functions.md: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+    .agents/skills/refactor-tests/round-trips.md: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+    .agents/skills/refactor-tests/route-handlers.md: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+    .agents/skills/refactor-tests/scripts/playwright-speed-reporter.mjs: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+    .agents/skills/refactor-tests/scripts/speed-reporter.mjs: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+    .agents/skills/refactor-tests/scripts/speed-table.mjs: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+    .agents/skills/refactor-tests/services.md: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
+    .agents/skills/self-documented-code/SKILL.md: sha256:03ecbc90210ddc90ffa657210e18f1b0dbc56a55604b6a2eb9af5ff81547006e
+    .agents/skills/self-documented-code/agents/openai.yaml: sha256:8665e9c93c17789efbbb28e0a331e6e4c044c883fe3c88cda9e35df6a4a0b3f5
+    .claude/skills/baby-sitting/SKILL.md: sha256:1816888d914f9db6ee3ee97d4d09ca049249458482c06b833c667c0a49999de7
+    .claude/skills/baby-sitting/agents/openai.yaml: sha256:11b4ea84ba58b144a4f04aba741c29e3c2eaf5ab8f6c5bb151d1d09c648d6740
+    .claude/skills/baby-sitting/scripts/block.sh: sha256:f54e35e59b2cd740cc698f6b4217c7dd41d15de5b086b9ac3819e4ee50c41d89
+    .claude/skills/baby-sitting/scripts/board.sh: sha256:0b853015b20f01fd3f4a25b8d0c3563dbcfba3bb32ac43c7648cda81a670838e
+    .claude/skills/baby-sitting/scripts/threads.sh: sha256:96e182addafa790b23ec9400ae63b0aae262857a2e245a2f811ab73fa8488073
+    .claude/skills/baby-sitting/scripts/watch.sh: sha256:1d5a90e96f3d588773e1610861aa07538e364bbfea4bb5e9cfe6cbaca5e7c743
+    .claude/skills/dont-repeat-yourself/SKILL.md: sha256:7b0408da064595df8974de4617567ec2d9275a7361ff7231c9159d4a635e3fe5
+    .claude/skills/dont-repeat-yourself/agents/openai.yaml: sha256:bd1b2ade223c139bf3149c3d99cc31a184255e1541c770a8f6f2d36bdee4d3de
+    .claude/skills/eval-report-install-ci/SKILL.md: sha256:e815a98276ca70f7f1816d7b1327ff822a44da3ce99a2e83f9f5d654d6a9f0b2
+    .claude/skills/eval-report-install-ci/agents/openai.yaml: sha256:c839d5789b158ce2fe00ed97c1af83622b2daca4160510a45f55695821503e1c
+    .claude/skills/eval-report/SKILL.md: sha256:e582de71dddb9450cbe387da0bd74a949c5db63ad07c7b0e5078e74b5bed1f02
+    .claude/skills/eval-report/agents/openai.yaml: sha256:52fded5e60b28c72047a504d013b4bb82fe4fa3dee5d173dfb71caf18887eb13
+    .claude/skills/eval-report/reference/input-format.md: sha256:8607be81eff55d95e09cd4509479ebf8872bece4ec0e50c41dcb713713d8f4ae
+    .claude/skills/eval-report/scripts/assets/report.css: sha256:f7ff39c67d07f1a6e37ca1321c9658aa187327e25b965e23ae9ddab4083f7d45
+    .claude/skills/eval-report/scripts/assets/report.js: sha256:4baa1915e34cc6ebf300fc4bc667eb1f50aa1e439f693f94f842660feaf0292e
+    .claude/skills/eval-report/scripts/eval-report.mjs: sha256:954e04c31fb33b353f9e07c767fc9ad116640b75213c8855dda91bc7d4d0617a
+    .claude/skills/eval-report/scripts/lib/command.mjs: sha256:1e70f333fab498039de6284e07dc13f90204d6f4a6f477cdc871544fd1206e90
+    .claude/skills/eval-report/scripts/lib/content.mjs: sha256:f12260f435ec36359718cfef6015f61a8f674c64508cdfac092edc686951a8df
+    .claude/skills/eval-report/scripts/lib/git.mjs: sha256:5361b3b0a7de48f18b27707614e4ef3b81fee152190d1ea154ea272916f2cca8
+    .claude/skills/eval-report/scripts/lib/html.mjs: sha256:a44ce948463d24d616a6e78f7cdd99e6ade4c2216aa19ccb0ccf702fde9e3b93
+    .claude/skills/eval-report/scripts/lib/publish.mjs: sha256:6d3e072aec25b2bca4c2eb5bac923f3af57b94ae12cd5e92981833da1defaf88
+    .claude/skills/eval-report/scripts/lib/report.mjs: sha256:69bff78e79debf4ec07bd71443df070912e585db913130132df11d6cf9e0a291
+    .claude/skills/eval-report/scripts/lib/results.mjs: sha256:4b6293057b15318cadcc47d8c6ed7450b6aa0179a4e2b741f1c0c173fcb9bcbf
+    .claude/skills/eval-report/scripts/lib/scope.mjs: sha256:b61fd390fe7aedc4970181ad832a94e9a69ca10ab81570cb46023a2f8641d4d1
+    .claude/skills/eval-report/scripts/lib/summary.mjs: sha256:ed296fdee0aeaa36f338e4b5c1eaf639f1bde34ae6869381d899044eae378db2
+    .claude/skills/eval-report/scripts/reporter.mjs: sha256:d76a413b121bb24df77cdc87e7c13b932957df118c8a4b56da06f397b2d2537e
+    .claude/skills/eval-report/templates/eval-report.yml: sha256:134a616e786268bca3e82e90867ebb0b9638d6d3c1c635c782d2bb76f79b73f9
+    .claude/skills/explain-with-slides/SKILL.md: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+    .claude/skills/explain-with-slides/agents/openai.yaml: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+    .claude/skills/explain-with-slides/reference/pr-mode.md: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+    .claude/skills/explain-with-slides/reference/slide-patterns.md: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+    .claude/skills/explain-with-slides/scripts/bundle-html.mjs: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+    .claude/skills/explain-with-slides/scripts/filters.sh: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+    .claude/skills/explain-with-slides/scripts/gen-code.mjs: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+    .claude/skills/explain-with-slides/scripts/loc.sh: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+    .claude/skills/explain-with-slides/scripts/pr-stats.sh: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+    .claude/skills/explain-with-slides/scripts/preview.mjs: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+    .claude/skills/explain-with-slides/scripts/shoot.mjs: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
+    .claude/skills/explain-with-video/SKILL.md: sha256:f7b5ed7e20c5970b510fe5dd924ad6e9f11f7c133a3f64b781af3e12b9cffc8b
+    .claude/skills/explain-with-video/agents/openai.yaml: sha256:1f1a74d116d1187807f7cd942b2128224ec6721d9127493437c4f01ab85d8481
+    .claude/skills/explain-with-video/assets/example/scenes/build.html: sha256:334e27895cc8d8f71cb088a68ac509bb1daf4d7943c0870cb2b9c2f71945de60
+    .claude/skills/explain-with-video/assets/example/scenes/contents.html: sha256:4b48e11bae85961a1b9afac2ff5cf5e4d146f9ff2fa879796b0248b5a2bbee04
+    .claude/skills/explain-with-video/assets/example/scenes/cover.html: sha256:27f8a21f5879e239a78048c5f378eaf2f6c969d55209034b88d4b9806e4251cb
+    .claude/skills/explain-with-video/assets/example/scenes/pipeline.html: sha256:7714c088e5e61b986829a68da1d3d6038bd5c3c6f512ca08391171adca87a57e
+    .claude/skills/explain-with-video/assets/example/scenes/scene.html: sha256:0ec609777974a3eb3824d9c579fd2cfdb29c22e609d88f9e8a25b6417c76dc86
+    .claude/skills/explain-with-video/assets/example/scenes/summary.html: sha256:1e84330d3383713b154f18209f7541eb39267c2fa142cf4dc69c9832b74a2493
+    .claude/skills/explain-with-video/assets/example/script.json: sha256:1518a1ab6d3edd22e3f8b4db8c40b3ad8a3e7172d36195c7a248b154312998dc
+    .claude/skills/explain-with-video/assets/page.html: sha256:2f2710beae681cc3c191f121e1b5d94d62eef7e3b092d46952628b14ca822dc2
+    .claude/skills/explain-with-video/assets/stage.css: sha256:309e0e304d9dd3ffa5c92414951c6a190f9894036a6636e30b617daf00dcecc1
+    .claude/skills/explain-with-video/assets/stage.js: sha256:da7063278cd62dfd39227e0d4dc868d264b6439ac6d16a98674be9e850431b25
+    .claude/skills/explain-with-video/reference/scene-format.md: sha256:e5c18b5a6301da066d65cc446d2182f95747038e67ce25970460dca099c6c54b
+    .claude/skills/explain-with-video/scripts/assemble.mjs: sha256:8334f8a9d625df68a873e809a81c05b2bd6e530167d15d8c965740a549db2564
+    .claude/skills/explain-with-video/scripts/lib.mjs: sha256:013997fa10329d294b33c164dd135ec7bf5b16dc9b7a2d87dc512b46bc925802
+    .claude/skills/explain-with-video/scripts/make.mjs: sha256:3946544f70bcfa7582cf8ecb17c434a3d19ab08a2ed339229da8da767fd05b44
+    .claude/skills/explain-with-video/scripts/page.mjs: sha256:aaa9a2140b070a73f25675a7ea7f635f599feac005008233c28b2fbcd788084f
+    .claude/skills/explain-with-video/scripts/render.mjs: sha256:13c128ed684f9e6e4afdc9f896d0f5f5e8defa1b5795836c61b2ac57949ef965
+    .claude/skills/explain-with-video/scripts/tts.mjs: sha256:25b8b37ab5f1a207229ce77c36ba32a7b1783dfa6216683aea6ef2b95f85158f
+    .claude/skills/finish-pr/SKILL.md: sha256:6d7dba967b5ab261223ef735d2f5f4756e1d7210897cb859b595b1d0e08c239f
+    .claude/skills/finish-pr/agents/openai.yaml: sha256:1b3dbe8bb32a7b38ed04593cfedad487068a24ca7754726aadb70ba39bc6e9da
+    .claude/skills/finish-pr/scripts/open.sh: sha256:a3a47c9b2ee6c2aa40016d0c690348f68b3f2869f22c3752eb3f0bf54c94329f
+    .claude/skills/finish-pr/scripts/owners.sh: sha256:028aafd285d47304155831d9521eca9a9637201c33a86597a771f138a5a30566
+    .claude/skills/finish-pr/scripts/status.sh: sha256:3e456b66d83c8918cc0dc0f6096be50c75ec27471b133ab35dcd2a9ace291cdd
+    .claude/skills/finish-pr/scripts/summary.sh: sha256:eb188deba608a29339f83c25e1f7cd7be7d773a9ba853d89e28ab452fc78b048
+    .claude/skills/finish-pr/scripts/timer.sh: sha256:64efe0bc72fe3f417e42567f661753b7e134b84ed1968858829200c990fa33b1
+    .claude/skills/refactor-evals/SKILL.md: sha256:8337f4f5e1d24846eb05b8aab780041fbb114e2e285239718daa57947cb0c310
+    .claude/skills/refactor-evals/agents/openai.yaml: sha256:094f3ef4fc8eef145235ffa2e534823fbb9a0cade101fa4573edfba3b18237c2
+    .claude/skills/refactor-evals/examples.md: sha256:c36af086b06cfca2d7574b31b7b93406b36c1cbb5ca49c9bc64777fe65b814dc
+    .claude/skills/refactor-evals/harness.md: sha256:fd771d2eb80580d82ca68644b24e95b72afe576522799eb46c6e2b94202cbd8d
+    .claude/skills/refactor-tests/SKILL.md: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+    .claude/skills/refactor-tests/agents/openai.yaml: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+    .claude/skills/refactor-tests/browser.md: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+    .claude/skills/refactor-tests/pure-functions.md: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+    .claude/skills/refactor-tests/round-trips.md: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+    .claude/skills/refactor-tests/route-handlers.md: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+    .claude/skills/refactor-tests/scripts/playwright-speed-reporter.mjs: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+    .claude/skills/refactor-tests/scripts/speed-reporter.mjs: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+    .claude/skills/refactor-tests/scripts/speed-table.mjs: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+    .claude/skills/refactor-tests/services.md: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
+    .claude/skills/self-documented-code/SKILL.md: sha256:03ecbc90210ddc90ffa657210e18f1b0dbc56a55604b6a2eb9af5ff81547006e
+    .claude/skills/self-documented-code/agents/openai.yaml: sha256:8665e9c93c17789efbbb28e0a331e6e4c044c883fe3c88cda9e35df6a4a0b3f5
+  content_hash: sha256:b3ada7dcb745353d05117b606feac7746cfb5b8d8156045007e936fc78dc07a6
+  declared_license: MIT
 - repo_url: mattpocock/skills
   name: grill-me
   host: github.com
@@ -8394,3 +8744,1623 @@ deployments:
   - classmethod/tsumiki
   active_owner: classmethod/tsumiki
   content_hash: sha256:cb40a98d985fdc02524ba40935f0de2cfdd2b1b6b1872921c7fba15cf0a715c2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/baby-sitting
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/baby-sitting/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1816888d914f9db6ee3ee97d4d09ca049249458482c06b833c667c0a49999de7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/baby-sitting/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:11b4ea84ba58b144a4f04aba741c29e3c2eaf5ab8f6c5bb151d1d09c648d6740
+- kind: project-relative
+  target: claude
+  value: .claude/skills/baby-sitting/scripts/block.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f54e35e59b2cd740cc698f6b4217c7dd41d15de5b086b9ac3819e4ee50c41d89
+- kind: project-relative
+  target: claude
+  value: .claude/skills/baby-sitting/scripts/board.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:0b853015b20f01fd3f4a25b8d0c3563dbcfba3bb32ac43c7648cda81a670838e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/baby-sitting/scripts/threads.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:96e182addafa790b23ec9400ae63b0aae262857a2e245a2f811ab73fa8488073
+- kind: project-relative
+  target: claude
+  value: .claude/skills/baby-sitting/scripts/watch.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1d5a90e96f3d588773e1610861aa07538e364bbfea4bb5e9cfe6cbaca5e7c743
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dont-repeat-yourself
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dont-repeat-yourself/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:7b0408da064595df8974de4617567ec2d9275a7361ff7231c9159d4a635e3fe5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/dont-repeat-yourself/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:bd1b2ade223c139bf3149c3d99cc31a184255e1541c770a8f6f2d36bdee4d3de
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report-install-ci
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report-install-ci/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e815a98276ca70f7f1816d7b1327ff822a44da3ce99a2e83f9f5d654d6a9f0b2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report-install-ci/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:c839d5789b158ce2fe00ed97c1af83622b2daca4160510a45f55695821503e1c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e582de71dddb9450cbe387da0bd74a949c5db63ad07c7b0e5078e74b5bed1f02
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:52fded5e60b28c72047a504d013b4bb82fe4fa3dee5d173dfb71caf18887eb13
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/reference/input-format.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8607be81eff55d95e09cd4509479ebf8872bece4ec0e50c41dcb713713d8f4ae
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/assets/report.css
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f7ff39c67d07f1a6e37ca1321c9658aa187327e25b965e23ae9ddab4083f7d45
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/assets/report.js
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4baa1915e34cc6ebf300fc4bc667eb1f50aa1e439f693f94f842660feaf0292e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/eval-report.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:954e04c31fb33b353f9e07c767fc9ad116640b75213c8855dda91bc7d4d0617a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/command.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1e70f333fab498039de6284e07dc13f90204d6f4a6f477cdc871544fd1206e90
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/content.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f12260f435ec36359718cfef6015f61a8f674c64508cdfac092edc686951a8df
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/git.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:5361b3b0a7de48f18b27707614e4ef3b81fee152190d1ea154ea272916f2cca8
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/html.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:a44ce948463d24d616a6e78f7cdd99e6ade4c2216aa19ccb0ccf702fde9e3b93
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/publish.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:6d3e072aec25b2bca4c2eb5bac923f3af57b94ae12cd5e92981833da1defaf88
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/report.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:69bff78e79debf4ec07bd71443df070912e585db913130132df11d6cf9e0a291
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/results.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4b6293057b15318cadcc47d8c6ed7450b6aa0179a4e2b741f1c0c173fcb9bcbf
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/scope.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:b61fd390fe7aedc4970181ad832a94e9a69ca10ab81570cb46023a2f8641d4d1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/lib/summary.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:ed296fdee0aeaa36f338e4b5c1eaf639f1bde34ae6869381d899044eae378db2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/scripts/reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:d76a413b121bb24df77cdc87e7c13b932957df118c8a4b56da06f397b2d2537e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/eval-report/templates/eval-report.yml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:134a616e786268bca3e82e90867ebb0b9638d6d3c1c635c782d2bb76f79b73f9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/reference/pr-mode.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/reference/slide-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/bundle-html.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/filters.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/gen-code.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/loc.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/pr-stats.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/preview.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/shoot.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f7b5ed7e20c5970b510fe5dd924ad6e9f11f7c133a3f64b781af3e12b9cffc8b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1f1a74d116d1187807f7cd942b2128224ec6721d9127493437c4f01ab85d8481
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/example/scenes/build.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:334e27895cc8d8f71cb088a68ac509bb1daf4d7943c0870cb2b9c2f71945de60
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/example/scenes/contents.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4b48e11bae85961a1b9afac2ff5cf5e4d146f9ff2fa879796b0248b5a2bbee04
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/example/scenes/cover.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:27f8a21f5879e239a78048c5f378eaf2f6c969d55209034b88d4b9806e4251cb
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/example/scenes/pipeline.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:7714c088e5e61b986829a68da1d3d6038bd5c3c6f512ca08391171adca87a57e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/example/scenes/scene.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:0ec609777974a3eb3824d9c579fd2cfdb29c22e609d88f9e8a25b6417c76dc86
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/example/scenes/summary.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1e84330d3383713b154f18209f7541eb39267c2fa142cf4dc69c9832b74a2493
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/example/script.json
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1518a1ab6d3edd22e3f8b4db8c40b3ad8a3e7172d36195c7a248b154312998dc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/page.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:2f2710beae681cc3c191f121e1b5d94d62eef7e3b092d46952628b14ca822dc2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/stage.css
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:309e0e304d9dd3ffa5c92414951c6a190f9894036a6636e30b617daf00dcecc1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/assets/stage.js
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:da7063278cd62dfd39227e0d4dc868d264b6439ac6d16a98674be9e850431b25
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/reference/scene-format.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e5c18b5a6301da066d65cc446d2182f95747038e67ce25970460dca099c6c54b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/scripts/assemble.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8334f8a9d625df68a873e809a81c05b2bd6e530167d15d8c965740a549db2564
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/scripts/lib.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:013997fa10329d294b33c164dd135ec7bf5b16dc9b7a2d87dc512b46bc925802
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/scripts/make.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:3946544f70bcfa7582cf8ecb17c434a3d19ab08a2ed339229da8da767fd05b44
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/scripts/page.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:aaa9a2140b070a73f25675a7ea7f635f599feac005008233c28b2fbcd788084f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/scripts/render.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:13c128ed684f9e6e4afdc9f896d0f5f5e8defa1b5795836c61b2ac57949ef965
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-video/scripts/tts.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:25b8b37ab5f1a207229ce77c36ba32a7b1783dfa6216683aea6ef2b95f85158f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:6d7dba967b5ab261223ef735d2f5f4756e1d7210897cb859b595b1d0e08c239f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1b3dbe8bb32a7b38ed04593cfedad487068a24ca7754726aadb70ba39bc6e9da
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr/scripts/open.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:a3a47c9b2ee6c2aa40016d0c690348f68b3f2869f22c3752eb3f0bf54c94329f
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr/scripts/owners.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:028aafd285d47304155831d9521eca9a9637201c33a86597a771f138a5a30566
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr/scripts/status.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:3e456b66d83c8918cc0dc0f6096be50c75ec27471b133ab35dcd2a9ace291cdd
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr/scripts/summary.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:eb188deba608a29339f83c25e1f7cd7be7d773a9ba853d89e28ab452fc78b048
+- kind: project-relative
+  target: claude
+  value: .claude/skills/finish-pr/scripts/timer.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:64efe0bc72fe3f417e42567f661753b7e134b84ed1968858829200c990fa33b1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-evals
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-evals/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8337f4f5e1d24846eb05b8aab780041fbb114e2e285239718daa57947cb0c310
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-evals/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:094f3ef4fc8eef145235ffa2e534823fbb9a0cade101fa4573edfba3b18237c2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-evals/examples.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:c36af086b06cfca2d7574b31b7b93406b36c1cbb5ca49c9bc64777fe65b814dc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-evals/harness.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:fd771d2eb80580d82ca68644b24e95b72afe576522799eb46c6e2b94202cbd8d
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/browser.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/pure-functions.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/round-trips.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/route-handlers.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/scripts/speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/scripts/speed-table.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/services.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/self-documented-code
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/self-documented-code/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:03ecbc90210ddc90ffa657210e18f1b0dbc56a55604b6a2eb9af5ff81547006e
+- kind: project-relative
+  target: claude
+  value: .claude/skills/self-documented-code/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8665e9c93c17789efbbb28e0a331e6e4c044c883fe3c88cda9e35df6a4a0b3f5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/baby-sitting
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/baby-sitting/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1816888d914f9db6ee3ee97d4d09ca049249458482c06b833c667c0a49999de7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/baby-sitting/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:11b4ea84ba58b144a4f04aba741c29e3c2eaf5ab8f6c5bb151d1d09c648d6740
+- kind: project-relative
+  target: codex
+  value: .agents/skills/baby-sitting/scripts/block.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f54e35e59b2cd740cc698f6b4217c7dd41d15de5b086b9ac3819e4ee50c41d89
+- kind: project-relative
+  target: codex
+  value: .agents/skills/baby-sitting/scripts/board.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:0b853015b20f01fd3f4a25b8d0c3563dbcfba3bb32ac43c7648cda81a670838e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/baby-sitting/scripts/threads.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:96e182addafa790b23ec9400ae63b0aae262857a2e245a2f811ab73fa8488073
+- kind: project-relative
+  target: codex
+  value: .agents/skills/baby-sitting/scripts/watch.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1d5a90e96f3d588773e1610861aa07538e364bbfea4bb5e9cfe6cbaca5e7c743
+- kind: project-relative
+  target: codex
+  value: .agents/skills/dont-repeat-yourself
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/dont-repeat-yourself/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:7b0408da064595df8974de4617567ec2d9275a7361ff7231c9159d4a635e3fe5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/dont-repeat-yourself/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:bd1b2ade223c139bf3149c3d99cc31a184255e1541c770a8f6f2d36bdee4d3de
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report-install-ci
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report-install-ci/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e815a98276ca70f7f1816d7b1327ff822a44da3ce99a2e83f9f5d654d6a9f0b2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report-install-ci/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:c839d5789b158ce2fe00ed97c1af83622b2daca4160510a45f55695821503e1c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e582de71dddb9450cbe387da0bd74a949c5db63ad07c7b0e5078e74b5bed1f02
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:52fded5e60b28c72047a504d013b4bb82fe4fa3dee5d173dfb71caf18887eb13
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/reference/input-format.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8607be81eff55d95e09cd4509479ebf8872bece4ec0e50c41dcb713713d8f4ae
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/assets/report.css
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f7ff39c67d07f1a6e37ca1321c9658aa187327e25b965e23ae9ddab4083f7d45
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/assets/report.js
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4baa1915e34cc6ebf300fc4bc667eb1f50aa1e439f693f94f842660feaf0292e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/eval-report.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:954e04c31fb33b353f9e07c767fc9ad116640b75213c8855dda91bc7d4d0617a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/command.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1e70f333fab498039de6284e07dc13f90204d6f4a6f477cdc871544fd1206e90
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/content.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f12260f435ec36359718cfef6015f61a8f674c64508cdfac092edc686951a8df
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/git.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:5361b3b0a7de48f18b27707614e4ef3b81fee152190d1ea154ea272916f2cca8
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/html.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:a44ce948463d24d616a6e78f7cdd99e6ade4c2216aa19ccb0ccf702fde9e3b93
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/publish.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:6d3e072aec25b2bca4c2eb5bac923f3af57b94ae12cd5e92981833da1defaf88
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/report.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:69bff78e79debf4ec07bd71443df070912e585db913130132df11d6cf9e0a291
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/results.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4b6293057b15318cadcc47d8c6ed7450b6aa0179a4e2b741f1c0c173fcb9bcbf
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/scope.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:b61fd390fe7aedc4970181ad832a94e9a69ca10ab81570cb46023a2f8641d4d1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/lib/summary.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:ed296fdee0aeaa36f338e4b5c1eaf639f1bde34ae6869381d899044eae378db2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/scripts/reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:d76a413b121bb24df77cdc87e7c13b932957df118c8a4b56da06f397b2d2537e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/eval-report/templates/eval-report.yml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:134a616e786268bca3e82e90867ebb0b9638d6d3c1c635c782d2bb76f79b73f9
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/reference/pr-mode.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/reference/slide-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/bundle-html.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/filters.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/gen-code.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/loc.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/pr-stats.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/preview.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/shoot.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f7b5ed7e20c5970b510fe5dd924ad6e9f11f7c133a3f64b781af3e12b9cffc8b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1f1a74d116d1187807f7cd942b2128224ec6721d9127493437c4f01ab85d8481
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/example/scenes/build.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:334e27895cc8d8f71cb088a68ac509bb1daf4d7943c0870cb2b9c2f71945de60
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/example/scenes/contents.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4b48e11bae85961a1b9afac2ff5cf5e4d146f9ff2fa879796b0248b5a2bbee04
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/example/scenes/cover.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:27f8a21f5879e239a78048c5f378eaf2f6c969d55209034b88d4b9806e4251cb
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/example/scenes/pipeline.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:7714c088e5e61b986829a68da1d3d6038bd5c3c6f512ca08391171adca87a57e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/example/scenes/scene.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:0ec609777974a3eb3824d9c579fd2cfdb29c22e609d88f9e8a25b6417c76dc86
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/example/scenes/summary.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1e84330d3383713b154f18209f7541eb39267c2fa142cf4dc69c9832b74a2493
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/example/script.json
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1518a1ab6d3edd22e3f8b4db8c40b3ad8a3e7172d36195c7a248b154312998dc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/page.html
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:2f2710beae681cc3c191f121e1b5d94d62eef7e3b092d46952628b14ca822dc2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/stage.css
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:309e0e304d9dd3ffa5c92414951c6a190f9894036a6636e30b617daf00dcecc1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/assets/stage.js
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:da7063278cd62dfd39227e0d4dc868d264b6439ac6d16a98674be9e850431b25
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/reference/scene-format.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:e5c18b5a6301da066d65cc446d2182f95747038e67ce25970460dca099c6c54b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/scripts/assemble.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8334f8a9d625df68a873e809a81c05b2bd6e530167d15d8c965740a549db2564
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/scripts/lib.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:013997fa10329d294b33c164dd135ec7bf5b16dc9b7a2d87dc512b46bc925802
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/scripts/make.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:3946544f70bcfa7582cf8ecb17c434a3d19ab08a2ed339229da8da767fd05b44
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/scripts/page.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:aaa9a2140b070a73f25675a7ea7f635f599feac005008233c28b2fbcd788084f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/scripts/render.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:13c128ed684f9e6e4afdc9f896d0f5f5e8defa1b5795836c61b2ac57949ef965
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-video/scripts/tts.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:25b8b37ab5f1a207229ce77c36ba32a7b1783dfa6216683aea6ef2b95f85158f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:6d7dba967b5ab261223ef735d2f5f4756e1d7210897cb859b595b1d0e08c239f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:1b3dbe8bb32a7b38ed04593cfedad487068a24ca7754726aadb70ba39bc6e9da
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr/scripts/open.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:a3a47c9b2ee6c2aa40016d0c690348f68b3f2869f22c3752eb3f0bf54c94329f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr/scripts/owners.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:028aafd285d47304155831d9521eca9a9637201c33a86597a771f138a5a30566
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr/scripts/status.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:3e456b66d83c8918cc0dc0f6096be50c75ec27471b133ab35dcd2a9ace291cdd
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr/scripts/summary.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:eb188deba608a29339f83c25e1f7cd7be7d773a9ba853d89e28ab452fc78b048
+- kind: project-relative
+  target: codex
+  value: .agents/skills/finish-pr/scripts/timer.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:64efe0bc72fe3f417e42567f661753b7e134b84ed1968858829200c990fa33b1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-evals
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-evals/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8337f4f5e1d24846eb05b8aab780041fbb114e2e285239718daa57947cb0c310
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-evals/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:094f3ef4fc8eef145235ffa2e534823fbb9a0cade101fa4573edfba3b18237c2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-evals/examples.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:c36af086b06cfca2d7574b31b7b93406b36c1cbb5ca49c9bc64777fe65b814dc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-evals/harness.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:fd771d2eb80580d82ca68644b24e95b72afe576522799eb46c6e2b94202cbd8d
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/browser.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/pure-functions.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/round-trips.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/route-handlers.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/scripts/speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/scripts/speed-table.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/services.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/self-documented-code
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/self-documented-code/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:03ecbc90210ddc90ffa657210e18f1b0dbc56a55604b6a2eb9af5ff81547006e
+- kind: project-relative
+  target: codex
+  value: .agents/skills/self-documented-code/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills
+  active_owner: marekkirejczyk/skills
+  content_hash: sha256:8665e9c93c17789efbbb28e0a331e6e4c044c883fe3c88cda9e35df6a4a0b3f5
