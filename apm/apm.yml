@@ -21,6 +21,11 @@ dependencies:
   # - tag が無い依存は ref を書かず、apm.lock.yaml の resolved_commit で pin する。
   #   Renovate の lockFileMaintenance が定期的に最新 commit へ更新する。
   apm:
+    - git: getsentry/skills
+      path: skills/security-review
+      ref: a582c51ee29d0f35e6ac321340796f77d43da733
+      alias: sentry-security-review
+    - davila7/claude-code-templates/cli-tool/components/skills/security/vulnerability-scanner
     # pr-author-all-review から対象差分に応じて使う専門レビュー。
     - petrkindlmann/qa-skills/skills/ai-qa-review#v3.6.0
     - supabase/agent-skills/skills/supabase-postgres-best-practices#v0.1.9
