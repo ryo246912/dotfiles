@@ -11,7 +11,7 @@
 #   mise run sandbox:build-template
 #
 # devcontainer との対応:
-#   - mise.toml / tasks/ / lint/ / scripts/ / lefthook.local.yml は devcontainer と共有する。
+#   - mise.toml / tasks/ / lint/ / scripts/ / lefthook-local.yml は devcontainer と共有する。
 #     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
 #     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
 #   - base image は v3 の公開 workload (docker.io/sbx/<agent>:latest)。
@@ -91,6 +91,7 @@ ARG DISABLE_TOOLS=""
 # インストール済みツール(/mise/data)を cache mount(/mise/data-cache)へ保存し、次回ビルド時に
 # 復元してから `mise install` する。差分（バージョンが変わったツール）だけが取得される。
 # cache mount は `docker builder prune` で消える（消えても初回と同じフルインストールになるだけ）。
+# root で動くツールの XDG キャッシュも cache mount に置き、agent のホームに残さない。
 #
 # /run/secrets/github_token は build 時に --secret で渡されるホストの GH_TOKEN。
 # aqua:/github: backend の API レート制限回避に使う。無くてもビルドは続行する。
@@ -107,6 +108,7 @@ RUN --mount=type=secret,id=github_token \
       GOMODCACHE=/mise/cache/go-mod \
       GOCACHE=/mise/cache/go-build \
       GOFLAGS=-modcacherw \
+      XDG_CACHE_HOME=/mise/cache/xdg \
       BUN_INSTALL_CACHE_DIR=/mise/cache/bun; \
     if [ -s /run/secrets/github_token ]; then \
       export GITHUB_TOKEN="$(cat /run/secrets/github_token)"; \
@@ -119,7 +121,15 @@ RUN --mount=type=secret,id=github_token \
     rm -rf /mise/data/downloads; \
     mise reshim -C /mise; \
     rsync -a --delete /mise/data/ /mise/data-cache/; \
-    chown -R agent:agent /mise/data /mise/state
+    mkdir -p /mise/aqua-registry; \
+    if [ -d /mise/cache/aqua-registry ]; then \
+      cp -a /mise/cache/aqua-registry/. /mise/aqua-registry/; \
+    fi; \
+    chown -R agent:agent /mise/data /mise/state /mise/aqua-registry
+
+# BuildKit cache mounts are not included in the image. Keep public registry metadata
+# available at runtime, including mise's prefer-offline shell/shim resolution.
+RUN ln -s /mise/aqua-registry /mise/cache/aqua-registry
 
 # gh stack（github/gh-stack）は gh の公式 extension として入れる。gh 2.102 以降の `stack` は
 # 「extension を入れてください」と出すだけの組み込みコマンドで、extension があればそちらが
@@ -129,7 +139,9 @@ RUN --mount=type=secret,id=github_token \
 # renovate: datasource=github-releases depName=github/gh-stack
 ARG GH_STACK_VERSION=v0.2.0
 RUN --mount=type=secret,id=github_token \
+    --mount=type=cache,id=sandbox-mise-cache,target=/mise/cache \
     set -eu; \
+    export XDG_CACHE_HOME=/mise/cache/xdg; \
     if [ -s /run/secrets/github_token ]; then \
       export GH_TOKEN="$(cat /run/secrets/github_token)"; \
     fi; \

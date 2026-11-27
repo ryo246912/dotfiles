@@ -50,12 +50,19 @@ CLAUDE.local.md
 
 ## crit
 .crit/
+
+## Lefthook
+lefthook-local.yml
+lefthook-local.yaml
+# 旧ファイルが残っている環境向け
 lefthook.local.yml
 
 ## desloppify
 .desloppify/
 
 ## PRの動作確認
+**/pr-behavior-review/config.md
+**/pr-behavior-review/lessons/
 **/pr-reviewer-behavior/config.md
 **/pr-reviewer-behavior/lessons/
 /.pr-reviewer-artifacts/

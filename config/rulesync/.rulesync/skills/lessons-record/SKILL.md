@@ -1,6 +1,6 @@
 ---
 name: lessons-record
-description: 採用したレビュー指摘やユーザーの訂正を、次の実装で同じ指摘を受けないための教訓として agent-lessons（Basic Memory）の inbox に 1 件記録する skill。pr-author-fix などで指摘を直した直後や、ユーザーに実装を訂正されたときに使う。
+description: 採用したレビュー指摘やユーザーの訂正を、次の実装で同じ指摘を受けないための教訓として agent-lessons（Basic Memory）の inbox に 1 件記録する skill。pr-fix などで指摘を直した直後や、ユーザーに実装を訂正されたときに使う。
 targets:
   - claudecode
   - codexcli

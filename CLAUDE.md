@@ -11,6 +11,11 @@
 
 ツールは [mise](https://mise.jdx.dev/)（`mise.toml`）で管理し、バージョン更新は [Renovate](https://docs.renovatebot.com/) で追跡します。
 
+## スクリプトの置き場所
+
+- 処理は極力 mise tasks（`mise.toml` の `[tasks]` や `tasks/*.toml`）として定義する
+- mise tasks にすると煩雑になる、または推奨しない事象がある場合だけ、スクリプトファイル（`scripts/` など）を作る。そのファイルの冒頭に、なぜ mise tasks にしなかったのかをコメントで書く
+
 ## Homebrew 系パッケージの導入設定
 
 - brew / brew-cask の導入設定を追加・変更する際は、まず mise bootstrap の `[bootstrap.packages]` で管理できるか検討する。対象の Mac で `mise bootstrap packages apply brew:<formula>` または `mise bootstrap packages apply brew-cask:<cask>` による導入を確認し、利用可能ならこの方式を優先する
@@ -27,6 +32,12 @@
 ## 詳細情報
 
 `docs/**` と `README.md` を参照してください。
+
+## PR 作成後の動作確認
+
+- このリポジトリで PR を作成したら、ユーザーの指示を待たずに `pr-verify-dotfiles` skill で PR の動作確認を行う。見つけた不具合や不備はその skill の手順で修正・push する
+- `mise bootstrap dotfiles apply` など配置を伴う確認は、worktree ではなく `~/dotfiles` の checkout で行う。worktree から apply すると symlink の参照先が worktree になるなど、配置が壊れるため
+- 配置を伴わない確認（lint、`rulesync generate --dry-run`、`mise bootstrap dotfiles diff` など）は worktree で行ってよい
 
 ## Codex Cloud での実装・PR・レビュー対応
 

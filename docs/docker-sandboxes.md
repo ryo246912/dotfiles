@@ -248,7 +248,7 @@ Apple Silicon / Windows 11 のみ対応のため）。
 
 ```bash
 # config-mac/mise/config.mac.toml の [tools] に以下が入っている
-#   "github:docker/sbx-releases" = { version = "0.53.0", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
+#   "github:docker/sbx-releases" = { version = "0.55.0-rc4", platforms.macos-arm64 = { asset_pattern = "DockerSandboxes-darwin.tar.gz", bin_path = "bin" } }
 mise install
 sbx version
 ```
@@ -257,13 +257,13 @@ aqua registry には `sbx` が未登録のため、github backend で
 [docker/sbx-releases](https://github.com/docker/sbx-releases) のリリース資産を直接取得しています。
 バージョンは renovate が追従します。
 
-### 0.53.0 への更新
+### 0.55.0-rc4 への更新
 
 dotfiles を反映後、ホストで以下を実行してください。
 
 ```bash
 mise install github:docker/sbx-releases
-sbx --version  # 0.53.0
+sbx --version  # 0.55.0-rc4
 sbx daemon restart
 sbx settings set claude.chrome true
 ```
@@ -448,7 +448,7 @@ sbx-agent --help
 1. sandbox 名を `<repo>-[<prefix>-]<branch>-<agent>` から生成する
    （hostname 相当なので英数字とハイフンに正規化し、63 文字に切り詰める）
 2. 同名の sandbox が無ければ `sbx env create` で作成する。このとき
-   `~/.config/git/config:ro` / `~/.config/git/gitignore:ro` / `~/.config/git/attributes:ro` / `~/.aws/config:ro` /
+   `~/.aws/config:ro` /
    `~/.agents:ro` / `~/.config/nvim:ro` / `~/.ssh/known_hosts:ro` / `~/.claude.json:ro` /
    `~/.local/share/agent-lessons`（`.git` を含めて書き込み可）と agent の設定ディレクトリを追加 workspace として渡す（`devcontainer.json` の `mounts` に対応）。
    これにより sandbox 内でも `lessons:sync` と週次収集の pull / ブランチ作成 / commit / push ができる。
@@ -456,7 +456,13 @@ sbx-agent --help
    `.git/hooks` や `.git/config`（`core.hooksPath` / `core.fsmonitor` / `core.sshCommand` など）の変更は、
    後続のホスト側 Git 操作（SessionStart の pull や `lessons:sync`）でコード実行につながる。
    この共有 clone はホストでのコード実行を許容できる信頼済み agent に限って使い、sandbox をホスト実行の信頼境界の内側として扱う。
-   マウントは作成時にしか付かないため、追加したマウント（例: mergiraf 用の `git/attributes`）を既存の sandbox に反映するには
+   Git 設定は `~/.config/git` ディレクトリ全体を read-only で mount する。ファイル単位では
+   checkout や設定再生成による inode の置換に追従できず、`Stale file handle` になるため。
+   ホスト側のファイル変更は再起動なしで参照でき、`allowed_signers` や `config.*.secret` も共有される。
+   symlink の参照先を読むため、dotfiles リポジトリの mount も維持する。
+   `--no-config` はこれらの自動 mount と Git 設定注入を止めるが、明示的な `--mount` / `SBX_AGENT_MOUNTS` は残る。
+   既存 sandbox の mount/env は変わらないため、共有をやめる場合は必要なデータを保存して `--new --no-config` で再作成する。
+   マウントは作成時にしか付かないため、変更したマウント（個別 Git ファイルからディレクトリへの変更を含む）を既存の sandbox に反映するには
    `sbx-agent <agent> --new`（`multi-worktree dev ... --new`）で作り直す。
    作成時の呼び出しは `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox 名>.sh` に記録され、
    `mise run sandbox:recreate` で選んだ sandbox をまとめて同じ指定で作り直せる。記録を始める前に作った
@@ -464,8 +470,8 @@ sbx-agent --help
    `~/.config/gh` はトークンが平文で入りうるため渡さない（`sbx secret` 経由にする）
 3. workspace が linked worktree なら、その common git dir（実体リポジトリの `.git`）も
    追加 workspace として渡す（[後述](#worktree-と-git-metadata-の-mount)）
-4. devcontainer の `remoteEnv` 相当のうち、`AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG` は common kit が設定する。
-   `HOST_USER` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS` と agent の設定ディレクトリ
+4. devcontainer の `remoteEnv` 相当のうち、`AI_AGENT` / `TERM` は common kit が設定する。
+   `HOST_USER` / `MISE_TRUSTED_CONFIG_PATHS` と agent の設定ディレクトリ
    （`CLAUDE_CONFIG_DIR` / `CODEX_HOME`）は `--env` で渡す
 5. 同じく `--env` で `GIT_CONFIG_COUNT` / `GIT_CONFIG_KEY_n` / `GIT_CONFIG_VALUE_n` を渡し、
    ホストの git 設定とコミット署名を設定する（[後述](#ホストの-git-設定とコミット署名)）
@@ -829,7 +835,7 @@ ccmanager の preset 一覧で `Claude account1 (Docker Sandbox)` などの sand
    - git 設定・コミット署名を runtime overlay、`AI_AGENT` などを common kit で設定
    - crit / plannotator のポートを公開（host port は自動採番）
    - `--static-mcp` で登録済み MCP を読み込む（既定は読み込まない）
-4. sandbox 内で初期化（nvim / agent-lessons の symlink と Basic Memory の登録 / `mac-host` SSH config / lefthook / crit）
+4. sandbox 内で初期化（nvim / agent-lessons の symlink と Basic Memory の登録 / `mac-host` SSH config / crit）
 5. `sbx run` でアタッチ
 
 `multi-worktree dev` から直接起動することもできます。
@@ -1273,7 +1279,7 @@ SBX_TEMPLATE_AGENTS="claude codex" mise run sandbox:build-template
 2. mise を `/usr/local/bin` に入れ、`config/devcontainer/mise.toml` を `/mise/config.toml` へ COPY
 3. `mise install` で devcontainer と同じツール群を入れる（BuildKit の cache mount で差分ビルド、
    `GH_TOKEN` は build secret で渡してレート制限を避ける）
-4. `tasks/` / `lint/` / `scripts/` / `lefthook.local.yml` を **devcontainer と同じ
+4. `tasks/` / `lint/` / `scripts/` / `lefthook-local.yml` を **devcontainer と同じ
    `~/.config/devcontainer` 配下**（sandbox 内では `/home/agent/.config/devcontainer`）へ COPY。
    こうすると tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` が
    パスの書き換え無しでそのまま解決します
@@ -1327,14 +1333,13 @@ devcontainer との違いは 2 点です。
 `sbx exec` で `scripts/sandbox-post-create.sh` を実行します
 （`sbx exec -d` は 0.45.0 で非対応になったので前景で実行します）。
 
-| 処理                          | 内容                                                                                                                 |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                                                   |
-| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                                                   |
-| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す                               |
-| NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記）                         |
-| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                                                     |
-| lefthook のインストール       | `INSTALL_LOCAL_LEFTHOOK=1` のときのみ。task root が multi-worktree なら直下の各リポジトリへ、通常は workspace 自体へ |
+| 処理                          | 内容                                                                                         |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| `~/.config/ssh/config` の生成 | `mac-host` → `host.docker.internal`。鍵は 600 でコピーしてから使う                           |
+| `~/.crit.config.json` の生成  | `no_open` / `agent_cmd`（devcontainer と同じ内容）                                           |
+| `~/.crit-host-port` の記録    | ホスト側で `sbx ports` が調べた host port を `SBX_CRIT_HOST_PORT` で受け取って書き出す       |
+| NO_PROXY にローカル宛てを追加 | `/etc/sandbox-persistent.sh` に `0.0.0.0` / `localhost` / `127.0.0.1` / `::1` を足す（下記） |
+| `~/.claude.json` のコピー     | ホストの `~/.claude.json` をマウント元からコピー                                             |
 
 > [!NOTE]
 > sbx は `HTTP(S)_PROXY` を sandbox のプロキシに向けますが、既定の `NO_PROXY` には `0.0.0.0` が
@@ -1398,9 +1403,9 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 | devcontainer の mount                     | sandbox                                                                                                                                       |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `~/.config/git/config`                    | ✅ `:ro` で渡し、`include.path` で取り込む                                                                                                    |
-| `~/.config/git/gitignore`                 | ✅ `:ro` で渡し、`core.excludesfile` に設定                                                                                                   |
-| `~/.config/git/attributes`                | ✅ `:ro` で渡し、`core.attributesfile` に設定                                                                                                 |
+| `~/.config/git/config`                    | ✅ `~/.config/git:ro` のディレクトリ mount 経由で、`include.path` で取り込む                                                                  |
+| `~/.config/git/gitignore`                 | ✅ `~/.config/git:ro` のディレクトリ mount 経由で、`core.excludesfile` に設定                                                                 |
+| `~/.config/git/attributes`                | ✅ `~/.config/git:ro` のディレクトリ mount 経由で、`core.attributesfile` に設定                                                               |
 | `~/.config/gh`                            | ⚠️ **マウントしない**（`hosts.yml` にトークンが平文で入りうるため）。`sbxenv.yaml` の `secrets.github`（`gh auth token`）でプロキシが注入する |
 | `~/.aws/config`                           | ✅ `:ro`                                                                                                                                      |
 | `~/.agents`                               | ✅ `:ro`                                                                                                                                      |
@@ -1420,8 +1425,8 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 | devcontainer                                                                              | sandbox                                                       |
 | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `AI_AGENT` / `TERM` / `LEFTHOOK_CONFIG`                                                   | ✅ `kits/common/common.yaml` の `args.*.env`                  |
-| `HOST_USER` / `INSTALL_LOCAL_LEFTHOOK` / `MISE_TRUSTED_CONFIG_PATHS`                      | ✅ `--env` で渡す                                             |
+| `AI_AGENT` / `TERM`                                                                       | ✅ `kits/common/common.yaml` の `args.*.env`                  |
+| `HOST_USER` / `MISE_TRUSTED_CONFIG_PATHS`                                                 | ✅ `--env` で渡す                                             |
 | `CRIT_HOST` / `CRIT_PORT` / `CRIT_ALLOW_UNAUTHENTICATED_NETWORK` / `CRIT_NO_UPDATE_CHECK` | ✅ `--env` で渡す                                             |
 | `PLANNOTATOR_REMOTE` / `PLANNOTATOR_PORT` / `PLANNOTATOR_BROWSER`                         | ✅ `--env` で渡す                                             |
 | `GH_TOKEN`（build secret + remoteEnv）                                                    | ✅ `sbxenv.yaml` の `secrets.github`（`gh auth token`）で代替 |
@@ -1432,7 +1437,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | devcontainer でやっていたこと                                                                     | sandbox                                                                                 |
 | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `include.path` / `core.excludesfile` / credential helper / `insteadOf` / `gc.worktreePruneExpire` | ✅ `GIT_CONFIG_*` で注入                                                                |
-| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ。既定は無効） |
+| 各リポジトリへの `lefthook-local.yml` 配置と `lefthook install`                                   | ❌ sbx では自動配置・インストールしない                                                 |
 | `~/.claude.json` のコピー                                                                         | ✅ 同上                                                                                 |
 | `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                                 |
 | コミット署名（専用鍵 + `allowed_signers`）                                                        | ✅ ssh-agent forwarding で署名し、ホストの `allowed_signers` をマウントして検証もできる |
@@ -1450,19 +1455,19 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### コンテナ内でできていたこと
 
-| できていたこと                                       | sandbox                                                                                                          |
-| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `docker compose` で DB 等を建てる                    | ✅ sandbox 専用 docker daemon で可能                                                                             |
-| `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                                                              |
-| lefthook の pre-commit lint 一式                     | ✅ `AI_AGENT=1` / `LEFTHOOK_CONFIG` + post-create の `lefthook install`（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ） |
-| 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                                                                     |
-| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`localhost:22` は `kits/common` が許可）                                                     |
-| `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                                                           |
-| crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている                                                |
-| plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている                                                   |
-| `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている                                                   |
-| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                                                             |
-| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)）                                           |
+| できていたこと                                       | sandbox                                                                |
+| ---------------------------------------------------- | ---------------------------------------------------------------------- |
+| `docker compose` で DB 等を建てる                    | ✅ sandbox 専用 docker daemon で可能                                   |
+| `mise run lint:*` / `fix:*`                          | ✅ template に mise + tasks + lint 設定が入っている                    |
+| lefthook の pre-commit lint 一式                     | ❌ sbx では自動インストールしない                                      |
+| 共有 skills（`~/.claude/skills`）                    | ✅ `sbx skills import` + `--skills=readonly`                           |
+| ホスト macOS への通知（SSH → `macos-notify-cli`）    | ✅ `mac-host` 経由（`localhost:22` は `kits/common` が許可）           |
+| `host-tmux`（ホスト tmux pane の参照）               | ✅ 同じスクリプトが PATH にあり、`mac-host` 経由で動く                 |
+| crit のレビュー UI                                   | ✅ crit 本体 + ラッパー + ポート公開 + host port 記録が揃っている      |
+| plannotator の SSH reverse tunnel                    | ✅ `PLANNOTATOR_*` と `ensure-plannotator-tunnel` が揃っている         |
+| `ai-rule-hook`（セッション終了時のルール提案）       | ✅ スクリプトが image に入り、`~/.claude` もマウントされている         |
+| MCP（ホストで認証済みのものを使う）                  | ✅ `sbx mcp` + `--static-mcp`（[詳細](#mcp-の扱い)）                   |
+| 生成物（`node_modules` / `.venv`）をホストに書かない | ❌ worktree に書かれる（[運用で分ける](#生成物node_modules-等の扱い)） |
 
 ### 残っている差分
 
@@ -1473,9 +1478,10 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 
 ### まとめ
 
-ツールチェイン・ホスト連携・MCP はすべて移植済みで、
-**残る差分は生成物の分離（mount できないため運用で分ける）と
-`~/.claude/settings.json` の read-only 化**です。
+ツールチェイン・ホスト連携・MCP の対応状況は上表のとおりです。
+主な差分は生成物の分離、`~/.claude/settings.json` の read-only 化、
+`~/.config/mise` を既定では共有せず必要時に `extra_workspaces` へ追加すること、
+および sbx で lefthook を自動配置・インストールしないことです。
 隔離・認証情報・コミット署名については devcontainer より安全な作りになっています。
 
 ## MCP の扱い
@@ -1762,7 +1768,8 @@ sbx settings set claude.chrome true
 
 OAuth preset の Claude で初回に `/login` を実行し、普段の Chrome 拡張と同じアカウントで
 ログインしてください。その後 `/chrome` で接続を確認します。
-OAuth 用の `--claude-oauth` は、ホストの `~/.claude` / `.claude.json` を自動共有せず、
+OAuth 用の `--claude-oauth` は、ホストの `~/.claude/projects` だけを読み書き可能で共有します。account1 の会話ログも sandbox から読み書きできます。
+設定・認証ファイル（`~/.claude/settings.json` や `.claude.json`）は自動共有せず、
 Sandbox 内の標準設定ディレクトリを使います。Git・ツール・共有 skills の設定は維持します。
 statusline は account の横に起動時の認証方式を表示します（例: `account1 setup-token` / `sbx OAuth`）。
 OAuth preset は statusline だけを CLI 設定として追加し、ホストの認証ファイルをコピーしません。
@@ -2118,6 +2125,36 @@ CLI の失敗時は hook が理由を stderr に出し、push / PR 作成は続�
 参考: [CodeRabbit auth login](https://docs.coderabbit.ai/cli/reference#auth-login)、
 [sbx SSH port forwarding](https://docs.docker.com/ai/sandboxes/integrations/#port-forwarding)、
 [CodeRabbit の料金・制限](https://docs.coderabbit.ai/management/plans)。
+
+## Claude sandbox の会話ログ
+
+認証方式にかかわらず、選択したホストアカウントの `projects` を
+sandbox の `/home/agent/.claude/projects` へ読み書き可能でマウントします。
+保存先は `--config-dir` 指定を優先し、省略時は次の対応です。
+
+| 起動時の選択          | ホスト側の保存先              |
+| --------------------- | ----------------------------- |
+| 既定・account1・OAuth | `~/.claude/projects`          |
+| account2              | `~/.claude-account2/projects` |
+| work3                 | `~/.claude-work3/projects`    |
+
+その他のアカウント ID は `--config-dir` を指定してください。
+OAuth は従来どおり `--config-dir` と併用できず、`~/.claude/projects` を使います。
+`CLAUDE_CONFIG_DIR` は sandbox 内で設定されます。ホスト側の同名環境変数は入力として使わないため、保存先は `--config-dir` または `--claude-account` で選択してください。
+設定ディレクトリを共有する経路では、その中の `projects` を使い、追加 target マウントは作りません。
+OAuth / `--no-config` では `/home/agent/.claude/projects` への追加マウントで永続化します。
+追加マウントが明示的な read-only マウントと競合する場合はエラーで停止します。
+`--no-config` でも会話ログの永続化は有効です。
+既存の `projects` が symlink の場合は従来の共有先を使うため、アカウント間で同じ保存先になることがあります。
+
+既存 sandbox は内部の会話ログと作業ファイルを退避してから、同じ起動引数に `--new` を付けて再作成します。
+`mise run sandbox:recreate <sandbox名>` は `${XDG_STATE_HOME:-~/.local/state}/sbx-agent/<sandbox名>.sh` に作成時の呼び出し記録がある場合だけ使えます。記録がない場合は警告してスキップされるため、元のコマンドを一度 `--new` 付きで実行してください。
+`--new` は既存 sandbox を削除します。退避前には実行しないでください。
+退避ログは既存ファイルと衝突しないことを確認して移します。
+再作成後は `/resume` または `claude --resume <セッションID>` で確認します。
+会話ログだけでは sandbox 内の worktree や未コミット変更は復元されません。
+
+マウントには [Docker の additionalWorkspaces](https://docs.docker.com/ai/sandboxes/configuration/environment-files/#additionalworkspaces) の `target` を使用します。
 
 ## 参考
 
