@@ -449,7 +449,7 @@ with_stage_lock materialize_all || exit 1
 # build context と Dockerfile の COPY 対象が揃っているか確認する
 # （dotfiles 未適用・リンク切れをここで検出し、分かりにくい docker build エラーを避ける）
 stage_missing=""
-for required in Dockerfile mise.toml tasks lint scripts lefthook.local.yml; do
+for required in Dockerfile mise.toml tasks lint scripts lefthook-local.yml; do
 	# 実体化コピーだけを見ると、過去の実行で作られた古いコピーが残っているせいで
 	# 「配置先から消えた・リンク切れになった」のを見逃す。配置先と両方を確認する
 	# （[ -e ] はリンク切れの symlink に対して偽になるのでリンク切れも検出できる）。
