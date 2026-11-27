@@ -41,7 +41,9 @@ if [[ ! -r "$template" ]]; then
     exit 1
 fi
 
-if [[ -f lefthook.local.yml ]] && ! cmp -s "$template" lefthook.local.yml; then
+# 旧テンプレートの内容を識別し、編集済みの設定だけ手動移行を案内する。
+legacy_template_sha256=42d0f6fbcb66b24db9efa9a359e2f0a3241ca7ac00c832ecfeb92ddccf84b00e
+if [[ -f lefthook.local.yml ]] && ! sha256sum --status -c <<< "$legacy_template_sha256  lefthook.local.yml"; then
     printf '⚠️ %s の lefthook.local.yml を確認し、設定を lefthook-local.yml に移行してください。\n' "$repo_root" >&2
     if [[ ! -e "$config" ]]; then
         exit 0
