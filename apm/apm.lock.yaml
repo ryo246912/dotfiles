@@ -2,6 +2,544 @@ lockfile_version: '1'
 generated_at: '2026-11-26T12:03:42.180309+00:00'
 apm_version: 0.33.0
 dependencies:
+- repo_url: getsentry/skills
+  name: security-review
+  host: github.com
+  resolved_commit: a582c51ee29d0f35e6ac321340796f77d43da733
+  version: unknown
+  virtual_path: skills/security-review
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/security-review
+  - .agents/skills/security-review/LICENSE
+  - .agents/skills/security-review/SKILL.md
+  - .agents/skills/security-review/SPEC.md
+  - .agents/skills/security-review/infrastructure/docker.md
+  - .agents/skills/security-review/languages/javascript.md
+  - .agents/skills/security-review/languages/python.md
+  - .agents/skills/security-review/references/api-security.md
+  - .agents/skills/security-review/references/authentication.md
+  - .agents/skills/security-review/references/authorization.md
+  - .agents/skills/security-review/references/business-logic.md
+  - .agents/skills/security-review/references/cryptography.md
+  - .agents/skills/security-review/references/csrf.md
+  - .agents/skills/security-review/references/data-protection.md
+  - .agents/skills/security-review/references/deserialization.md
+  - .agents/skills/security-review/references/error-handling.md
+  - .agents/skills/security-review/references/file-security.md
+  - .agents/skills/security-review/references/injection.md
+  - .agents/skills/security-review/references/logging.md
+  - .agents/skills/security-review/references/misconfiguration.md
+  - .agents/skills/security-review/references/modern-threats.md
+  - .agents/skills/security-review/references/ssrf.md
+  - .agents/skills/security-review/references/supply-chain.md
+  - .agents/skills/security-review/references/xss.md
+  - .claude/skills/security-review
+  - .claude/skills/security-review/LICENSE
+  - .claude/skills/security-review/SKILL.md
+  - .claude/skills/security-review/SPEC.md
+  - .claude/skills/security-review/infrastructure/docker.md
+  - .claude/skills/security-review/languages/javascript.md
+  - .claude/skills/security-review/languages/python.md
+  - .claude/skills/security-review/references/api-security.md
+  - .claude/skills/security-review/references/authentication.md
+  - .claude/skills/security-review/references/authorization.md
+  - .claude/skills/security-review/references/business-logic.md
+  - .claude/skills/security-review/references/cryptography.md
+  - .claude/skills/security-review/references/csrf.md
+  - .claude/skills/security-review/references/data-protection.md
+  - .claude/skills/security-review/references/deserialization.md
+  - .claude/skills/security-review/references/error-handling.md
+  - .claude/skills/security-review/references/file-security.md
+  - .claude/skills/security-review/references/injection.md
+  - .claude/skills/security-review/references/logging.md
+  - .claude/skills/security-review/references/misconfiguration.md
+  - .claude/skills/security-review/references/modern-threats.md
+  - .claude/skills/security-review/references/ssrf.md
+  - .claude/skills/security-review/references/supply-chain.md
+  - .claude/skills/security-review/references/xss.md
+  deployed_file_hashes:
+    .agents/skills/security-review/LICENSE: sha256:0fc858d87f467971ee612fc183896257a1c160a1610a443896b33ae4d2a44ef7
+    .agents/skills/security-review/SKILL.md: sha256:26db9a5b1999adc19c4bf6eb7fbe37b56f0135b79f3054f33fd03baefa8e93ed
+    .agents/skills/security-review/SPEC.md: sha256:e8dcb0a851bc70a99f7fcab3e10da0045c615415245463d808e08104b1917b42
+    .agents/skills/security-review/infrastructure/docker.md: sha256:84bd49469c5a0cbd42fecdcce752de98cf6821b601dfef6a1920df61f030ae62
+    .agents/skills/security-review/languages/javascript.md: sha256:f4226c82de13da9dec9be7b509932d74a4ade2c8d46b98a078a5b38bf8aa3319
+    .agents/skills/security-review/languages/python.md: sha256:32d0b1304d132fc582320d584d54bbaea566d51700cd16b3f0be723ed834a556
+    .agents/skills/security-review/references/api-security.md: sha256:65b2456b4c5ae0d6d9849eac8196ac03fbefbf88657c5e069a8aa5063dd6afbf
+    .agents/skills/security-review/references/authentication.md: sha256:7bc598cd4af33bb62406f5a0e8ff7adebff83c04e5fb449e6738f96ae0e26be6
+    .agents/skills/security-review/references/authorization.md: sha256:5ccfd579a1eca4d9d374eb00b04ba33cc9a2918e14e5cb7620c136a6feaeffff
+    .agents/skills/security-review/references/business-logic.md: sha256:fc8ec30eb19f73759e8901e58d7ca66fc87035703325cc8a844298102fa6298a
+    .agents/skills/security-review/references/cryptography.md: sha256:1e1301624e0c9b1699e1d95af11df06a67d104ff06443e93711bb656152f364c
+    .agents/skills/security-review/references/csrf.md: sha256:7b57ba0a45a291eee24578af8b0c69515c76e452c33d8c2d717c66ee3bbdda20
+    .agents/skills/security-review/references/data-protection.md: sha256:920b7dfb86dc696002d31022c1f7665ef602dd1ed76f1124ad937d488ce2b381
+    .agents/skills/security-review/references/deserialization.md: sha256:be9946daf389ad594fbc4065246ff334c389da1e2cf593180ca150b0204287fb
+    .agents/skills/security-review/references/error-handling.md: sha256:e12d3c9f713614223ce797935f3a4c2ac1a7f1fcf0ea24e865a1a70efeab4fb9
+    .agents/skills/security-review/references/file-security.md: sha256:a0a001fb79fe9f1169fa3ba523225164744c42d8779341f15d3d0fc349185f2a
+    .agents/skills/security-review/references/injection.md: sha256:d3989e97af773f521170b430a0e629b26c6ff2051cd826fa62a895523f268178
+    .agents/skills/security-review/references/logging.md: sha256:acca4eeebfc451bb62a7c085d1121ffa443e8cd0831548c2ae6f7fc606056cbc
+    .agents/skills/security-review/references/misconfiguration.md: sha256:919c44e309eaa6427a8bb44a2ed645fbf2b46d9dfe86a0fcdb2d084201898390
+    .agents/skills/security-review/references/modern-threats.md: sha256:d2ac69d91ade6df9c4bf89b2be0d203651d1a0cc5a67d03db8013af52c8ffe6b
+    .agents/skills/security-review/references/ssrf.md: sha256:646a8244fa61997b9b4f093169be1af4f94e6a3d04dcae8d426bb821870b2bff
+    .agents/skills/security-review/references/supply-chain.md: sha256:ef3000d91763ccdddfbce2660943c4090b4c16b3b33afe980f4e10947729e1f1
+    .agents/skills/security-review/references/xss.md: sha256:4735df1e581b757b078605fbc27d37e85cfe182c45ab326c9e536c71a930680c
+    .claude/skills/security-review/LICENSE: sha256:0fc858d87f467971ee612fc183896257a1c160a1610a443896b33ae4d2a44ef7
+    .claude/skills/security-review/SKILL.md: sha256:26db9a5b1999adc19c4bf6eb7fbe37b56f0135b79f3054f33fd03baefa8e93ed
+    .claude/skills/security-review/SPEC.md: sha256:e8dcb0a851bc70a99f7fcab3e10da0045c615415245463d808e08104b1917b42
+    .claude/skills/security-review/infrastructure/docker.md: sha256:84bd49469c5a0cbd42fecdcce752de98cf6821b601dfef6a1920df61f030ae62
+    .claude/skills/security-review/languages/javascript.md: sha256:f4226c82de13da9dec9be7b509932d74a4ade2c8d46b98a078a5b38bf8aa3319
+    .claude/skills/security-review/languages/python.md: sha256:32d0b1304d132fc582320d584d54bbaea566d51700cd16b3f0be723ed834a556
+    .claude/skills/security-review/references/api-security.md: sha256:65b2456b4c5ae0d6d9849eac8196ac03fbefbf88657c5e069a8aa5063dd6afbf
+    .claude/skills/security-review/references/authentication.md: sha256:7bc598cd4af33bb62406f5a0e8ff7adebff83c04e5fb449e6738f96ae0e26be6
+    .claude/skills/security-review/references/authorization.md: sha256:5ccfd579a1eca4d9d374eb00b04ba33cc9a2918e14e5cb7620c136a6feaeffff
+    .claude/skills/security-review/references/business-logic.md: sha256:fc8ec30eb19f73759e8901e58d7ca66fc87035703325cc8a844298102fa6298a
+    .claude/skills/security-review/references/cryptography.md: sha256:1e1301624e0c9b1699e1d95af11df06a67d104ff06443e93711bb656152f364c
+    .claude/skills/security-review/references/csrf.md: sha256:7b57ba0a45a291eee24578af8b0c69515c76e452c33d8c2d717c66ee3bbdda20
+    .claude/skills/security-review/references/data-protection.md: sha256:920b7dfb86dc696002d31022c1f7665ef602dd1ed76f1124ad937d488ce2b381
+    .claude/skills/security-review/references/deserialization.md: sha256:be9946daf389ad594fbc4065246ff334c389da1e2cf593180ca150b0204287fb
+    .claude/skills/security-review/references/error-handling.md: sha256:e12d3c9f713614223ce797935f3a4c2ac1a7f1fcf0ea24e865a1a70efeab4fb9
+    .claude/skills/security-review/references/file-security.md: sha256:a0a001fb79fe9f1169fa3ba523225164744c42d8779341f15d3d0fc349185f2a
+    .claude/skills/security-review/references/injection.md: sha256:d3989e97af773f521170b430a0e629b26c6ff2051cd826fa62a895523f268178
+    .claude/skills/security-review/references/logging.md: sha256:acca4eeebfc451bb62a7c085d1121ffa443e8cd0831548c2ae6f7fc606056cbc
+    .claude/skills/security-review/references/misconfiguration.md: sha256:919c44e309eaa6427a8bb44a2ed645fbf2b46d9dfe86a0fcdb2d084201898390
+    .claude/skills/security-review/references/modern-threats.md: sha256:d2ac69d91ade6df9c4bf89b2be0d203651d1a0cc5a67d03db8013af52c8ffe6b
+    .claude/skills/security-review/references/ssrf.md: sha256:646a8244fa61997b9b4f093169be1af4f94e6a3d04dcae8d426bb821870b2bff
+    .claude/skills/security-review/references/supply-chain.md: sha256:ef3000d91763ccdddfbce2660943c4090b4c16b3b33afe980f4e10947729e1f1
+    .claude/skills/security-review/references/xss.md: sha256:4735df1e581b757b078605fbc27d37e85cfe182c45ab326c9e536c71a930680c
+  content_hash: sha256:20b187f4c4d35035274c4d6a07b52725ef937d79389fd04b33150b8632eeea9a
+deployments:
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:0fc858d87f467971ee612fc183896257a1c160a1610a443896b33ae4d2a44ef7
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:26db9a5b1999adc19c4bf6eb7fbe37b56f0135b79f3054f33fd03baefa8e93ed
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/SPEC.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:e8dcb0a851bc70a99f7fcab3e10da0045c615415245463d808e08104b1917b42
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/infrastructure/docker.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:84bd49469c5a0cbd42fecdcce752de98cf6821b601dfef6a1920df61f030ae62
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/languages/javascript.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:f4226c82de13da9dec9be7b509932d74a4ade2c8d46b98a078a5b38bf8aa3319
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/languages/python.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:32d0b1304d132fc582320d584d54bbaea566d51700cd16b3f0be723ed834a556
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/api-security.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:65b2456b4c5ae0d6d9849eac8196ac03fbefbf88657c5e069a8aa5063dd6afbf
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/authentication.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:7bc598cd4af33bb62406f5a0e8ff7adebff83c04e5fb449e6738f96ae0e26be6
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/authorization.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:5ccfd579a1eca4d9d374eb00b04ba33cc9a2918e14e5cb7620c136a6feaeffff
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/business-logic.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:fc8ec30eb19f73759e8901e58d7ca66fc87035703325cc8a844298102fa6298a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/cryptography.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:1e1301624e0c9b1699e1d95af11df06a67d104ff06443e93711bb656152f364c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/csrf.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:7b57ba0a45a291eee24578af8b0c69515c76e452c33d8c2d717c66ee3bbdda20
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/data-protection.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:920b7dfb86dc696002d31022c1f7665ef602dd1ed76f1124ad937d488ce2b381
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/deserialization.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:be9946daf389ad594fbc4065246ff334c389da1e2cf593180ca150b0204287fb
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/error-handling.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:e12d3c9f713614223ce797935f3a4c2ac1a7f1fcf0ea24e865a1a70efeab4fb9
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/file-security.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:a0a001fb79fe9f1169fa3ba523225164744c42d8779341f15d3d0fc349185f2a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/injection.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:d3989e97af773f521170b430a0e629b26c6ff2051cd826fa62a895523f268178
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/logging.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:acca4eeebfc451bb62a7c085d1121ffa443e8cd0831548c2ae6f7fc606056cbc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/misconfiguration.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:919c44e309eaa6427a8bb44a2ed645fbf2b46d9dfe86a0fcdb2d084201898390
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/modern-threats.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:d2ac69d91ade6df9c4bf89b2be0d203651d1a0cc5a67d03db8013af52c8ffe6b
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/ssrf.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:646a8244fa61997b9b4f093169be1af4f94e6a3d04dcae8d426bb821870b2bff
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/supply-chain.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:ef3000d91763ccdddfbce2660943c4090b4c16b3b33afe980f4e10947729e1f1
+- kind: project-relative
+  target: claude
+  value: .claude/skills/security-review/references/xss.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:4735df1e581b757b078605fbc27d37e85cfe182c45ab326c9e536c71a930680c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/LICENSE
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:0fc858d87f467971ee612fc183896257a1c160a1610a443896b33ae4d2a44ef7
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:26db9a5b1999adc19c4bf6eb7fbe37b56f0135b79f3054f33fd03baefa8e93ed
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/SPEC.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:e8dcb0a851bc70a99f7fcab3e10da0045c615415245463d808e08104b1917b42
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/infrastructure/docker.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:84bd49469c5a0cbd42fecdcce752de98cf6821b601dfef6a1920df61f030ae62
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/languages/javascript.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:f4226c82de13da9dec9be7b509932d74a4ade2c8d46b98a078a5b38bf8aa3319
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/languages/python.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:32d0b1304d132fc582320d584d54bbaea566d51700cd16b3f0be723ed834a556
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/api-security.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:65b2456b4c5ae0d6d9849eac8196ac03fbefbf88657c5e069a8aa5063dd6afbf
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/authentication.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:7bc598cd4af33bb62406f5a0e8ff7adebff83c04e5fb449e6738f96ae0e26be6
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/authorization.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:5ccfd579a1eca4d9d374eb00b04ba33cc9a2918e14e5cb7620c136a6feaeffff
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/business-logic.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:fc8ec30eb19f73759e8901e58d7ca66fc87035703325cc8a844298102fa6298a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/cryptography.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:1e1301624e0c9b1699e1d95af11df06a67d104ff06443e93711bb656152f364c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/csrf.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:7b57ba0a45a291eee24578af8b0c69515c76e452c33d8c2d717c66ee3bbdda20
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/data-protection.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:920b7dfb86dc696002d31022c1f7665ef602dd1ed76f1124ad937d488ce2b381
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/deserialization.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:be9946daf389ad594fbc4065246ff334c389da1e2cf593180ca150b0204287fb
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/error-handling.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:e12d3c9f713614223ce797935f3a4c2ac1a7f1fcf0ea24e865a1a70efeab4fb9
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/file-security.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:a0a001fb79fe9f1169fa3ba523225164744c42d8779341f15d3d0fc349185f2a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/injection.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:d3989e97af773f521170b430a0e629b26c6ff2051cd826fa62a895523f268178
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/logging.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:acca4eeebfc451bb62a7c085d1121ffa443e8cd0831548c2ae6f7fc606056cbc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/misconfiguration.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:919c44e309eaa6427a8bb44a2ed645fbf2b46d9dfe86a0fcdb2d084201898390
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/modern-threats.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:d2ac69d91ade6df9c4bf89b2be0d203651d1a0cc5a67d03db8013af52c8ffe6b
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/ssrf.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:646a8244fa61997b9b4f093169be1af4f94e6a3d04dcae8d426bb821870b2bff
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/supply-chain.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:ef3000d91763ccdddfbce2660943c4090b4c16b3b33afe980f4e10947729e1f1
+- kind: project-relative
+  target: codex
+  value: .agents/skills/security-review/references/xss.md
+  runtime: null
+  scope: project
+  owners:
+  - getsentry/skills/skills/security-review
+  active_owner: getsentry/skills/skills/security-review
+  content_hash: sha256:4735df1e581b757b078605fbc27d37e85cfe182c45ab326c9e536c71a930680c
 - repo_url: backnotprop/plannotator
   name: plannotator-annotate
   host: github.com

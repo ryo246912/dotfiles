@@ -21,6 +21,7 @@ dependencies:
   # - tag が無い依存は ref を書かず、apm.lock.yaml の resolved_commit で pin する。
   #   Renovate の lockFileMaintenance が定期的に最新 commit へ更新する。
   apm:
+    - getsentry/skills/skills/security-review
     # pr-author-all-review から対象差分に応じて使う専門レビュー。
     - petrkindlmann/qa-skills/skills/ai-qa-review#v3.6.0
     - supabase/agent-skills/skills/supabase-postgres-best-practices#v0.1.9
