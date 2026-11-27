@@ -130,29 +130,6 @@ bash /home/vscode/.config/devcontainer/scripts/mount-container-only-dirs.sh "${P
 # 実際のリポジトリは直下に並ぶ（例: task-root/repo-a, task-root/repo-b）。
 # task rootのブランチ名でmulti-worktreeを判定し、その場合だけ直下のリポジトリを対象にする。
 # 通常のリポジトリは直下にsubmoduleがあってもworkspace自体を対象にする。
-lefthook_template="${HOME}/.config/devcontainer/lefthook.local.yml"
-
-# 呼び出し元が `if ! install_lefthook ...` で失敗を警告に落とすため、bash の仕様上この関数内では
-# set -e が効かない。各コマンドの失敗を確実に伝えるよう、明示的に `|| return 1` を付ける。
-install_lefthook() {
-	local repo_root=$1
-	local local_lefthook_config="${repo_root}/lefthook.local.yml"
-	if [ ! -e "$local_lefthook_config" ]; then
-		cp "$lefthook_template" "$local_lefthook_config" || return 1
-	fi
-	local git_exclude
-	git_exclude="$(git -C "$repo_root" rev-parse --path-format=absolute --git-path info/exclude)" || return 1
-	mkdir -p "$(dirname "$git_exclude")" || return 1
-	if ! grep -Fxq "lefthook.local.yml" "$git_exclude" 2>/dev/null; then
-		echo "lefthook.local.yml" >>"$git_exclude" || return 1
-	fi
-	(
-		cd "$repo_root" || exit 1
-		LEFTHOOK_CONFIG="$local_lefthook_config" lefthook install
-	) || return 1
-	echo "✓ ${repo_root} に Lefthook をインストールしました"
-}
-
 lefthook_repo_roots=()
 workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
 workspace_branch=""
@@ -169,16 +146,16 @@ if [[ "$workspace_branch" == multi-worktree-* ]]; then
 elif [ -n "$workspace_root" ]; then
 	lefthook_repo_roots+=("$workspace_root")
 fi
-# 既定では lefthook.local.yml のコピーと hook のインストールを行わない。
+# 既定では lefthook-local.yml のコピーと hook のインストールを行わない。
 # 有効にする場合はホストで INSTALL_LOCAL_LEFTHOOK=1 を設定する（devcontainer.json の remoteEnv で渡る）。
 if [ "${INSTALL_LOCAL_LEFTHOOK:-0}" = "1" ]; then
 	for repo_root in "${lefthook_repo_roots[@]}"; do
-		if ! install_lefthook "$repo_root"; then
+		if ! bash "${HOME}/.config/devcontainer/scripts/install-local-lefthook.sh" "$repo_root"; then
 			echo "⚠️ ${repo_root} への Lefthook のインストールに失敗しましたが、残りの作成処理を続行します" >&2
 		fi
 	done
 else
-	echo "ℹ️ INSTALL_LOCAL_LEFTHOOK が 1 ではないため lefthook.local.yml の配置をスキップしました"
+	echo "ℹ️ INSTALL_LOCAL_LEFTHOOK が 1 ではないため lefthook-local.yml の配置をスキップしました"
 fi
 
 # .claude.json のコピー（既存の処理）

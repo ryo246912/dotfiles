@@ -12,9 +12,6 @@ args:
   term:
     default: xterm-256color
     env: TERM
-  lefthook_config:
-    default: lefthook.local.yml
-    env: LEFTHOOK_CONFIG
   install_local_lefthook:
     default: "0"
     env: INSTALL_LOCAL_LEFTHOOK

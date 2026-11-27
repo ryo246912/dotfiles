@@ -54,7 +54,7 @@ CLAUDE.local.md
 ## Lefthook
 lefthook-local.yml
 lefthook-local.yaml
-# devcontainer / sandbox が LEFTHOOK_CONFIG で指定する専用設定
+# 旧ファイルが残っている環境向け
 lefthook.local.yml
 
 ## desloppify
