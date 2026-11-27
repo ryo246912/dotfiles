@@ -187,7 +187,7 @@ install_lefthook_all() {
 
     local repo_root
     for repo_root in ${repo_roots[@]+"${repo_roots[@]}"}; do
-        if ! bash "$scripts_dir/install-local-lefthook.sh" "$repo_root"; then
+        if ! bash "$scripts_dir/install-local-lefthook.sh" "$repo_root" --quiet; then
             log_warn "${repo_root} への Lefthook のインストールに失敗しました"
         fi
     done
