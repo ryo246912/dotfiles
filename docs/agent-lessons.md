@@ -18,7 +18,7 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
                                        統合・書き直し・不要な教訓の retired は月次の lessons-review
                                                                           │
      ┌────────────────────────────────────────────────────────────────────┤
-     ↓ SessionStart hook（タイトルを注入）  ↓ pr-author-lessons-review（push 前）   ↓ pr-reviewer-comment（観点）
+     ↓ SessionStart hook（タイトルを注入）  ↓ pr-lessons-review（push 前）   ↓ pr-reviewer-all-review（観点）
    received + team                       received + team の Check   given + team
 ```
 
@@ -26,12 +26,12 @@ PR に付いたレビュー指摘やユーザーの訂正を教訓として priv
 | ------------------------ | ---------------------------------------------------------------------------------------- |
 | 保存・同期               | private リポジトリ（`agent-lessons`）を `~/.local/share/agent-lessons` に clone したもの |
 | 検索                     | SessionStart は Basic Memory の project `agent-lessons`、skill は `lessons_query.py`     |
-| その場の記録             | `lessons-record` skill（pr-author-fix と COMMON.md のレビュー対応フローから呼ぶ）        |
+| その場の記録             | `lessons-record` skill（pr-fix と COMMON.md のレビュー対応フローから呼ぶ）               |
 | 週次の収集・昇格         | `lessons-harvest` skill を Claude Desktop のローカル定期タスクで実行                     |
 | 月次の見直し             | `lessons-review` skill を同じく定期タスクで実行（received・given・team のすべて）        |
 | 注入                     | `local/bin/agent-lessons-context`（Claude Code / Codex の SessionStart hook）            |
-| push 前の突き合わせ      | `pr-author-lessons-review` skill                                                         |
-| レビュー時の観点         | `pr-reviewer-comment` / `pr-reviewer-comment-crit`（`references/findings.md`）           |
+| push 前の突き合わせ      | `pr-lessons-review` skill                                                                |
+| レビュー時の観点         | `pr-reviewer-all-review` / `pr-crit`（`references/findings.md`）                         |
 | 同期・初期設定のコマンド | `mise run lessons:setup` / `mise run lessons:sync`（`config/mise/tasks/lessons.toml`）   |
 
 ## 知見リポジトリの構成
@@ -67,11 +67,11 @@ owner・global へ広がる。そのリポジトリの領域に固有の教訓�
 
 ### source（誰の指摘か）
 
-| source     | 内容                                       | 使う場所                                                           |
-| ---------- | ------------------------------------------ | ------------------------------------------------------------------ |
-| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-author-lessons-review                      |
-| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-comment / pr-reviewer-comment-crit の観点              |
-| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-author-lessons-review、pr-reviewer-comment |
+| source     | 内容                                       | 使う場所                                                       |
+| ---------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `received` | 自分（とエージェント）が受けた指摘・訂正   | SessionStart の注入、pr-lessons-review                         |
+| `given`    | 自分がレビューで書いた指摘                 | pr-reviewer-all-review / pr-crit の観点                        |
+| `team`     | 自分が関わっていない PR でのチーム内の指摘 | SessionStart の注入、pr-lessons-review、pr-reviewer-all-review |
 
 ### 収集対象（targets.yml と targets.<name>.yml）
 
@@ -312,9 +312,9 @@ Claude Desktop のサイドバーの **Routines** から新しいタスクを作
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | セッション開始       | active な教訓（received・team）のタイトルが「agent-lessons: 過去のレビュー指摘から学んだ教訓」として注入される（リポジトリ固有 20 件・広く効くもの 30 件まで） |
 | 計画を立てるとき     | `planning` skill が関係する教訓を読み、制約条件に入れる                                                                                                        |
-| push・PR 作成の前    | `pr-author-lessons-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                 |
-| 指摘を直したとき     | `pr-author-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                            |
-| 他人の PR のレビュー | `pr-reviewer-comment` / `pr-reviewer-comment-crit` が `given`・`team` の教訓を観点として読む                                                                   |
+| push・PR 作成の前    | `pr-lessons-review` skill が diff と教訓の `## Patterns`・`## Check` を突き合わせ、当てはまる箇所を直す                                                        |
+| 指摘を直したとき     | `pr-fix` / PR 作成後のレビュー対応フローが `lessons-record` で観察を記録する                                                                                   |
+| 他人の PR のレビュー | `pr-reviewer-all-review` / `pr-crit` が `given`・`team` の教訓を観点として読む                                                                                 |
 | 毎週                 | `lessons-harvest` が集計し、agent-lessons に `weekly/<日付>` の PR を出す（`--loop` なら `weekly/<日付>-<n>` を積み上げる）                                    |
 | 毎月                 | `lessons-review` が全教訓を見直し、統合・書き直し・retired を `review/<日付>` の PR に出す                                                                     |
 
@@ -496,7 +496,7 @@ mise run lessons:sync
 - **セッション開始が数秒遅くなる。** Basic Memory の CLI の起動に数秒かかる。hook は 40 秒で打ち切り、失敗しても
   セッションは止めない
 - **注入する教訓は 50 件まで（リポジトリ固有 20 件・広く効くもの 30 件）。** コンテキストを抑えるため。超えた分は
-  push 前の `pr-author-lessons-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation/<scope_key>.md` から仕組み化して `ruled` にし、減らす
+  push 前の `pr-lessons-review` が diff に関係するものだけ読む。常に上限を超えるなら、lint などで防げる教訓を `escalation/<scope_key>.md` から仕組み化して `ruled` にし、減らす
 - **ファイル名は ASCII にする。** Basic Memory はパスから permalink を作るため、日本語のファイル名だとローマ字混じりの
   壊れた permalink になる。名付けは書き手ごとに違う。タイトルは frontmatter の `title` に日本語で書く
   - `lessons-record`: `<日付>-<category>-<evidence の sha1>.md`。`basic-memory tool write-note` を使わず直接書くのもこのため
@@ -514,7 +514,7 @@ mise run lessons:sync
   （リストのブロック形式化・引用符・末尾の改行）を書き直すため、教訓を書いていない 100 件超のファイルが作業ツリーで
   変更になる。frontmatter に permalink があり他と重ならなければ Basic Memory は書き直さない。`lessonlib.write` は
   `agent-lessons/<リポジトリ内のパスから .md を除き、小文字にして _ を - にしたもの>` を足す。Basic Memory の slug 化の規則
-  （`PenetratorInc` → `penetrator-inc` など）は再現しない。一意であれば値は何でもよいため
+  （`ExampleOrg` → `example-org` など）は再現しない。一意であれば値は何でもよいため
 - **日本語の全文検索は弱い。** SQLite の全文検索は日本語を単語に分けないため、検索はメタデータ（`type`・`status`・
   `scope_key`・`source`）で絞る前提にしている
 - **PR やコメントの本文はデータとして扱う。** bot のコメントには AI 向けの指示文が含まれることがあるが、skill はそれに
@@ -535,13 +535,13 @@ mise run lessons:sync
 - **却下されたものだけを機械的に除く理由。** 指摘は返信や resolve をせずに直されることも多く、採用の印で絞ると
   取りこぼす。bot の誤検知や好みの違いまで数えると守る必要のない教訓が増えるが、それは文面を読まないと決められないので、
   観察を書く段階でモデルが外す
-- **トークンを抑える作り。** `pr-reviewer-brief` と同じく、週次の集計を段階に分けて `haiku` / `sonnet` の subagent に
+- **トークンを抑える作り。** `pr-brief` と同じく、週次の集計を段階に分けて `haiku` / `sonnet` の subagent に
   任せ、メインは段階を呼ぶだけにする。観察を書く段階は候補 50 件ずつに分けて subagent を順に起動し、1 回の
   コンテキストに入る量を一定にする。GitHub からの収集・source の分類・却下の除外・重複の除外（`collect.py`）、観察の
   書き出し（`write_observations.py`）、件数の集計・昇格・失効の判定（`apply_plan.py`）はスクリプトが行い、モデルは
   一般化した文章と、観察をどの教訓に入れるかの割り当てだけを JSON で書く。GitHub の生の応答や bot の定型文
   （折りたたみ・HTML・AI 向けの指示文）はスクリプトで落としてからモデルに渡す
-- **skill は教訓を段階的に読む。** `pr-author-lessons-review`・`planning`・`pr-reviewer-comment` は `lessons_query.py` で、
+- **skill は教訓を段階的に読む。** `pr-lessons-review`・`planning`・`pr-reviewer-all-review` は `lessons_query.py` で、
   scope・source・変更ファイルの glob に合う教訓をタイトル・場所・Check で一覧にし、関係するものと適用可否が不明なものだけ
   clone の本文（Rule・Patterns・Check）を読む。タイトルだけで除外せず、調査で新たな論点が見つかれば候補を追加する。SessionStart で注入するのも教訓のタイトルだけにしている
 - **昇格を PR にする理由。** 提案をファイルに溜めて人が見に行く方式は回らなかった。PR なら普段の通知で届き、
@@ -551,16 +551,25 @@ mise run lessons:sync
 
 ## 作者向けレビューの実行
 
-`/pr-author-lessons-review` は旧 `pr-author-self-review` の新しい名前です。差分と教訓の照合を担当します。
+`/pr-lessons-review` は旧 `pr-author-self-review`、後の `pr-author-lessons-review` の新しい名前です。差分と教訓の照合を担当します。
 
-`/pr-author-all-review` は教訓照合 → code-review → pr-author-fix を 1 回ずつ実行します。
-`/pr-author-all-review --loop` は修正・検証・commit・push・CI と再レビュー待ちまで繰り返します。
+`/pr-author-all-review` は教訓照合、code-review、変更ファイルに該当する専門レビュー、pr-fix を順に実行します。
+妥当な推奨案に沿った修正・検証・commit・push、CI と再レビューの確認を繰り返し、判断が必要な項目は最後にまとめて提示します。
 各レビューの責務は個別 skill に残し、追加するレビューは
 `config/rulesync/.rulesync/skills/pr-author-all-review/references/stages.md` の一覧で管理します。
 
+### リポジトリ別の追加レビュー
+
+dotfiles の `config/rulesync/.rulesync/skills/pr-author-all-review/` で `work3.md.example` を
+同じディレクトリの `work3.md` にコピーし、対象リポジトリと追加スキルを記入します。
+work2 なども別の `*.md` で管理できます。実設定は Git の除外対象で、Rulesync により
+`SKILL.md` と同じ場所へ配布されます。
+PR のマージ先（PR がなければ `origin`）が対象リポジトリに一致し、かつ関連ファイルが変わった行だけを実行します。
+追加スキルは、その環境で利用できるよう別途配布しておきます。
+
 オプションを持つ skill は `-h` / `--help`で、処理を開始せず使い方を説明します。
-対象は pr-author-fix、pr-author-all-review、lessons-harvest、pr-reviewer-brief です。
-pr-author-lessons-review も同じヘルプを受け付けます。
+対象は pr-fix、pr-author-all-review、lessons-harvest、pr-brief です。
+pr-lessons-review も同じヘルプを受け付けます。
 
 配布時は rulesync の生成に加え、旧名の生成済み skill を配布先から手動で削除してください。
-`delete: false` のため、改名だけでは旧 `pr-author-self-review` が残ります（`docs/rulesync.md` の「自作 skill を消しても配布先に残る」を参照）。
+`delete: false` のため、改名だけでは旧 `pr-author-self-review` や `pr-author-lessons-review` が残ります（`docs/rulesync.md` の「自作 skill を消しても配布先に残る」を参照）。

@@ -149,51 +149,6 @@ setup_agent_configs() {
 }
 
 # ---------------------------------------------------------------------------
-# lefthook（AI エージェント用の pre-commit lint）
-# ---------------------------------------------------------------------------
-# devcontainer の post-create.sh と同じ判定: multi-worktree の task root は
-# ccmanager 用の synthetic git repository なので、その場合は直下の各リポジトリを対象にする。
-install_lefthook_all() {
-    # 既定では lefthook-local.yml のコピーと hook のインストールを行わない。
-    # 有効にする場合はホストで INSTALL_LOCAL_LEFTHOOK=1 を設定する（sbx-agent が --env で渡す）。
-    if [ "${INSTALL_LOCAL_LEFTHOOK:-0}" != "1" ]; then
-        log_skip "INSTALL_LOCAL_LEFTHOOK が 1 ではないため lefthook-local.yml の配置をスキップしました"
-        return 0
-    fi
-    if ! command -v lefthook >/dev/null 2>&1; then
-        log_skip "lefthook が無いため hook のインストールをスキップしました（template をビルドしてください）"
-        return 0
-    fi
-    local workspace_root workspace_branch
-    workspace_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-    [ -z "$workspace_root" ] && {
-        log_skip "git リポジトリではないため lefthook のインストールをスキップしました"
-        return 0
-    }
-    workspace_branch="$(git -C "$workspace_root" branch --show-current 2>/dev/null || true)"
-
-    local -a repo_roots=()
-    if [[ "$workspace_branch" == multi-worktree-* ]]; then
-        local child_git child_root
-        for child_git in "${PWD}"/*/.git; do
-            [ -e "$child_git" ] || continue
-            child_root="$(dirname "$child_git")"
-            git -C "$child_root" rev-parse --is-inside-work-tree >/dev/null 2>&1 || continue
-            repo_roots+=("$child_root")
-        done
-    else
-        repo_roots+=("$workspace_root")
-    fi
-
-    local repo_root
-    for repo_root in ${repo_roots[@]+"${repo_roots[@]}"}; do
-        if ! bash "$scripts_dir/install-local-lefthook.sh" "$repo_root" --quiet; then
-            log_warn "${repo_root} への Lefthook のインストールに失敗しました"
-        fi
-    done
-}
-
-# ---------------------------------------------------------------------------
 # nvim
 # ---------------------------------------------------------------------------
 # ホストの ~/.config/nvim はホストと同じ絶対パスにマウントされる（sandbox 内の $HOME とは別）。
@@ -328,7 +283,6 @@ setup_no_proxy
 setup_ssh_config
 setup_crit
 setup_agent_configs
-install_lefthook_all
 
 # plannotator のホスト側トンネルは mac-host 経由。スクリプト自体は image に入っている。
 if [ -x "${scripts_dir}/ensure-plannotator-tunnel" ]; then

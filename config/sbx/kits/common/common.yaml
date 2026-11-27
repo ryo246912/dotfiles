@@ -12,9 +12,6 @@ args:
   term:
     default: xterm-256color
     env: TERM
-  install_local_lefthook:
-    default: "0"
-    env: INSTALL_LOCAL_LEFTHOOK
 capabilities:
   # v3 kits must request forwarding explicitly, even when enabled on the host.
   - type: com.docker.sandbox/ssh-agent@1
@@ -89,7 +86,12 @@ capabilities:
           - "zenn.dev"
           - "qiita.com"
           - "**.wikipedia.org"
+          # 公開 X 投稿の調査
+          - "x.com"
+          - "twitter.com"
+          - "api.fxtwitter.com"
           # パッケージ・ビルドツールの取得元（Balanced preset に無いもの）
+          - "conda.anaconda.org"
           # mise のバージョン解決・インストール
           - "mise-versions.jdx.dev"
           - "mise.run"

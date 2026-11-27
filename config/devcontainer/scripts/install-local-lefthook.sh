@@ -2,25 +2,33 @@
 set -euo pipefail
 
 repo_root=$1
-mode=${2:-}
 template="$(cd -- "$(dirname -- "$0")/.." && pwd)/lefthook-local.yml"
 config=lefthook-local.yml
 
 cd "$repo_root"
 
-install_hooks() (
+has_main_config() {
     local stem extension
-    if [[ "$mode" == --quiet ]]; then
-        exec >/dev/null 2>&1
-    fi
     for stem in lefthook .lefthook .config/lefthook; do
         for extension in yml yaml json jsonc toml; do
             if [[ -e "$stem.$extension" ]]; then
-                env -u LEFTHOOK_CONFIG lefthook install
-                return
+                return 0
             fi
         done
     done
+    return 1
+}
+
+render_standalone_config() {
+    cat "$template" || return
+    printf '\nno_auto_install: true\n'
+}
+
+install_hooks() (
+    if has_main_config; then
+        env -u LEFTHOOK_CONFIG lefthook install
+        return
+    fi
 
     # Lefthook 2.2.1 の install は主設定がないと lefthook.yml を生成する。
     # インストール時だけ空の主設定を渡し、ローカル設定は標準の探索で読み込む。
@@ -30,11 +38,6 @@ install_hooks() (
     printf '{}\n' > "$temp_dir/lefthook.yml"
     LEFTHOOK_CONFIG="$temp_dir/lefthook.yml" lefthook install
 )
-
-if [[ "$mode" == --install-only ]]; then
-    install_hooks
-    exit 0
-fi
 
 if [[ ! -r "$template" ]]; then
     printf '⚠️ Lefthook のテンプレートを読み込めません。%s\n' "$template" >&2
@@ -57,7 +60,8 @@ for stem in lefthook-local .lefthook-local .config/lefthook-local; do
         if [[ ! -e "$candidate" && ! -L "$candidate" ]]; then
             continue
         fi
-        if [[ "$candidate" == "$config" ]] && cmp -s "$template" "$candidate"; then
+        if [[ "$candidate" == "$config" ]] &&
+            { cmp -s "$template" "$candidate" || cmp -s <(render_standalone_config) "$candidate"; }; then
             continue
         fi
         printf '⚠️ %s に既存の %s があるため、AI 用 Lefthook 設定の配置をスキップしました。\n' "$repo_root" "$candidate" >&2
@@ -72,7 +76,11 @@ if ! grep -Fxq "/$config" "$git_exclude" 2>/dev/null; then
 fi
 
 if [[ ! -e "$config" ]]; then
-    (set -o noclobber; cat "$template" > "$config")
+    if has_main_config; then
+        (set -o noclobber; cat "$template" > "$config")
+    else
+        (set -o noclobber; render_standalone_config > "$config")
+    fi
 fi
 
 install_hooks

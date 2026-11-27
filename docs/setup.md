@@ -94,8 +94,9 @@
     ```
 
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
-  - 2回目以降の `dotfiles apply` はファイルを配置するだけで、ツールは入らない（初回の自動 install は apm/rulesync が
-    未導入のときだけ）。ツールだけ入れ直すときは tools ステップだけ実行する
+  - `dotfiles apply` は毎回 gh 導入・認証と `mise install` も行う（post-merge の自動 apply も同じ。post-checkout の
+    自動 apply は `DOTFILES_SKIP_TOOLS_INSTALL=1` で行わない）。gh 未ログインなら apply のたびに `gh auth login` のプロンプトが出て、
+    ログインしないと中断する。ツールだけ入れ直すときは tools ステップだけ実行する
 
     ```sh
     mise bootstrap --only tools # HOST_ENV 反映前は MISE_ENV=mac を付ける（ロール別のツールは入らない）
@@ -176,20 +177,20 @@
   - [ ] ホストの git 署名用の GPG 設定
     - ホストで直接コミットするときの署名。`gpg --import` を含む以下の GPG 設定は sandbox の署名には使わない。
 
-    - [ ] secret設定ファイルの作成
+    - [ ] 非公開設定ファイルの作成
       - サンプルをコピーし、`machineId`を自分の値に編集する
 
       ```sh
-      cp ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
+      cp -n ~/dotfiles/config/git/config.secret.sample ~/.config/git/config.secret
       nvim ~/.config/git/config.secret
       ```
 
       - 仕事用の設定が必要な場合も、サンプルをコピーして`email`と`signingkey`を編集する
 
       ```sh
-      cp ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
-      cp ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
-      nvim ~/.config/git/config.work3.secret
+      cp -n ~/dotfiles/config/git/config.work.secret.sample ~/.config/git/config.work.secret
+      cp -n ~/dotfiles/config/git/config.work3.secret.sample ~/.config/git/config.work3.secret
+      nvim ~/.config/git/config.work.secret ~/.config/git/config.work3.secret
       ```
 
       - 各値の確認方法
@@ -391,14 +392,17 @@
 
 - [ ] （work ホストのみ）git 管理外の work 用ファイルを用意する
   - 雛形をコピーしてプレースホルダを書き換える（コピー先は gitignore 済みかリポジトリ外）。
-    git の secret ファイルは上の「git」で用意済み
+    git の非公開設定ファイルは上の「git」で用意済み
 
-    | 用途                        | 雛形                                         | コピー先                                         | 対象             |
-    | --------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
-    | AWS の SSO・aws-vault 設定  | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
-    | sandbox の許可ドメイン      | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
-    | sandbox から使う MCP サーバ | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
-    | 仕事用の環境変数など        | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
+    | 用途                         | 雛形                                         | コピー先                                         | 対象             |
+    | ---------------------------- | -------------------------------------------- | ------------------------------------------------ | ---------------- |
+    | AWS の SSO・aws-vault 設定   | `~/.aws/config.example`                      | `~/.aws/config`                                  | work2 / work3    |
+    | sandbox の許可ドメイン       | `config/sbx/allow-domains.work3.txt.example` | `config/sbx/allow-domains.work3.txt`             | work3            |
+    | sandbox から使う MCP サーバ  | `config/sbx/mcp.<role>.yml.example`          | `config/sbx/mcp.<role>.yml`                      | work2 / work3    |
+    | Alembic の切替前検査（任意） | `config/git/work3.example/`                  | `~/.config/git/work3/`                           | work3            |
+    | 仕事用の環境変数など         | なし                                         | `~/.zshrc.secret` / `~/.zprofile.secret`（任意） | 必要なホストのみ |
+
+  - Alembic の切替前検査（Git 2.36 以上）では、雛形の `config` と `guard` をコピーする。`config` の URL を対象リポジトリで `git config --get remote.origin.url` が返す1件に置き換え、`guard` に実際のパスと、Compose の DB サービス名（`dbService`）、DB ユーザー（`dbUser`）、DB 名（`dbName`）を設定する。既存の個人設定に `git()` があれば削除し、`mise bootstrap dotfiles apply` 後に対話型 zsh を起動する。検査は直接の `git checkout` / `git switch` で有効になり、`ALEMBIC_GUARD=0` で省略できる。
 
   - AWS: プロファイル名（`XXX`）・`sso_account_id`・`sso_start_url` を書き換える
     - `sso_start_url`: AWS access portal の URL（`https://xxx.awsapps.com/start`）。社内の案内か管理者から受け取る
@@ -519,6 +523,29 @@
 - [ ] VSCode
   - [ ] settings syncの同期
   - [ ] 設定ファイルをコピー
+
+### Git 管理外の設定ファイル
+
+使う機能に対応する行だけ設定します。相対パスは dotfiles リポジトリのルートが基準です。
+雛形がある場合はコピー先が未作成ならコピーし、コピー先でプレースホルダーを実際の値に置き換えます。
+既存の設定を引き継ぐ場合は、不足項目だけ追記します。
+
+| 用途                                     | 雛形                                                                                                 | コピー先・設定内容                                                                                                                                                                                                    |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CodeRabbit の端末設定                    | `config/git/config.secret.sample`                                                                    | `~/.config/git/config.secret` に端末の値を設定する。[初期設定](#初期設定)を参照                                                                                                                                       |
+| 仕事用 Git の署名                        | `config/git/config.work.secret.sample` / `config/git/config.work3.secret.sample`                     | 利用するロールの `~/.config/git/config.work.secret` / `config.work3.secret` にメールアドレスと署名鍵を設定する。[初期設定](#初期設定)を参照                                                                           |
+| AWS の SSO・aws-vault                    | `aws/config.example`（配置後は `~/.aws/config.example`）                                             | work2 / work3 の `~/.aws/config` に SSO セッション、アカウント、ロールとプロファイルを設定する。[初期設定](#初期設定)を参照                                                                                           |
+| Sandbox の許可ドメイン                   | `config/sbx/allow-domains.work3.txt.example`                                                         | 同じディレクトリの `allow-domains.work3.txt` に必要なドメインを記入する。[Sandbox の設定](docker-sandboxes.md)を参照                                                                                                  |
+| Sandbox の MCP サーバー                  | `config/sbx/mcp.work2.yml.example` / `config/sbx/mcp.work3.yml.example`                              | 同じディレクトリの `mcp.work2.yml` / `mcp.work3.yml` に社内 URL、リポジトリパスなどを設定する。[Sandbox の設定](docker-sandboxes.md)を参照                                                                            |
+| Alembic の切替前検査                     | `config/git/work3.example/`                                                                          | `~/.config/git/work3/` に `config` と `guard` をコピーし、対象リポジトリの URL、パス、DB の接続先を設定する。[初期設定](#初期設定)を参照                                                                              |
+| 仕事用のシェル環境変数                   | なし                                                                                                 | 必要に応じて `~/.zshrc.secret` / `~/.zprofile.secret` を作る。[初期設定](#初期設定)を参照                                                                                                                             |
+| 仕事用のレビュー教訓の収集対象           | `config/agent-lessons/targets.work.yml.example`                                                      | `~/.config/agent-lessons/targets.work.yml` にリポジトリとチーム収集の有無を設定する。[収集対象の設定](agent-lessons.md#収集対象targetsyml-と-targetsnameyml)を参照                                                    |
+| 作者向けレビューのリポジトリ別追加段階   | `config/rulesync/.rulesync/skills/pr-author-all-review/work3.md.example`                             | 同じディレクトリの `work3.md` に対象リポジトリ、スキル、変更ファイルの条件を記入し、Rulesync で配布する。[リポジトリ別の追加レビュー](agent-lessons.md#リポジトリ別の追加レビュー)を参照                              |
+| PR の動作確認環境                        | `config/rulesync/.rulesync/skills/pr-behavior-review/config.example.md`                              | 初回実行時にスキルが `config.md` を作る。使うリポジトリの接続先、画面、テストデータなどを設定する。[動作確認スキルの設定手順](../config/rulesync/.rulesync/skills/pr-behavior-review/SKILL.md#入力と設定の補完)を参照 |
+| multi-worktree                           | `config/multi-worktree/config.toml.sample`（配置後は `~/.config/multi-worktree/config.toml.sample`） | `~/.config/multi-worktree/config.toml` にリポジトリと worktree の設定を記入する。[基本セットアップ](multi-worktree.md#基本セットアップ)を参照                                                                         |
+| Vicinae の個人・仕事用ショートカット     | `templates/vicinae/vicinae.secret.yaml.sample`                                                       | 同じディレクトリの `vicinae.secret.yaml` に URL やメールアドレスを設定する。[追加設定](#追加設定)を参照                                                                                                               |
+| navi の非公開チートシート                | `config/navi/template.cheat.md`                                                                      | 必要に応じて `config/navi/cheats/<名前>.secret.cheat.md` を作り、個人・仕事用のコマンドを記入する                                                                                                                     |
+| Claude Code のプロジェクト別ローカル設定 | なし                                                                                                 | 必要に応じて対象プロジェクトの `.claude/settings.local.json` でスキル表示などを設定する。[スキル設定](ai-skill.md)を参照                                                                                              |
 
 ### 追加設定
 
@@ -856,9 +883,9 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     MISE_ENV=linux mise bootstrap dotfiles apply --yes
     mise trust ~/.config/mise/config.linux.toml
     ```
-    初回（apm/rulesync が未導入）は、ファイル配置に続けて `[bootstrap.hooks.post-dotfiles]` が
+    ファイル配置に続けて `[bootstrap.hooks.post-dotfiles]` が
     gh 導入（未ログインなら `gh auth login --scopes 'project'` のプロンプト）→ `GITHUB_TOKEN=$(gh auth token) mise install`
-    → APM の user-scope dependencies・rulesync generate まで実行する（導入済みの環境ではスキップ）。
+    → APM の user-scope dependencies・rulesync generate まで実行する（`mise install` は 2回目以降の apply でも毎回実行する）。
     このコマンドで `config/` 等の各ファイルへのシンボリックリンクが `~/.config` に張られる
     （`~/.config` は symlink-each と track の両方で宣言している。詳細は [docs/mise.md](./mise.md) の
     track/history の節参照）。
@@ -889,7 +916,9 @@ do shell script "/Applications/Claude.app/Contents/MacOS/Claude --user-data-dir=
     native の packages フェーズには無いため、非対話端末（cron 等）から実行すると sudo
     プロンプトでハングしうる。対話端末（TTY）から実行すること
   - 失敗時は同じ2コマンドを再実行する（各フェーズは収束的なので再実行して安全）
-  - 2回目以降の `dotfiles apply` だけではツールは入らない（初回の自動 install は apm/rulesync が未導入のときだけ）。
+  - `dotfiles apply` は毎回 gh 導入・認証と `mise install` をするので、2回目以降もツールが追加・更新される
+    （post-merge の自動 apply も同じ。post-checkout の自動 apply は `DOTFILES_SKIP_TOOLS_INSTALL=1` で行わない）。gh 未ログインなら apply のたびに
+    `gh auth login` のプロンプトが出て、ログインしないと中断する。
     ツールだけ入れ直すときは `mise bootstrap --only tools`
     （`HOST_ENV` 反映前は `MISE_ENV=linux` を付ける。ロール別のツールは入らない）
 

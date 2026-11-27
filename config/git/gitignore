@@ -61,6 +61,8 @@ lefthook.local.yml
 .desloppify/
 
 ## PRの動作確認
+**/pr-behavior-review/config.md
+**/pr-behavior-review/lessons/
 **/pr-reviewer-behavior/config.md
 **/pr-reviewer-behavior/lessons/
 /.pr-reviewer-artifacts/
