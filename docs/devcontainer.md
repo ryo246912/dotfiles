@@ -15,7 +15,7 @@ devcontainer はいずれもここに書かれた仕組みを共有します。
 > このページのツールチェイン（`mise.toml` / `tasks/` / `lint/`）とホスト連携スクリプト
 > （通知・crit・plannotator・host-tmux・lefthook）は **`Dockerfile.sandbox` 経由で sandbox 側にも
 > 移植済み**で、同じファイルを共有しています。これらは bind mount ではなく image へ COPY して
-> いるため、`mise.toml` / `tasks/` / `lint/` / `scripts/` / `lefthook-local.yml` のいずれかを
+> いるため、`mise.toml` / `tasks/` / `lint/` / `scripts/` / `lefthook.local.yml` のいずれかを
 > 変更したら `mise run sandbox:build-template` で sandbox 用 template を作り直してください。
 > 項目ごとの再現状況と、まだ差分が残っている点（生成物ディレクトリの分離など）は
 > [devcontainer との機能対応表](./docker-sandboxes.md#devcontainer-との機能対応表) にまとめています。
@@ -173,7 +173,7 @@ cache mount は `docker builder prune` で削除されます（削除されて�
 | `Dockerfile.sandbox`                       | 未使用                     | `mise run sandbox:build-template` が使う template の定義 |
 | `mise.toml` / `tasks/` / `lint/`           | bind mount + image に COPY | image に COPY（同じ内容）                                |
 | `scripts/`                                 | bind mount                 | image に COPY                                            |
-| `lefthook-local.yml`                       | bind mount                 | image に COPY                                            |
+| `lefthook.local.yml`                       | bind mount                 | image に COPY                                            |
 | `scripts/initialize.sh`                    | `initializeCommand`        | `mise run sandbox:setup` が流用                          |
 | `scripts/post-create.sh` / `post-start.sh` | `postCreateCommand` 等     | 未使用（代わりに `sandbox-post-create.sh`）              |
 | `scripts/sandbox-post-create.sh`           | 未使用                     | `sbx exec` で sandbox 作成直後に実行                     |
@@ -217,7 +217,7 @@ COPY --chown=vscode:vscode mise.toml /mise/config.toml
 このコピーは起動中の devcontainer が bind mount しているため
 （`multi-worktree` では複数が同時に動く）、作り直すと動いているコンテナから
 設定が消えてしまいます。コピー後に `Dockerfile` / `mise.toml` / `tasks` / `lint` /
-`scripts` / `lefthook-local.yml` が揃っているかを検証し、欠けていればそこで止めます
+`scripts` / `lefthook.local.yml` が揃っているかを検証し、欠けていればそこで止めます
 （dotfiles 未適用やリンク切れを、分かりにくい `docker build` エラーの前に検出するため）。
 
 > [!NOTE]
@@ -558,6 +558,6 @@ ssh -F ~/.config/ssh/config mac-host \
 ## AIエージェント向けpre-commit
 
 devcontainerでは`AI_AGENT`を設定し、ホストで`INSTALL_LOCAL_LEFTHOOK=1`を設定している場合に限り、
-作成時にAIエージェント向けのLefthook pre-commit（`lefthook-local.yml`）を各リポジトリへ配置してインストールする
+作成時にAIエージェント向けのLefthook pre-commit（`lefthook.local.yml`）を各リポジトリへ配置してインストールする
 （既定では配置もインストールも行わない）。ジョブは`AI_AGENT`が空でない場合に実行するため、
 エージェント側が`claude-code_2-1-218_agent`のような識別子で値を上書きしても動作する。

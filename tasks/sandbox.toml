@@ -101,7 +101,7 @@ done
 
 # COPY する対象が実体として読めることを先に確かめる（symlink 切れ・未配置をここで検出する）
 missing=""
-for required in Dockerfile.sandbox mise.toml tasks lint scripts lefthook-local.yml; do
+for required in Dockerfile.sandbox mise.toml tasks lint scripts lefthook.local.yml; do
   [ -e "${context}/${required}" ] || missing="${missing}${missing:+, }${required}"
 done
 if [ -n "$missing" ]; then

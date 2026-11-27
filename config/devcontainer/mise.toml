@@ -57,13 +57,8 @@ includes = ["/mise/tasks/*.toml"]
 [hooks]
 postinstall = '''
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
-config="$root/lefthook-local.yml"
-if [ ! -f "$config" ]; then
-    if [ -f "$root/lefthook.local.yml" ]; then
-        printf '%s\n' 'Lefthook: lefthook.local.yml を lefthook-local.yml にリネームしてください。' >&2
-    fi
-    exit 0
-fi
+config="$root/lefthook.local.yml"
+[ -f "$config" ] || exit 0
 cd "$root" || exit 0
 LEFTHOOK_CONFIG="$config" lefthook install
 '''
