@@ -143,8 +143,8 @@ gh event listen --resource <PR URL> --event com.github.pull_request.review.submi
 gh event listen --resource <PR URL> --event com.github.pull_request.check_suite.status.changed.v1 --timeout <待機上限>
 ```
 
-- 上記以外のイベント種別（マージコンフリクトなど）の名前は `gh event listen --help` で確認して指定する。推測で書かない
-- 既定は最初の 1 件で終了する（待機上限に達すると終了コード 8）。イベントを受けたら本節の各回の確認（`headRefOid`・`mergeable`・base 先端 SHA・CI・コメントの再取得）を行い、まだ完了条件を満たさなければ再度 `gh event listen` で待つ
+- 上記以外のイベント種別（head の変更、マージコンフリクトなど）の名前は `gh event listen --help` で確認して指定する。推測で書かない。待機中の push や競合を検出するため、head の変更・マージコンフリクトを表す種別も `--event` に加える
+- 既定は最初の 1 件で終了する（待機上限に達すると終了コード 8）。イベントを受けたら、まず `gh event listen` を再起動して stderr に `Listening for events.` が出るのを確認し、その後で本節の各回の確認（`headRefOid`・`mergeable`・base 先端 SHA・CI・コメントの再取得）を行う。再取得中に届いたイベントは再起動したリスナーで受け取り、完了条件を満たさなければ待機を続ける
 - イベントは過去分を再配信しない。リスナーをバックグラウンドで起動し、stderr に `Listening for events.` が出てから（再接続後の同じ表示の後も）現在の状態を 1 回取得する。起動と取得を同時に行うと、その間のイベントを取りこぼす
 - `--timeout` には下記の待機上限の残りを指定する。タイムアウトは未着として扱い、成功にしない
 - イベントの内容だけで完了判定しない。受信後は必ず最新の head SHA・`mergeable`・CI・レビューを再取得して判定する（古い SHA へのイベントを現在の head の結果として使わない）
