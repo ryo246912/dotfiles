@@ -134,7 +134,7 @@ gh run view <run-ID> --log-failed
 ### イベント待ち（`gh event listen`）
 
 レビュー待ち・コンフリクト待ち・CI 待ちは、`gh event listen` が使える場合は定期取得の代わりにこれで待つ。
-`gh event` は preview で Event Streams のアクセス権が必要なため、最初に `gh event --help` で使えるか確認する。
+`gh event` は preview で Event Streams のアクセス権が必要なため、最初に `gh event --help`（`gh` が対応しているか）と `gh event subscription list`（アカウントにアクセス権があるか。権限がなければ 403 になる）で使えるか確認する。
 
 ```bash
 # PR の URL は --resource、イベントは --event に完全な種別名で渡す（位置引数は受け付けない。短縮名は無い）
