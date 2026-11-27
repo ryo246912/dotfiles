@@ -150,7 +150,7 @@ gh event listen --resource <PR URL> --event com.github.pull_request.check_suite.
 - イベントは過去分を再配信しない。リスナーをバックグラウンドで起動し、stderr に `Listening for events.` が出てから（再接続後の同じ表示の後も）現在の状態を 1 回取得する。起動と取得を同時に行うと、その間のイベントを取りこぼす
 - `--timeout` には下記の待機上限の残りを指定する。タイムアウトは未着として扱い、成功にしない
 - イベントの内容だけで完了判定しない。受信後は必ず最新の head SHA・`mergeable`・CI・レビューを再取得して判定する（古い SHA へのイベントを現在の head の結果として使わない）
-- イベントでは検出できないものは、定期取得を併用する: PR の会話コメント、commit status 形式の外部 CI（check suite を発生させない）、`mergeable` が `UNKNOWN` から確定する変化
+- イベントでは検出できないものは、定期取得を併用する: PR の会話コメント、commit status 形式の外部 CI（check suite を発生させない）、base ブランチ先端 SHA の更新、`mergeable` が `UNKNOWN` から確定する変化
 - `gh` が古い・サブコマンドが無い・アクセス権がない・接続に失敗した場合は、その旨を報告し、下記の定期取得に切り替える。`gh event listen` の失敗を成功扱いしない
 - `--watch` モードの `watch_feedback.py` は別機構のまま使う。修正担当内のレビュー・CI・コンフリクト待ちに限り、この節を適用する
 
