@@ -1273,7 +1273,7 @@ SBX_TEMPLATE_AGENTS="claude codex" mise run sandbox:build-template
 2. mise を `/usr/local/bin` に入れ、`config/devcontainer/mise.toml` を `/mise/config.toml` へ COPY
 3. `mise install` で devcontainer と同じツール群を入れる（BuildKit の cache mount で差分ビルド、
    `GH_TOKEN` は build secret で渡してレート制限を避ける）
-4. `tasks/` / `lint/` / `scripts/` / `lefthook.local.yml` を **devcontainer と同じ
+4. `tasks/` / `lint/` / `scripts/` / `lefthook-local.yml` を **devcontainer と同じ
    `~/.config/devcontainer` 配下**（sandbox 内では `/home/agent/.config/devcontainer`）へ COPY。
    こうすると tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` が
    パスの書き換え無しでそのまま解決します
@@ -1432,7 +1432,7 @@ sandbox を複数同時に起動してもポートが衝突しません。割り
 | devcontainer でやっていたこと                                                                     | sandbox                                                                                 |
 | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `include.path` / `core.excludesfile` / credential helper / `insteadOf` / `gc.worktreePruneExpire` | ✅ `GIT_CONFIG_*` で注入                                                                |
-| 各リポジトリへの `lefthook.local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ。既定は無効） |
+| 各リポジトリへの `lefthook-local.yml` 配置と `lefthook install`                                   | ✅ `sandbox-post-create.sh` で実行（`INSTALL_LOCAL_LEFTHOOK=1` のときのみ。既定は無効） |
 | `~/.claude.json` のコピー                                                                         | ✅ 同上                                                                                 |
 | `~/.crit.config.json` の生成                                                                      | ✅ 同上                                                                                 |
 | コミット署名（専用鍵 + `allowed_signers`）                                                        | ✅ ssh-agent forwarding で署名し、ホストの `allowed_signers` をマウントして検証もできる |

@@ -50,7 +50,10 @@ CLAUDE.local.md
 
 ## crit
 .crit/
-lefthook.local.yml
+
+## Lefthook
+lefthook-local.yml
+lefthook-local.yaml
 
 ## desloppify
 .desloppify/

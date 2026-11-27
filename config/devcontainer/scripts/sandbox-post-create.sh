@@ -154,12 +154,12 @@ setup_agent_configs() {
 # devcontainer の post-create.sh と同じ判定: multi-worktree の task root は
 # ccmanager 用の synthetic git repository なので、その場合は直下の各リポジトリを対象にする。
 install_lefthook_all() {
-    local template="${HOME}/.config/devcontainer/lefthook.local.yml"
+    local template="${HOME}/.config/devcontainer/lefthook-local.yml"
 
-    # 既定では lefthook.local.yml のコピーと hook のインストールを行わない。
+    # 既定では lefthook-local.yml のコピーと hook のインストールを行わない。
     # 有効にする場合はホストで INSTALL_LOCAL_LEFTHOOK=1 を設定する（sbx-agent が --env で渡す）。
     if [ "${INSTALL_LOCAL_LEFTHOOK:-0}" != "1" ]; then
-        log_skip "INSTALL_LOCAL_LEFTHOOK が 1 ではないため lefthook.local.yml の配置をスキップしました"
+        log_skip "INSTALL_LOCAL_LEFTHOOK が 1 ではないため lefthook-local.yml の配置をスキップしました"
         return 0
     fi
     if ! command -v lefthook >/dev/null 2>&1; then
@@ -167,7 +167,7 @@ install_lefthook_all() {
         return 0
     fi
     if [ ! -f "$template" ]; then
-        log_skip "lefthook.local.yml が無いため hook のインストールをスキップしました"
+        log_skip "lefthook-local.yml が無いため hook のインストールをスキップしました"
         return 0
     fi
 
@@ -194,15 +194,15 @@ install_lefthook_all() {
 
     local repo_root config git_exclude
     for repo_root in ${repo_roots[@]+"${repo_roots[@]}"}; do
-        config="${repo_root}/lefthook.local.yml"
+        config="${repo_root}/lefthook-local.yml"
         if [ ! -e "$config" ] && ! cp "$template" "$config"; then
-            log_warn "${repo_root} への lefthook.local.yml の配置に失敗しました"
+            log_warn "${repo_root} への lefthook-local.yml の配置に失敗しました"
             continue
         fi
         if git_exclude="$(git -C "$repo_root" rev-parse --path-format=absolute --git-path info/exclude 2>/dev/null)"; then
             mkdir -p "$(dirname "$git_exclude")"
-            grep -Fxq "lefthook.local.yml" "$git_exclude" 2>/dev/null \
-                || echo "lefthook.local.yml" >>"$git_exclude"
+            grep -Fxq "lefthook-local.yml" "$git_exclude" 2>/dev/null \
+                || echo "lefthook-local.yml" >>"$git_exclude"
         fi
         if (cd "$repo_root" && LEFTHOOK_CONFIG="$config" lefthook install >/dev/null 2>&1); then
             log_ok "${repo_root} に Lefthook をインストールしました"

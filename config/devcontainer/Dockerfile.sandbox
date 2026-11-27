@@ -11,7 +11,7 @@
 #   mise run sandbox:build-template
 #
 # devcontainer との対応:
-#   - mise.toml / tasks/ / lint/ / scripts/ / lefthook.local.yml は devcontainer と共有する。
+#   - mise.toml / tasks/ / lint/ / scripts/ / lefthook-local.yml は devcontainer と共有する。
 #     devcontainer が bind mount していたのと同じ `~/.config/devcontainer` 配下へ COPY するので、
 #     tasks が参照する `${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/...` がそのまま解決する。
 #   - base image は v3 の公開 workload (docker.io/sbx/<agent>:latest)。
