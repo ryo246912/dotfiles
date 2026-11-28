@@ -117,12 +117,12 @@ EOF
         log_skip "~/.crit.config.json は既に存在します"
     fi
 
-    if [ -n "${SBX_CRIT_HOST_PORT:-}" ]; then
+    if [[ "${SBX_CRIT_HOST_PORT:-}" =~ ^[0-9]+$ ]]; then
         printf '%s\n' "$SBX_CRIT_HOST_PORT" >"${HOME}/.crit-host-port"
         log_ok "crit の host port (${SBX_CRIT_HOST_PORT}) を ~/.crit-host-port に記録しました"
     else
         rm -f "${HOME}/.crit-host-port"
-        log_skip "crit の host port が渡されていないため記録をスキップしました"
+        log_skip "crit の有効な host port がないため記録をスキップしました"
     fi
 }
 

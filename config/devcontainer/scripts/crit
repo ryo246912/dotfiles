@@ -66,7 +66,12 @@ if is_review_launch "${1-}"; then
 	fi
 	# host側の公開portが分かる場合は、reviewerが開くURLを追加出力する。
 	if [ -s "${host_port_file}" ]; then
-		printf 'crit UI (host): http://localhost:%s\n' "$(cat "${host_port_file}")"
+		host_port=$(cat "${host_port_file}")
+		if [[ "$host_port" =~ ^[0-9]+$ ]]; then
+			printf 'crit UI (host): http://localhost:%s\n' "$host_port"
+		else
+			printf 'crit UI (host): sandbox の場合はホストで sbx ports <sandbox> を確認してください\n' >&2
+		fi
 	fi
 fi
 

@@ -874,10 +874,14 @@ sandbox_exists() {
 # 既存 sandbox に対しては無視されるため、sbx ports を使う）
 republish_ports() {
     [[ "$HOST_BRIDGE" != true ]] && return 0
-    local port
+    local port host_port
     for port in "$CRIT_SANDBOX_PORT" "$PLANNOTATOR_SANDBOX_PORT"; do
-        [[ -n "$(sandbox_host_port "$port")" ]] && continue
-        sbx ports "$SANDBOX_NAME" --publish "$port" >/dev/null 2>&1 || true
+        if host_port=$(sandbox_host_port "$port") && [[ -n "$host_port" ]]; then
+            continue
+        fi
+        # host port を省略すると、sbx が loopback に空きポートを割り当てる。
+        sbx ports "$SANDBOX_NAME" --publish "$port" >/dev/null \
+            || log_warn "sandbox port $port の再公開に失敗しました: $SANDBOX_NAME"
     done
 }
 
@@ -890,11 +894,19 @@ load_static_mcp() {
     done
 }
 
-# sandbox 内の指定ポートに割り当てられた host port を調べる
+# sbx ports --json の安定したフィールドから割り当て済み TCP host port を調べる。
+# 未公開の host_port (null / 0 / "-") と UDP を除外する。
 sandbox_host_port() {
     local sandbox_port="$1"
-    sbx ports "$SANDBOX_NAME" 2>/dev/null \
-        | awk -v p="$sandbox_port" 'NR > 1 && $3 == p { print $2; exit }'
+    sbx ports "$SANDBOX_NAME" --json 2>/dev/null \
+        | jq -r --argjson p "$sandbox_port" '
+            .[]
+            | select((.sandbox_port | tonumber?) == $p)
+            | select((.protocol | ascii_downcase | test("^tcp(4|6)?$")))
+            | (.host_port | tonumber?) as $port
+            | select($port != null and $port > 0 and $port <= 65535)
+            | $port
+        ' | head -n 1
 }
 
 # アタッチ時の port / mount 復旧も必要なので、作成時 lifecycle だけに任せず毎回実行する
@@ -904,17 +916,25 @@ sandbox_host_port() {
 # 分離といったホスト連携と無関係な処理も含んでおり、mac-host 関連は
 # SBX_HOST_SSH_KEY が無ければスクリプト側で自動的にスキップされる。
 run_post_create() {
-    local -a env_args=()
-    local crit_host_port
+    local crit_host_port="" attempt
     if [[ "$HOST_BRIDGE" == true ]]; then
-        crit_host_port=$(sandbox_host_port "$CRIT_SANDBOX_PORT")
-        [[ -n "$crit_host_port" ]] && env_args+=(--env "SBX_CRIT_HOST_PORT=${crit_host_port}")
+        # env create または republish_ports の公開結果が反映されるまで短時間待つ。
+        for attempt in 1 2 3 4 5; do
+            if crit_host_port=$(sandbox_host_port "$CRIT_SANDBOX_PORT") && [[ -n "$crit_host_port" ]]; then
+                break
+            fi
+            crit_host_port=""
+            [[ "$attempt" -eq 5 ]] || sleep 1
+        done
+        if [[ -z "$crit_host_port" ]]; then
+            log_warn "crit の host port を確認できません。ホストで sbx ports $SANDBOX_NAME を実行してください"
+        fi
     fi
 
     log_info "sandbox の初期化を実行します"
     # `if ! cmd; then` の中で $? を読むと `! cmd` の結果（常に 0）になるため、先に保存する
     local rc=0
-    sbx exec ${env_args[@]+"${env_args[@]}"} "$SANDBOX_NAME" \
+    sbx exec --env "SBX_CRIT_HOST_PORT=$crit_host_port" "$SANDBOX_NAME" \
         bash -lc "[ -x '$SANDBOX_POST_CREATE' ] || exit 97; '$SANDBOX_POST_CREATE'" || rc=$?
     if [[ $rc -ne 0 ]]; then
         if [[ $rc -eq 97 ]]; then
@@ -1206,7 +1226,6 @@ if [[ "$FORCE_NEW" == true ]] || ! sandbox_exists; then
 else
     [[ -n "$CLAUDE_ACCOUNT" ]] && register_subscription_secret
     log_info "既存の sandbox を再利用します: $SANDBOX_NAME"
-    republish_ports
     load_static_mcp
 fi
 
@@ -1217,6 +1236,7 @@ fi
 
 # 初期化は作成時だけでなくアタッチごとに実行する。bind mount による生成物の分離と
 # 公開ポートは sandbox の停止で失われるため、毎回張り直す必要がある（全処理は冪等）。
+republish_ports
 run_post_create
 
 # ブラウザーログインは新規作成時だけ試し、失敗しても sandbox の利用を続ける。
