@@ -244,26 +244,26 @@ url_api = "https://api.github.com/repos/betterleaks/betterleaks/releases/assets/
 provenance = "github-attestations"
 
 [[tools."github:dyoshikawa/rulesync"]]
-version = "32.0.0"
+version = "43.14.0"
 backend = "github:dyoshikawa/rulesync"
-specifiers = ["32.0.0"]
+specifiers = ["v43.14.0"]
 
 [tools."github:dyoshikawa/rulesync"."platforms.linux-arm64"]
-checksum = "sha256:d481330458f5e27d7f08e24dbcdcda02e3dae9f0ec7664adcc865ccc8095d376"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v32.0.0/rulesync-linux-arm64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/630999470"
+checksum = "sha256:1cd0a7feadd6e646f93b736af0492192e1b2fbcca9dcf4c2de2160070d2cbed9"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.14.0/rulesync-linux-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/789867496"
 provenance = "github-attestations"
 
 [tools."github:dyoshikawa/rulesync"."platforms.linux-x64"]
-checksum = "sha256:771d23260799a556c9fd0d1f24de95e0d68c9838359c8b67d16f8405dd16de35"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v32.0.0/rulesync-linux-x64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/630999475"
+checksum = "sha256:310e3664bb424f88e1779c247cce03c5d1ca34dc44a8be64a7b3a7ca61ebc000"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.14.0/rulesync-linux-x64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/789867502"
 provenance = "github-attestations"
 
 [tools."github:dyoshikawa/rulesync"."platforms.macos-arm64"]
-checksum = "sha256:b54d0bd4d1efe07025f724a919cc42dcec0d7438f52750c9b472ac5f90846489"
-url = "https://github.com/dyoshikawa/rulesync/releases/download/v32.0.0/rulesync-darwin-arm64"
-url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/630999476"
+checksum = "sha256:d09de39a00a2874866527f8c43c5062910a21d91d4b2193f93c95e5bd59b247a"
+url = "https://github.com/dyoshikawa/rulesync/releases/download/v43.14.0/rulesync-darwin-arm64"
+url_api = "https://api.github.com/repos/dyoshikawa/rulesync/releases/assets/789867498"
 provenance = "github-attestations"
 
 [[tools."github:superfly/flyctl"]]
