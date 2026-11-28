@@ -718,6 +718,8 @@ dotfilesで継続管理する場合は、提案された`npx skills add`を直�
 
 Claude Code では `/impeccable critique 設定画面`、Codex では `$impeccable critique 設定画面` のように呼び出します。対象にルート、画面名、コンポーネントのパスなどを添えると、確認範囲が明確になります。
 
+Claude Code では `skillOverrides` を `name-only` に設定しています。一覧のコンテキストを抑えながら、名前を指定して呼び出せます。
+
 `pr-uiux-review` は見た目や情報配置に変更がある場合に `critique` の評価手順を使い、観察結果をレビューにまとめます。
 
 ## `modern-web-guidance`
