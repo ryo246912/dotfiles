@@ -549,15 +549,23 @@ main() {
     esac
   fi
 
-  command -v t3-sandbox >/dev/null 2>&1 || { echo "error: t3-sandbox が必要です" >&2; exit 127; }
   failed=""
   for name in $names; do
-    if t3-sandbox recreate-registered "$name"; then
-      echo "✅ ${name} を作り直しました (T3)"
-      continue
-    else
-      status=$?
-      if [ "$status" -ne 3 ]; then
+    if command -v t3-sandbox >/dev/null 2>&1; then
+      if t3-sandbox recreate-registered "$name"; then
+        echo "✅ ${name} を作り直しました (T3)"
+        continue
+      else
+        status=$?
+        if [ "$status" -ne 3 ]; then
+          failed="${failed}${failed:+, }$name"
+          continue
+        fi
+      fi
+    elif [ -d "${XDG_STATE_HOME:-$HOME/.local/state}/t3-sandbox/profiles" ]; then
+      # A registered T3 sandbox must never bypass service coordination.
+      if ! python3 -c 'import json, pathlib, sys; sys.exit(any(json.loads(p.read_text())["name"] == sys.argv[2] for p in pathlib.Path(sys.argv[1]).glob("*.json")))' "${XDG_STATE_HOME:-$HOME/.local/state}/t3-sandbox/profiles" "$name"; then
+        echo "error: ${name}: T3 profile を確認できないか t3-sandbox が必要です" >&2
         failed="${failed}${failed:+, }$name"
         continue
       fi
