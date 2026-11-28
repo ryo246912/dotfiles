@@ -107,6 +107,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 外部skillは `apm/apm.yml`、自作skillはrulesyncで管理します。このページでは次のskillの使い方を説明します。
 
 - Plannotator / Effective HTML skills
+- Marek Kirejczyk の `explain-with-slides` / `refactor-tests`
 - `understand`
 - `crit` / `crit-cli`
 - `terminal-browser`
@@ -118,10 +119,9 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `find-skills`
 - `last30days`
 - `modern-web-guidance`
+- [`impeccable`](#impeccableimpeccable)
 - `prompt-master`
 - `desloppify`
-
-Marek Kirejczyk のスキル集は APM で10スキルを配布します。Claude Code では `/explain-with-slides` のように明示的に呼び出せます。
 
 ### インストール
 
@@ -149,6 +149,27 @@ Claude Code では `/last30days X を使えるよう設定して`、Codex では
 と入力すると、その情報源の設定案内を開けます。
 選択した情報源によっては、セットアップ時にブラウザのログイン情報の利用を求められたり、
 Homebrew で `yt-dlp` を導入したりします。入力した API キーは通常 `~/.config/last30days/.env` に保存されます。
+
+## `explain-with-slides`
+
+リポジトリの仕組みや PR の変更を、図・コード抜粋・実行結果を使ったスライドで説明します。
+対象が CLI の場合は、実際に実行したコマンドの出力を載せられます。
+
+対象の checkout でエージェントを起動し、説明したい範囲、読み手、言語を伝えます。
+
+```text
+# Claude Code
+/explain-with-slides APM で外部スキルを配布する仕組みを、日本語で dotfiles の新規利用者向けに説明して
+
+# Codex
+$explain-with-slides APM で外部スキルを配布する仕組みを、日本語で dotfiles の新規利用者向けに説明して
+
+# Codex で PR の変更を説明する
+$explain-with-slides pr 123 日本語でレビュー担当者向けに、変更点と確認方法を説明して
+```
+
+短い発表なら「5分・6枚程度」のように指定できます。Codex ではブラウザで開ける単一の `deck.html` が生成されます。
+左右の矢印キーで移動し、`N` キーで発表者ノートを表示できます。
 
 ## Plannotator / Effective HTML
 
@@ -706,6 +727,20 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## Impeccable（`impeccable`）
+
+[Impeccable の公式スキル](https://github.com/pbakaus/impeccable/tree/main/plugin/skills/impeccable) は、Web 画面やコンポーネントの設計・評価・改善に使います。dotfiles では APM が公式リポジトリのスキルを Claude Code・Codex 向けに配布します。
+
+| サブコマンド      | 用途                                                                   |
+| ----------------- | ---------------------------------------------------------------------- |
+| `critique <対象>` | 画面を確認し、視覚階層、余白、強調の強さなど UI/UX の改善点を出す      |
+| `audit <対象>`    | アクセシビリティ、パフォーマンス、レスポンシブ表示を技術面から確認する |
+| `shape <対象>`    | 実装前に、目的と利用場面を踏まえて画面や操作を設計する                 |
+
+Claude Code では `/impeccable critique 設定画面`、Codex では `$impeccable critique 設定画面` のように呼び出します。対象にルート、画面名、コンポーネントのパスなどを添えると、確認範囲が明確になります。
+
+`pr-uiux-review` は見た目や情報配置に変更がある場合に `critique` の評価手順を使い、観察結果をレビューにまとめます。
 
 ## `modern-web-guidance`
 

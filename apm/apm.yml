@@ -27,6 +27,8 @@ dependencies:
     # PostgreSQL の診断・レビュー・変更検証スキル 5 種。tag がないため Renovate の APM lockFileMaintenance で更新する。
     - soudai/postgresql-use-improve-agents-skill
     - vercel-labs/agent-skills/skills/web-design-guidelines
+    # pr-uiux-review の画面レビューで使う公式スキル。skill リリースタグに固定する。
+    - pbakaus/impeccable/plugin/skills/impeccable#skill-v4.11.1
     - vercel-labs/agent-skills/skills/react-best-practices
     # Plannotatorのreview / annotate / last launcher skills。
     - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.6
@@ -83,8 +85,9 @@ dependencies:
       path: desloppify/data/global
       ref: v1.0
       alias: desloppify
-    # Marek Kirejczyk のスキルを含む plugin package（tag なし）。
-    - marekkirejczyk/skills
+    # 導入時に確認したコミットから2スキルを個別に配布する。
+    - marekkirejczyk/skills/skills/explain-with-slides#c3b71527d029be4b9cafa953203fdfc043c4066d
+    - marekkirejczyk/skills/skills/refactor-tests#c3b71527d029be4b9cafa953203fdfc043c4066d
   # MCP サーバはここに書かない。apm install は --only apm で MCP を各 agent に登録しないため、
   # ここに書くと lockfile に載らず apm install --frozen（apm:ci）が失敗する。
   # sandbox で使う MCP は config/sbx/mcp.yml（同じ dependencies.mcp の書式）で管理する。
