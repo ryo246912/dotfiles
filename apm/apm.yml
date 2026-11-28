@@ -85,9 +85,9 @@ dependencies:
       path: desloppify/data/global
       ref: v1.0
       alias: desloppify
-    # 導入時に確認したコミットから2スキルを個別に配布する。
-    - marekkirejczyk/skills/skills/explain-with-slides#c3b71527d029be4b9cafa953203fdfc043c4066d
-    - marekkirejczyk/skills/skills/refactor-tests#c3b71527d029be4b9cafa953203fdfc043c4066d
+    # Marek Kirejczyk の2スキルを個別に配布する（tag なし）。
+    - marekkirejczyk/skills/skills/explain-with-slides
+    - marekkirejczyk/skills/skills/refactor-tests
   # MCP サーバはここに書かない。apm install は --only apm で MCP を各 agent に登録しないため、
   # ここに書くと lockfile に載らず apm install --frozen（apm:ci）が失敗する。
   # sandbox で使う MCP は config/sbx/mcp.yml（同じ dependencies.mcp の書式）で管理する。

@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-28T06:59:43.712335+00:00'
+generated_at: '2026-11-28T07:09:06.949214+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -2269,8 +2269,7 @@ dependencies:
 - repo_url: marekkirejczyk/skills
   name: explain-with-slides
   host: github.com
-  resolved_commit: c3b71527d029be4b9cafa953203fdfc043c4066d
-  resolved_ref: c3b71527d029be4b9cafa953203fdfc043c4066d
+  resolved_commit: eebf0afe28e1b1cfbb783136bf2257abf5ba6076
   version: unknown
   virtual_path: skills/explain-with-slides
   is_virtual: true
@@ -2327,8 +2326,7 @@ dependencies:
 - repo_url: marekkirejczyk/skills
   name: refactor-tests
   host: github.com
-  resolved_commit: c3b71527d029be4b9cafa953203fdfc043c4066d
-  resolved_ref: c3b71527d029be4b9cafa953203fdfc043c4066d
+  resolved_commit: eebf0afe28e1b1cfbb783136bf2257abf5ba6076
   version: unknown
   virtual_path: skills/refactor-tests
   is_virtual: true

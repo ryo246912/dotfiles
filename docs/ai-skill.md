@@ -107,7 +107,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 外部skillは `apm/apm.yml`、自作skillはrulesyncで管理します。このページでは次のskillの使い方を説明します。
 
 - Plannotator / Effective HTML skills
-- Marek Kirejczyk の `explain-with-slides` / `refactor-tests`
+- [`explain-with-slides`](#explain-with-slides)
 - `understand`
 - `crit` / `crit-cli`
 - `terminal-browser`
