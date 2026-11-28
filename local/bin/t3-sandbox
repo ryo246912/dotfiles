@@ -204,7 +204,7 @@ def mapped_t3_ports(name):
             if len(fields := row.split()) >= 3 and fields[2] == "3773" and fields[1].isdigit()]
 
 
-def prepare(profile):
+def prepare(profile, recreate=False):
     require("sbx", "sbx-agent")
     run(["sbx", "ls"], stdout=subprocess.DEVNULL)
     account = profile["account"]
@@ -219,9 +219,10 @@ def prepare(profile):
     if profile["name"] == profile_key(account, SHARED_PROFILE):
         mounts.append("--writable-dotfiles")
         environment = {**environment, "SBX_AGENT_HOST_PROFILE": str(profile_path(account, SHARED_PROFILE).resolve())}
+    lifecycle = ["--new"] if recreate else []
     run(["sbx-agent", "claude", *auth_args,
          "--workspace", profile["workspace"], "--name", profile["name"],
-         *mounts, "--publish", f'{profile["port"]}:3773', "--setup-only"],
+         *mounts, "--publish", f'{profile["port"]}:3773', "--setup-only", *lifecycle],
         env=environment)
     workspace = profile["workspace"]
     mounted = subprocess.run(["sbx", "exec", "-u", "agent", profile["name"], "test", "-d", workspace])
@@ -618,6 +619,62 @@ def reset(repo=False):
     print(f"削除済み: {name}。再度使う場合は {setup_command} を実行してください。")
 
 
+def recreate_registered(name):
+    with setup_lock() as root:
+        matches = []
+        for path in (root / "profiles").glob("*.json"):
+            with path.open() as stream:
+                profile = json.load(stream)
+            if profile["name"] == name:
+                matches.append((path, profile))
+        if not matches:
+            return False
+        if len(matches) != 1:
+            raise ValueError(f"{name}: T3 profile が重複しています")
+        path, profile = matches[0]
+        account = profile["account"]
+        workspace = Path(profile["workspace"])
+        repository = SHARED_PROFILE if name == profile_key(account, SHARED_PROFILE) else workspace
+        if path != profile_path(account, repository):
+            raise ValueError(f"{name}: 旧形式または不正な profile です")
+        profile = load_profile(account, repository)
+        if not workspace.is_dir() or not Path(profile["storage"]).is_dir():
+            raise ValueError(f"{name}: workspace / storage が存在しません")
+        require("sbx", "sbx-agent")
+        label = f"local.t3-sandbox.{name}"
+        definition = service_path(label)
+        if sys.platform == "darwin":
+            require("launchctl")
+            domain = f"gui/{os.getuid()}"
+            target = f"{domain}/{label}"
+            active = subprocess.run(["launchctl", "print", target],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+            stop = ["launchctl", "bootout", target]
+            start = ["launchctl", "bootstrap", domain, definition]
+        else:
+            require("systemctl")
+            status = run(["systemctl", "--user", "show", "--property=ActiveState",
+                          "--value", definition.name], capture_output=True, text=True).stdout.strip()
+            active = status not in ("inactive", "failed")
+            stop = ["systemctl", "--user", "stop", definition.name]
+            start = ["systemctl", "--user", "start", definition.name]
+        if active and not definition.is_file():
+            raise ValueError(f"{name}: 自動起動の定義が見つかりません")
+        if active:
+            run(stop)
+        try:
+            stop_sandbox(profile)
+            prepare(profile, recreate=True)
+            if active:
+                run(start)
+        except (Exception, KeyboardInterrupt):
+            print(f"{name}: 再作成に失敗しました。profile は保持しています。"
+                  "自動起動は停止したままの場合があります。原因を解消して再実行し、"
+                  "必要なら t3:cli の restart-server で復旧してください。", file=sys.stderr)
+            raise
+        return True
+
+
 def main():
     parser = argparse.ArgumentParser(prog="t3-sandbox", description=__doc__)
     sub = parser.add_subparsers(dest="action", required=True)
@@ -630,6 +687,8 @@ def main():
     initial.add_argument("--no-autostart", action="store_true", help="自動起動を登録しない（検証用）")
     reset_parser = sub.add_parser("reset", help="設定済みの sandbox を選び、確認後に削除")
     reset_parser.add_argument("--repo", action="store_true", help="カレント Git リポジトリ専用の sandbox を操作")
+    recreate = sub.add_parser("recreate-registered")
+    recreate.add_argument("name")
     service = sub.add_parser("run")
     service.add_argument("account", choices=ACCOUNTS)
     service_scope = service.add_mutually_exclusive_group()
@@ -647,6 +706,8 @@ def main():
             parser.error("--port は 1024〜65535 で指定してください")
         setup(args)
         return
+    if args.action == "recreate-registered":
+        sys.exit(0 if recreate_registered(args.name) else 3)
     if args.action == "reset":
         reset(args.repo)
         return
