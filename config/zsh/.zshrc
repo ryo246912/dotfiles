@@ -1,5 +1,9 @@
 # cSpell:disable
 
+# Disable T3 Code analytics and OpenTelemetry.
+export T3CODE_TELEMETRY_ENABLED=false
+export T3CODE_OTEL_SDK_DISABLED=true
+
 # launch tmux when start zsh
 should_auto_attach_tmux=0
 

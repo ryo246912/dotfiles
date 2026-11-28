@@ -292,6 +292,94 @@ T3 サーバーも provider も terminal も sbx 内で動く。ホストの Loc
 追加プロジェクトはアプリの Add Project で clone できる。T3 データ領域内の projects など、
 sandbox に渡したディレクトリへ保存する。ホストの任意の別ディレクトリは見えない。
 
+### 差分を見て行を指定し、エージェントに依頼する
+
+T3 Code v0.1.11 の画面では、スレッドの差分と PR の差分でコメントの送り先が異なる。
+**同じスレッドのエージェントに直してほしいときは、そのスレッドの差分で `Comment` を押し、チャットから送信する。**
+
+1. 作業中のスレッドで、変更ファイル一覧やタイムラインの **Open diff** を開く。
+   差分上部で **Changes**（ブランチの変更）、**Uncommitted**（未コミットの変更）、
+   **Latest turn**（直近のターン）、または **Turn**（指定ターン）を選ぶ。
+2. 対象ファイルを開き、行番号脇の **＋** を押す。複数行なら行番号欄をドラッグして範囲を選び、その範囲にコメントを付ける。
+   左右分割では左が変更前、右が変更後。今あるコードを直してほしい場合は変更後側の行を選ぶ。
+3. 「この範囲のエラー処理を共通化して」などの依頼を書き、**Comment** を押す。
+   ファイル名・行範囲・コメントがスレッドのチャット入力欄に追加される。
+   入力欄で内容を確認して **送信** すると、選択中のスレッドのエージェントに届く。
+   この環境では、スレッドが使っている sandbox 内の checkout または worktree が作業先になる。
+   [差分の範囲選択](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/web/src/components/DiffPanel.tsx#L889-L923) ·
+   [行コメントの追加処理](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/web/src/components/diffs/AnnotatableCodeView.tsx#L211-L282)
+
+PR の **Code** タブで行コメントを書いた場合は、ボタンのラベルで送り先を確認する。
+
+- **Add to review** は PR レビューの下書きに追加する。**Review → Submit review** で GitHub などの PR に投稿される。
+  両方のボタンがある場合、行コメント欄の **⌘/Ctrl+Enter** はメインの **Add to review** と同じ動作。
+- **Add to agent** は選んだ行と依頼をエージェント用の入力欄に渡す。横にチャットが開いていればその入力欄に追加され、
+  なければエージェント用のスレッドを開く。入力欄を確認して送信する。
+  [PR 差分のボタン](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/web/src/components/pullRequest/PullRequestCodeTab.tsx#L1357-L1395) ·
+  [エージェントへの受け渡し](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/web/src/components/pullRequest/PullRequestDetailPanel.tsx#L978-L1006)
+
+### 会話を引き継いで Fork する
+
+元スレッドで、引き継ぎたい完了済みのエージェント回答にマウスを乗せる。
+回答末尾のコピーアイコンの隣にある枝分かれアイコン **Fork from this response** を押すと、
+その回答までの会話を引き継いだ別スレッドが開く。プロバイダーの対応状況によってはボタンが表示されない。
+Fork は元の作業先を共有するため、ファイル変更も隔離したい場合は、元の変更をコミットして
+そのコミットから **New worktree** で新規スレッドを作り、会話の要点を渡す。
+[Fork ボタン](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/web/src/components/chat/TimelineAssistantRows.tsx#L235-L258) ·
+[作業先の扱い](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/server/src/orchestration-v2/Orchestrator.ts#L5951-L5968)
+
+### テレメトリーを無効にする
+
+dotfiles の zsh 設定と sandbox の起動スクリプトは、
+`T3CODE_TELEMETRY_ENABLED=false` と `T3CODE_OTEL_SDK_DISABLED=true` を設定する。
+ローカル版は新しい zsh から起動する。デスクトップ版は完全に終了し、両変数が渡る環境から起動し直す。
+macOS で Dock や Finder から起動する場合は、そのログインセッションで次を実行してから起動する。
+
+```sh
+launchctl setenv T3CODE_TELEMETRY_ENABLED false
+launchctl setenv T3CODE_OTEL_SDK_DISABLED true
+```
+
+稼働済みの sandbox では、作業を終えてから `mise run t3:cli -- --sbx <sandbox-name> restart-server` で設定を反映する。
+
+スマホから接続した場合も、操作イベントを `ingest.t3.codes` に送るのは接続先の T3 サーバー。
+PC の hosts で遮断している場合は、sandbox 内からの通信にも効いているかを確認する。
+スマホは接続時に端末 ID と、ログイン済みなら T3 Connect アカウント ID のハッシュを接続先に渡す。
+これは接続先をアカウントや端末に紐づけて集計するための情報で、サーバー側の外部送信を無効にしても接続時に渡される。
+サーバーからの利用統計の送信を止めるためにアカウント削除は不要。削除で過去の利用統計も消えるかは未確認。
+[接続時のハッシュ](https://github.com/pingdotgg/t3code/blob/84a0c051/packages/client-runtime/src/authorization/remote.ts#L45-L62) ·
+[サーバー側の無効化](https://github.com/pingdotgg/t3code/blob/84a0c051/apps/server/src/telemetry/AnalyticsService.ts#L130-L145)
+
+### アーカイブ・スレッド削除時の worktree
+
+T3 Code v0.1.11 の実装では、**アーカイブしただけでは worktree は消えない**。
+初期設定では worktree の自動削除は無効で、アーカイブから何日後に消えるという既定の期限はない。
+ストレージ設定で自動クリーンアップを有効にすると、最終活動からの日数、作業完了（settled）からの日数、
+PR のマージ、アーカイブ済みまたは完了済みで基準ブランチに未統合のコミットがないことなど、
+設定した条件を満たした worktree が次のクリーンアップで削除候補になる。
+条件はプロジェクト単位で上書きできる。
+[設定の既定値](https://github.com/pingdotgg/t3code/blob/v0.1.11/packages/contracts/src/settings.ts#L1334-L1344) ·
+[日数と状態の判定](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/server/src/storageCleanup.ts#L1275-L1315) ·
+[Git の判定](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/server/src/storageCleanup.ts#L1563-L1595)
+
+アーカイブ操作自体はクリーンアップを起動しない。サーバー起動時と以後おおむね 1 時間おきに実行され、
+関連設定の変更やストレージ設定からの手動実行でも起動できる。
+[クリーンアップの起動条件](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/server/src/storageCleanup.ts#L1949-L2021)
+
+**スレッドを削除したとき**は、削除時の自動クリーンアップ設定によって変わる。
+
+- **オフ（初期設定）**。専用の worktree で、UI が確認ダイアログを出せて削除権限もある場合は、
+  worktree も削除するか聞かれる。同意するとスレッドの削除成功直後に worktree の強制削除を試みる。
+  未コミットの変更も失われ得る。確認で断った場合や worktree の削除に失敗した場合は、スレッドだけが消える。
+  [確認とスレッド削除](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/web/src/hooks/useThreadActions.ts#L530-L636) ·
+  [worktree の削除](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/web/src/hooks/useThreadActions.ts#L674-L728)
+- **オン**。確認ダイアログを経ず、スレッド削除イベントを受けてバックグラウンドでクリーンアップをキューに入れる。
+  定期実行を待たずに処理されるが、削除完了は非同期。稼働中のセッション、開いているターミナル、
+  他のスレッドとの共有、保護対象のローカル変更などの条件によって worktree が残ることもある。
+  [削除イベントの処理](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/server/src/storageCleanup.ts#L1998-L2021) ·
+  [保護条件](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/server/src/storageCleanup.ts#L1275-L1294) ·
+  [ローカル変更の確認](https://github.com/pingdotgg/t3code/blob/v0.1.11/apps/server/src/storageCleanup.ts#L1630-L1660)
+
 ## スマホ・別の PC のアプリから接続する（初回のみ）
 
 T3 Connect に sandbox の環境を登録すると、デスクトップ・iOS・Android の T3 Code アプリや
