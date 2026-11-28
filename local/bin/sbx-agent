@@ -894,33 +894,19 @@ load_static_mcp() {
     done
 }
 
-# sbx ports の HOST PORT / SANDBOX PORT 列から割り当て済みの TCP port を調べる。
+# sbx ports --json の安定したフィールドから割り当て済み TCP host port を調べる。
+# 未公開の host_port (null / 0 / "-") と UDP を除外する。
 sandbox_host_port() {
     local sandbox_port="$1"
-    sbx ports "$SANDBOX_NAME" 2>/dev/null \
-        | awk -v p="$sandbox_port" '
-            !host || !sandbox {
-                host = sandbox = protocol = 0
-                column = 0
-                for (i = 1; i <= NF; i++) {
-                    column++
-                    label = $i
-                    if (($i == "HOST" || $i == "SANDBOX") && $(i + 1) ~ /^(IP|PORT)$/) {
-                        label = $i " " $(i + 1)
-                        i++
-                    }
-                    if (label == "HOST PORT") host = column
-                    if (label == "SANDBOX PORT") sandbox = column
-                    if (label == "PROTOCOL") protocol = column
-                }
-                next
-            }
-            !found && $sandbox == p && (!protocol || $protocol ~ /^tcp[46]?$/) &&
-                $host ~ /^[0-9]+$/ && $host > 0 {
-                print $host
-                found = 1
-            }
-        '
+    sbx ports "$SANDBOX_NAME" --json 2>/dev/null \
+        | jq -r --argjson p "$sandbox_port" '
+            .[]
+            | select((.sandbox_port | tonumber?) == $p)
+            | select((.protocol | ascii_downcase | test("^tcp(4|6)?$")))
+            | (.host_port | tonumber?) as $port
+            | select($port != null and $port > 0 and $port <= 65535)
+            | $port
+        ' | head -n 1
 }
 
 # アタッチ時の port / mount 復旧も必要なので、作成時 lifecycle だけに任せず毎回実行する
