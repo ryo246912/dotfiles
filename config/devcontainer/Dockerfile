@@ -104,6 +104,15 @@ RUN --mount=type=secret,id=github_token,uid=1000,gid=1000,mode=0400 \
       /mise/data/shims/gh extension install github/gh-stack --pin "$GH_STACK_VERSION"; \
     rm -rf "$gh_config"
 
+# mise でインストールした gh-actions-lock を gh extension として登録する。
+RUN set -eu; \
+    ext_dir="$HOME/.local/share/gh-local-extensions/gh-actions-lock"; \
+    mkdir -p "$ext_dir"; \
+    ln -sfn /mise/data/shims/gh-actions-lock "$ext_dir/gh-actions-lock"; \
+    tmp_config="$(mktemp -d)"; \
+    GH_CONFIG_DIR="$tmp_config" /mise/data/shims/gh extension install "$ext_dir"; \
+    rm -rf "$tmp_config"
+
 # tasks の変更で上の重い install layer が無効化されないよう、install の後に COPY する。
 COPY --chown=vscode:vscode tasks /mise/tasks
 
