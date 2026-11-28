@@ -152,6 +152,18 @@ RUN --mount=type=secret,id=github_token \
     rm -rf "$gh_config"; \
     chown -R agent:agent "${AGENT_HOME}/.local/share/gh"
 
+# mise でインストールした gh-actions-lock を gh extension として登録する。
+# gh の extension store は mise の PATH とは独立している。
+RUN set -eu; \
+    ext_dir="${AGENT_HOME}/.local/share/gh-local-extensions/gh-actions-lock"; \
+    install -d -o agent -g agent "$ext_dir"; \
+    ln -sfn /mise/data/shims/gh-actions-lock "$ext_dir/gh-actions-lock"; \
+    tmp_config="$(mktemp -d)"; \
+    XDG_DATA_HOME="${AGENT_HOME}/.local/share" GH_CONFIG_DIR="$tmp_config" \
+      /mise/data/shims/gh extension install "$ext_dir"; \
+    rm -rf "$tmp_config"; \
+    chown -R agent:agent "${AGENT_HOME}/.local/share/gh"
+
 # tasks と設定ツリーは install の後に COPY する（上記の理由でキャッシュを守るため）。
 # devcontainer が bind mount していたのと同じ ~/.config/devcontainer 配下へ置くので、
 # tasks が参照する ${XDG_CONFIG_HOME:-$HOME/.config}/devcontainer/lint/... がそのまま解決する。
