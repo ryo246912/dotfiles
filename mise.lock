@@ -293,7 +293,7 @@ backend = "npm:oxfmt"
 specifiers = ["0.80.0"]
 
 [[tools."npm:oxlint"]]
-version = "1.87.0"
-aube = { path = ".mise/locks/npm-oxlint/1.87.0", digest = "sha256:fa3fe0a7d1858a740522115c9608e956f0759c35d487a1eb3822b98033a19d38" }
+version = "1.95.0"
+aube = { path = ".mise/locks/npm-oxlint/1.95.0", digest = "sha256:d6581794919eb7199e4a267423acd945fa8508c36944fa8498659ca1d1f7a8bb" }
 backend = "npm:oxlint"
-specifiers = ["1.87.0"]
+specifiers = ["1.95.0"]
