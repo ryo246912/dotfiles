@@ -10,34 +10,38 @@
 
 ## 全体構成
 
-要点は 3 つ。
+既定では、選択した `oauth`、`account1`、`account2`、`work3` の各アカウントに、共有 SBX と T3 サーバーを一つずつ用意する。
+共有 SBX はホストの `~/Programming` と、`sbx-agent` が検出した dotfiles（通常は `~/dotfiles`）を読み書き可能でマウントする。
+T3 アプリから接続済みの環境で **Add Project** を選び、SBX 内で見えているホストの Git リポジトリを指定する。
+後から `~/Programming` 配下に作ったリポジトリも同じ環境から見える。マウント追加やペアリングのやり直しは不要。
 
-1. **sandbox は Git リポジトリのルートパスとアカウントの組み合わせごとに 1 つ**。
-2. **T3 サーバーも sandbox の中に 1 つ**。このサーバーが、そのアカウントのエージェント（Claude Code / Codex）を動かす。
-3. **worktree はスレッドごとに選べる**。subscription プロファイルの初期値は worktree、OAuth の初期値は現在のチェックアウト。実装前に作業先表示を確認する（後述）。
+`~/Programming` 配下の既存ファイルや Git の管理ファイルも、共有 SBX を使う各アカウントのエージェントから読み書きできる。
+アカウントの認証と T3 履歴は別々だが、同じチェックアウトを複数のエージェントが使えば変更が競合し得る。
+同時作業では、対象プロジェクトの変更を T3 の worktree で分けられる。
+共有 SBX は同じホストの dotfiles checkout を参照するため、そこを直接編集すると他のスレッド・アカウントとホストに反映される。
+共有マウントには `.git` も含まれ、Git の設定やフックの変更は後続のホスト側 Git 操作に影響し得るため、信頼できるエージェントで使う。
 
-PC とスマホのアプリで同じ環境に接続すると、同じセッションと履歴を操作できる。
-以下は、`xxx` に OAuth 環境、`yyy` に account1 環境を作った例。
+既存のリポジトリ別環境は `--repo` で引き続き操作できる。共有環境には初回だけ別途ペアリングする。
+同じ共有環境を再起動すると、公開ポートとホストに保存した T3 データを再利用する。
+公開ポートは専用環境と同じアカウント別の枠から割り当てる。
+`oauth` は 3800–3809、`account1` は 3810–3819、`account2` は 3820–3829、`work3` は 3830–3839。
+
+以下は `oauth` と `work3` を選んだ場合の構成例。ポートは割り当ての一例。
 
 ```text
-T3 Code アプリ（接続先を切り替え）
-  PC はローカルの公開ポート、スマホは T3 Connect で接続
-  公開ポート枠: oauth 3800–3809 / account1 3810–3819
-                account2 3820–3829 / work3 3830–3839
-  │
+T3 Code アプリ
+  │ PC はローカル公開ポート、スマホは T3 Connect
   └─ Mac（ホスト）
-      ├─ 127.0.0.1:3800 → xxx-oauth-<パスのハッシュ>-t3
-      │                    ├─ T3 サーバー（sandbox 内の :3773）
-      │                    ├─ workspace: xxx
-      │                    └─ T3 の設定・履歴: xxx の環境の保存先
-      │
-      └─ 127.0.0.1:3810 → yyy-a1-<パスのハッシュ>-t3
-                           ├─ T3 サーバー（sandbox 内の :3773）
-                           ├─ workspace: yyy
-                           └─ T3 の設定・履歴: yyy の環境の保存先
+      ├─ 127.0.0.1:3800 → programming-oauth-t3
+      │                     └─ T3 サーバー :3773（OAuth の認証・履歴）
+      ├─ 127.0.0.1:3830 → programming-w3-t3
+      │                     └─ T3 サーバー :3773（work3 の認証・履歴）
+      └─ 上の両 SBX に読み書き可能でマウント
+          ├─ ~/Programming/  → リポジトリ A・B・後から追加した C
+          └─ ~/dotfiles/     → 同じホスト側 checkout（通常の配置先）
 ```
 
-各環境にはアカウントごとの枠から空いている公開ポートを1つ割り当てる。
+`--repo` で作る専用環境には、対象の Git リポジトリをマウントし、別の T3 サーバーと公開ポートを割り当てる。
 
 ### 各部品の役割
 
@@ -85,7 +89,7 @@ mise run sandbox:build-template claude
 クリップボードや Claude の Chrome 連携などのホスト設定も有効にする場合は、
 別途 `mise run sandbox:sbx-settings` を実行する。このタスクは sbx デーモンを再起動する。
 
-template は T3 追加後に再ビルドする。セットアップではリポジトリとアカウントの組み合わせに対応する sandbox を作る。同名の sandbox がある場合は再利用する。
+template は T3 追加後に再ビルドする。セットアップでは選択したアカウントごとに共有 sandbox を作る。同名の sandbox がある場合は再利用する。
 既存 sandbox の mount は setup では更新されない。構成が違う場合は必要なデータを保存し、
 対象 sandbox を停止・削除してから setup で作り直す（自動削除はしない）。
 T3 アプリは [公式ダウンロード](https://t3.codes/download) から導入する。
@@ -95,10 +99,9 @@ Homebrew の公開版がサーバーより古い場合は、アプリも公式�
 
 ## 最初にアカウントを選ぶ
 
-初回だけ、最初に登録する Git リポジトリで次を実行する。
+初回だけ、次を実行する。ホストに `~/Programming` と dotfiles の checkout が必要。
 
 ```bash
-cd /path/to/project
 mise run t3:setup
 ```
 
@@ -107,7 +110,7 @@ mise run t3:setup
 `fzf` で Tab / Shift-Tab を使って複数選択し、Enter で確定する。
 Ctrl-A で全選択、Ctrl-D で選択解除、Esc で設定を変更せず中止できる。
 `fzf` が未導入なら `mise install aqua:junegunn/fzf` で導入する。
-開始前に表示される Workspace が、操作しているプロジェクトのパスであることを確認する。
+開始前に表示される Workspace は、共有環境なら `~/Programming`、`--repo` で作る専用環境なら対象リポジトリのルートになる。
 
 subscription プロファイルは `sbx-agent --claude-account` と subscription kit を使い、
 Claude の認証先をその sandbox に固定する。token が未登録の場合は停止する。
@@ -115,9 +118,9 @@ Claude の認証先をその sandbox に固定する。token が未登録の場�
 ```bash
 mise run sandbox:claude-token account2
 # メニューを使わず指定する場合
-mise run t3:setup -- --sbx account2 --workspace /path/to/project
+mise run t3:setup -- --sbx account2
 # 複数アカウントをまとめて準備する場合
-mise run t3:setup -- --sbx account1 account2 work3 --workspace "$PWD"
+mise run t3:setup -- --sbx account1 account2 work3
 ```
 
 `sandbox:setup` が行う認証 binding も必要。詳細は [Docker Sandboxes](docker-sandboxes.md) を参照。
@@ -139,13 +142,13 @@ T3 Code アプリに接続したいリポジトリのルートで次を実行す
 
 ```sh
 cd /path/to/yyy
-mise run t3:setup
-mise run t3:cli
+mise run t3:setup -- --repo
+mise run t3:cli -- --repo
 ```
 
 セットアップでは fzf でアカウントを選び、CLI では **pair → 同じアカウント** を選ぶ。
 サブディレクトリからの実行でも Git が検出したルートを使う。別の場所からセットアップする場合は、
-`--workspace /path/to/repo` で対象を指定できる。ペアリングは対象リポジトリ内で実行する。
+`--workspace /path/to/repo` で対象を指定できる。専用環境のペアリングも対象リポジトリ内で `--repo` を指定する。
 
 セットアップは Git のルートパスとアカウントを使い、sandbox、設定・履歴、ホストの自動起動を
 個別に作る。sandbox 名には CCManager の preset と同じ `a1`、`a2`、`w3`、`oauth` が入る。
@@ -238,14 +241,14 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
    PC から到達できる `http://127.0.0.1:3774` などの URL に変換して表示する。
 5. 必要なら表示名を `account2` などに変更し、Providers で Claude の認証状態を確認する。
 6. 初回にプロジェクトが未登録なら、コマンドパレットの **Add project** → **Local folder** から
-   setup で指定した workspace を追加する。
+   共有環境では `~/Programming` 配下の Git リポジトリか dotfiles の checkout、専用環境では setup で指定した Git リポジトリを追加する。
 
 サービス起動直後に pair が「サーバーがない」と返す場合は、起動完了後に再実行する。
 ペアリングは端末ごとに一度だけでよい。URL / コードは認証情報なのでコミット・共有しない。
 複数アカウントを使う場合は、それぞれ一度 setup と接続を行う。
 **以降のアカウント切替はアプリの接続先環境を選ぶだけ**。
 
-`mise run t3:cli` は **操作 → 対象 Sandbox** の順で選ぶ。対象はカレントリポジトリで設定済みの環境。
+`mise run t3:cli` は **操作 → 対象 Sandbox** の順で選ぶ。既定の対象は設定済みの共有環境。専用環境にはリポジトリ内で `--repo` を指定する。
 **login** を選ぶと途中で **Claude / Codex** の選択が入り、その操作に対応した Sandbox が表示される。
 スクリプトなどから直接実行する場合は `mise run t3:cli -- --sbx work3 pair` も使える。
 
@@ -308,7 +311,7 @@ Claude の `account1` / `account2` / `work3` とは別のもの。
    ターミナルのコードと画面のコードが一致することを確認して承認する。
 4. ターミナルへ戻り、**`✓ Authorized`** と表示されて処理が完了するまで待つ。
 5. 認証が正常終了し、選んだ環境の自動起動定義（macOS の LaunchAgent ファイルまたは Linux の systemd unit ファイル）がある場合は、Sandbox と T3 サーバーを自動で再起動する。
-   実行中の作業は認証前に終了しておく。自動起動定義がなく手動で起動している場合は、認証後に実行中のサーバーを止めてから `t3-sandbox run <account> --repository /path/to/repo` を実行する。
+   実行中の作業は認証前に終了しておく。自動起動定義がなく手動で起動している場合は、認証後に実行中のサーバーを止めてから、共有環境は `t3-sandbox run <account> --shared`、専用環境は `t3-sandbox run <account> --repository /path/to/repo` で起動する。
 
 既に PC のアプリへ pair で接続済みなら、対象環境の Settings → Sharing & access から
 **T3 Connect** を有効化して本人認証する方法も使える。
@@ -486,18 +489,18 @@ mise run t3:cli -- --sbx account2 server-status
 
 サービスを止める際は実行中の作業を確認する。
 sandbox を停止するだけだとサービスが再試行する。
-sandbox を削除した場合はサービス経由ではなく、対象アカウントと同じ workspace を指定して（以下は work3 の例）
-`mise run t3:setup -- --sbx work3 --workspace /path/to/project` を実行し、
+sandbox を削除した場合はサービス経由で再作成せず、共有環境なら `mise run t3:setup -- --sbx work3`、
+専用環境なら対象リポジトリ内で `mise run t3:setup -- --repo --sbx work3` を実行し、
 再作成時の plan を手動で確認・承認する。サービスからの無条件な自動承認は行わない。
 
 ### 設定済み sandbox を削除する
 
-対象リポジトリで `mise run t3:reset` を実行し、fzf でアカウントを選んで削除を確認する。
+共有環境は `mise run t3:reset`、専用環境は対象リポジトリで `mise run t3:reset -- --repo` を実行し、fzf でアカウントを選んで削除を確認する。
 自動起動サービスを解除し、sandbox を停止してから削除する。ホスト側の登録も削除し、公開ポートを解放する。
 実行中の作業は中断されるため、sandbox 内だけにある必要なファイルは先に保存する。
 ホストに保存された T3 の設定と履歴は残る。
-また使う場合は `mise run t3:setup` で環境を作成する。
-削除の途中でエラーが出たら、原因を解消して `mise run t3:reset` を再実行する。
+また使う場合は共有環境なら `mise run t3:setup`、専用環境なら `mise run t3:setup -- --repo` で作成する。
+削除の途中でエラーが出たら、原因を解消して同じ reset コマンドを再実行する。
 
 ### macOS で旧 sandbox の自動起動を解除する
 
