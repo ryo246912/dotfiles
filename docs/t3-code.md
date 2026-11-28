@@ -454,6 +454,90 @@ PC・sandbox・T3 サーバーは起動した状態を維持する。
 T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは、全リポジトリの環境を合わせて
 モバイルから使う環境を 3 つまで選ぶ。PC のローカル接続は T3 Connect の枠を使わない。
 
+## 別ホストのセッションを引き継ぐ
+
+T3 Code に、別ホストで動いているスレッドを手元のホストへ移し替える機能はない。
+スレッドは元のホストで動かしたまま、別の端末から接続して続きを操作する。
+以下は T3 Code 公式リポジトリ（`pingdotgg/t3code`）の `docs/user/`
+（`remote-access.md` / `outside-agents.md` / `thread-migration.md` / `portable-handoffs.md`）に基づく。
+バージョンにより項目名が異なる可能性がある。
+
+### 1. 元のホストへ接続して続ける（基本）
+
+どのクライアントからも、サーバー上の同じスレッドが見える。
+スレッドが動くホストを接続先に登録すれば、別のマシン・ブラウザー・スマホから続きを打てる。
+
+| 方法          | 手順                                                                                              |
+| ------------- | ------------------------------------------------------------------------------------------------- |
+| T3 Connect    | ホストの Settings → Sharing & access で有効化する。CLI のみのホストは `t3 up`。同じアカウントでログイン |
+| SSH           | デスクトップアプリの Settings → Environments → Add environment → SSH に `user@host` を入れる       |
+| LAN/Tailscale | ホストで `t3 serve --lan` を実行し、`t3 pair` でペアリングする                                   |
+
+元のホストは起動したままにする。この dotfiles の sandbox 構成での手順は
+「スマホ・別の PC のアプリから接続する」を参照。
+
+### 2. 別ホストの Claude Code / Codex CLI の会話を取り込む
+
+T3 Code の外で `claude` / `codex` を直接使っていた会話は、取り込める。
+
+1. 上の方法で、そのホストを environment として登録する
+2. Settings → Projects → Import projects and their threads を開き、その environment を選ぶ
+3. Claude Code / Codex / Pi の会話が T3 Code のスレッドとして取り込まれ、続きを打てる
+   （事前選択されるのは直近 30 日分）
+
+取り込んだスレッドも、そのホスト上で動く。
+
+### 3. スレッドを別のサーバーへ移す方法はない
+
+ドキュメントにも、スレッド全体を書き出すコマンドは無いと書かれている。代替手段は次のとおり。
+
+- **Linked environments（beta）**: 両方のマシンの Settings → Labs で有効にしてリンクすると、
+  相手のスレッドを読み取り専用で追える。操作するときは Connect to interact で直接ペアリングする
+- **新しいスレッドで引き継ぐ**: 移したい先で新しいスレッドを作り、要点のまとめを貼る。
+  プロバイダー切替時にも使われる portable handoff は履歴の一部しか渡さず、
+  上限は既定 16k トークン（`T3CODE_CONTEXT_HANDOFF_TOKEN_CAP` で変更可）。
+  重要な制約は書き直して渡す
+- **データ丸ごとの退避**: サーバーを止めて `~/.t3/userdata` を退避する方法は案内されているが、
+  スレッド 1 本だけを移す用途には向かない
+
+## T3 Connect の安全性
+
+T3 Connect は、ルーターのポート開放なしでホストと他の端末をつなぐ仕組み。
+公式ドキュメントの `remote-access.md` で確認できた範囲を整理する。
+
+### 確認できたこと
+
+- 既定では、**同じ T3 Connect アカウントにログインした端末は、どれでも接続できる**
+- 新しい端末の承認を必須にできる。ホストの Settings → Sharing & access で
+  **Require approval for new devices** を有効にする。新端末が出す短いコード（10 分有効）を、
+  接続済みの端末、または `t3 auth connect-device approve <code>` で承認する
+- 端末の失効は Settings → Sharing & access、または `t3 auth connect-device revoke <code>` で行う
+- ペアリング済みの端末は使っている間ログインが続き、30 日使わないと再ペアリングが必要になる
+- `--scope`（例: `orchestration:read` / `filesystem:write` / `terminal:operate`）で、
+  ペアリングやセッションの権限を絞れる
+- 解除は、アカウントメニューの T3 Connect → Deregister、または CLI ホストで
+  `t3 connect unlink` / `t3 connect logout`
+- 「ペアリング URL とコードはパスワードと同じに扱い、ログやスクリーンショットに貼らない」という注意がある
+- T3 Connect 自体に beta / experimental の表示は無い（beta なのは Linked environments）
+
+### 確認できていないこと
+
+- リレーの構造、通信の暗号化方式、リレー運営側が通信内容を見られるか。このページには記載が無い。
+  第三者による監査（セキュリティ認証など）の有無も確認できていない
+- そのため「安全」とも「危険」とも断定できない。上の「確認できたこと」だけを根拠にする
+
+### この構成での注意
+
+T3 Connect に登録した環境からは、エージェントがそのホスト（この構成では sandbox）で
+コマンド実行・ファイル操作できる。アカウントが乗っ取られると、接続できる端末が増える。
+
+- T3 Connect のアカウントに 2 段階認証を設定する
+- **Require approval for new devices** を有効にする
+- 使わない端末は失効させ、使わなくなった環境は Deregister する
+- 公開するのは、権限を絞った sandbox（この構成では work3 など）の環境だけにする。
+  認証情報を多く持つホスト本体は公開しない
+- 不安がある場合は T3 Connect を使わず、Tailscale や SSH で接続する
+
 ## 自動起動と保存先
 
 | 項目                        | 保存先（既定）                                                   |
