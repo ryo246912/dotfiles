@@ -459,7 +459,10 @@ T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは
 T3 Code に、別ホストで動いているスレッドを手元のホストへ移し替える機能はない。
 スレッドは元のホストで動かしたまま、別の端末から接続して続きを操作する。
 以下は T3 Code 公式リポジトリ（`pingdotgg/t3code`）の `docs/user/`
-（`remote-access.md` / `outside-agents.md` / `thread-migration.md` / `portable-handoffs.md`）に基づく。
+に基づく。接続方法は `remote-access.md`、会話の取り込みは `welcome-page.md`、
+データの退避は `thread-migration.md` を参照している。
+「スレッドを別のサーバーへ移す方法はない」の Linked environments と portable handoff は、
+公式ドキュメントの `portable-handoffs.md` などを参照した情報で、このリポジトリの作業では原文を再確認していない。
 バージョンにより項目名が異なる可能性がある。
 
 ### 1. 元のホストへ接続して続ける（基本）
