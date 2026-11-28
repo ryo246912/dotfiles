@@ -303,6 +303,13 @@ def tailscale_pair(profile):
     if backend_state != "Running":
         raise ValueError(f"Tailscale が接続されていません（状態: {backend_state}）。"
                          "Tailscale アプリで接続（Connect）してから、もう一度実行してください")
+    # With HTTPS Certificates disabled, serve can print an enablement notice and exit 0 without
+    # configuring anything. Warn only when the capability map exists, so older clients still proceed.
+    cap_map = state["Self"].get("CapMap")
+    if isinstance(cap_map, dict) and "https" not in cap_map:
+        print("警告: この tailnet の HTTPS 機能が有効ではない可能性があります。"
+              "管理画面（https://login.tailscale.com/admin/dns）で HTTPS Certificates を有効にしてください",
+              file=sys.stderr, flush=True)
     # Every environment already owns a unique host port, so reuse it as the tailnet HTTPS port.
     # This replaces the old fixed per-account ports, which cannot cover several repositories.
     https_port = profile["port"]
@@ -313,6 +320,9 @@ def tailscale_pair(profile):
         raise ValueError(f"tailscale serve に失敗しました: {reason or '終了コード ' + str(serve.returncode)}\n"
                          f"HTTPS ポート {https_port} が使えない場合は、443 / 8443 / 10000 などで "
                          "docs/t3-code.md の手順を手動で実行してください")
+    # Exit status 0 does not prove serve configured anything, so show whatever it printed.
+    if notice := (serve.stderr + serve.stdout).strip():
+        print(notice, file=sys.stderr, flush=True)
     base_url = f"https://{host}:{https_port}"
     result = subprocess.run(sandbox_command(profile, [
         "auth", "pairing", "create", "--ttl", "10m", "--label", "phone", "--base-url", base_url]),
