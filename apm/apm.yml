@@ -65,7 +65,7 @@ dependencies:
     - cathrynlavery/diagram-design/skills/diagram-design
     - vercel-labs/skills/skills/find-skills#v1.9.0
     - mvanhorn/last30days-skill/skills/last30days#v4.6.0
-    - GoogleChrome/modern-web-guidance/skills/modern-web-guidance#v1.0.1
+    - GoogleChrome/modern-web-guidance/skills/modern-web-guidance#v1.0.2
     # AI tool向けのprompt生成・改善skill（tag なし、lockfileのcommitでpin）。
     - nidhinjs/prompt-master
     # Ponytail は skill ディレクトリ単位で配布する。
