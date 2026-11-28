@@ -107,6 +107,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 外部skillは `apm/apm.yml`、自作skillはrulesyncで管理します。このページでは次のskillの使い方を説明します。
 
 - Plannotator / Effective HTML skills
+- [`explain-with-slides`](#explain-with-slides)
 - `understand`
 - `crit` / `crit-cli`
 - `terminal-browser`
@@ -148,6 +149,27 @@ Claude Code では `/last30days X を使えるよう設定して`、Codex では
 と入力すると、その情報源の設定案内を開けます。
 選択した情報源によっては、セットアップ時にブラウザのログイン情報の利用を求められたり、
 Homebrew で `yt-dlp` を導入したりします。入力した API キーは通常 `~/.config/last30days/.env` に保存されます。
+
+## `explain-with-slides`
+
+リポジトリの仕組みや PR の変更を、図・コード抜粋・実行結果を使ったスライドで説明します。
+対象が CLI の場合は、実際に実行したコマンドの出力を載せられます。
+
+対象の checkout でエージェントを起動し、説明したい範囲、読み手、言語を伝えます。
+
+```text
+# Claude Code
+/explain-with-slides APM で外部スキルを配布する仕組みを、日本語で dotfiles の新規利用者向けに説明して
+
+# Codex
+$explain-with-slides APM で外部スキルを配布する仕組みを、日本語で dotfiles の新規利用者向けに説明して
+
+# Codex で PR の変更を説明する
+$explain-with-slides pr 123 日本語でレビュー担当者向けに、変更点と確認方法を説明して
+```
+
+短い発表なら「5分・6枚程度」のように指定できます。Codex ではブラウザで開ける単一の `deck.html` が生成されます。
+左右の矢印キーで移動し、`N` キーで発表者ノートを表示できます。
 
 ## Plannotator / Effective HTML
 

@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-28T06:45:31.638841+00:00'
+generated_at: '2026-11-28T10:38:33.152680+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -2270,6 +2270,116 @@ dependencies:
     .claude/skills/modern-web-guidance/guides/webmcp/agentic-javascript-tools.md: sha256:bef5b816376264a7ca56e3fac88ddb97ae5b763e011faccee686d64dd13a1fd7
     .claude/skills/modern-web-guidance/guides/webmcp/webmcp.md: sha256:ed20a7cb5bb400b186e234ec0f4ffa0d923ded078447777ff42499cce902afa9
   content_hash: sha256:f7cddafe7598139720c16559377396aa2ab2f2784fb7cf53a642df86302072d9
+- repo_url: marekkirejczyk/skills
+  name: explain-with-slides
+  host: github.com
+  resolved_commit: eebf0afe28e1b1cfbb783136bf2257abf5ba6076
+  version: unknown
+  virtual_path: skills/explain-with-slides
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/explain-with-slides
+  - .agents/skills/explain-with-slides/SKILL.md
+  - .agents/skills/explain-with-slides/agents/openai.yaml
+  - .agents/skills/explain-with-slides/reference/pr-mode.md
+  - .agents/skills/explain-with-slides/reference/slide-patterns.md
+  - .agents/skills/explain-with-slides/scripts/bundle-html.mjs
+  - .agents/skills/explain-with-slides/scripts/filters.sh
+  - .agents/skills/explain-with-slides/scripts/gen-code.mjs
+  - .agents/skills/explain-with-slides/scripts/loc.sh
+  - .agents/skills/explain-with-slides/scripts/pr-stats.sh
+  - .agents/skills/explain-with-slides/scripts/preview.mjs
+  - .agents/skills/explain-with-slides/scripts/shoot.mjs
+  - .claude/skills/explain-with-slides
+  - .claude/skills/explain-with-slides/SKILL.md
+  - .claude/skills/explain-with-slides/agents/openai.yaml
+  - .claude/skills/explain-with-slides/reference/pr-mode.md
+  - .claude/skills/explain-with-slides/reference/slide-patterns.md
+  - .claude/skills/explain-with-slides/scripts/bundle-html.mjs
+  - .claude/skills/explain-with-slides/scripts/filters.sh
+  - .claude/skills/explain-with-slides/scripts/gen-code.mjs
+  - .claude/skills/explain-with-slides/scripts/loc.sh
+  - .claude/skills/explain-with-slides/scripts/pr-stats.sh
+  - .claude/skills/explain-with-slides/scripts/preview.mjs
+  - .claude/skills/explain-with-slides/scripts/shoot.mjs
+  deployed_file_hashes:
+    .agents/skills/explain-with-slides/SKILL.md: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+    .agents/skills/explain-with-slides/agents/openai.yaml: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+    .agents/skills/explain-with-slides/reference/pr-mode.md: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+    .agents/skills/explain-with-slides/reference/slide-patterns.md: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+    .agents/skills/explain-with-slides/scripts/bundle-html.mjs: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+    .agents/skills/explain-with-slides/scripts/filters.sh: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+    .agents/skills/explain-with-slides/scripts/gen-code.mjs: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+    .agents/skills/explain-with-slides/scripts/loc.sh: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+    .agents/skills/explain-with-slides/scripts/pr-stats.sh: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+    .agents/skills/explain-with-slides/scripts/preview.mjs: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+    .agents/skills/explain-with-slides/scripts/shoot.mjs: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
+    .claude/skills/explain-with-slides/SKILL.md: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+    .claude/skills/explain-with-slides/agents/openai.yaml: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+    .claude/skills/explain-with-slides/reference/pr-mode.md: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+    .claude/skills/explain-with-slides/reference/slide-patterns.md: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+    .claude/skills/explain-with-slides/scripts/bundle-html.mjs: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+    .claude/skills/explain-with-slides/scripts/filters.sh: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+    .claude/skills/explain-with-slides/scripts/gen-code.mjs: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+    .claude/skills/explain-with-slides/scripts/loc.sh: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+    .claude/skills/explain-with-slides/scripts/pr-stats.sh: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+    .claude/skills/explain-with-slides/scripts/preview.mjs: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+    .claude/skills/explain-with-slides/scripts/shoot.mjs: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
+  content_hash: sha256:4a58f7aac351e8be17bab4b955c971ff46e32f02129c516a54358ec91eba2b68
+- repo_url: marekkirejczyk/skills
+  name: refactor-tests
+  host: github.com
+  resolved_commit: eebf0afe28e1b1cfbb783136bf2257abf5ba6076
+  version: unknown
+  virtual_path: skills/refactor-tests
+  is_virtual: true
+  package_type: claude_skill
+  deployed_files:
+  - .agents/skills/refactor-tests
+  - .agents/skills/refactor-tests/SKILL.md
+  - .agents/skills/refactor-tests/agents/openai.yaml
+  - .agents/skills/refactor-tests/browser.md
+  - .agents/skills/refactor-tests/pure-functions.md
+  - .agents/skills/refactor-tests/round-trips.md
+  - .agents/skills/refactor-tests/route-handlers.md
+  - .agents/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  - .agents/skills/refactor-tests/scripts/speed-reporter.mjs
+  - .agents/skills/refactor-tests/scripts/speed-table.mjs
+  - .agents/skills/refactor-tests/services.md
+  - .claude/skills/refactor-tests
+  - .claude/skills/refactor-tests/SKILL.md
+  - .claude/skills/refactor-tests/agents/openai.yaml
+  - .claude/skills/refactor-tests/browser.md
+  - .claude/skills/refactor-tests/pure-functions.md
+  - .claude/skills/refactor-tests/round-trips.md
+  - .claude/skills/refactor-tests/route-handlers.md
+  - .claude/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  - .claude/skills/refactor-tests/scripts/speed-reporter.mjs
+  - .claude/skills/refactor-tests/scripts/speed-table.mjs
+  - .claude/skills/refactor-tests/services.md
+  deployed_file_hashes:
+    .agents/skills/refactor-tests/SKILL.md: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+    .agents/skills/refactor-tests/agents/openai.yaml: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+    .agents/skills/refactor-tests/browser.md: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+    .agents/skills/refactor-tests/pure-functions.md: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+    .agents/skills/refactor-tests/round-trips.md: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+    .agents/skills/refactor-tests/route-handlers.md: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+    .agents/skills/refactor-tests/scripts/playwright-speed-reporter.mjs: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+    .agents/skills/refactor-tests/scripts/speed-reporter.mjs: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+    .agents/skills/refactor-tests/scripts/speed-table.mjs: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+    .agents/skills/refactor-tests/services.md: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
+    .claude/skills/refactor-tests/SKILL.md: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+    .claude/skills/refactor-tests/agents/openai.yaml: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+    .claude/skills/refactor-tests/browser.md: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+    .claude/skills/refactor-tests/pure-functions.md: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+    .claude/skills/refactor-tests/round-trips.md: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+    .claude/skills/refactor-tests/route-handlers.md: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+    .claude/skills/refactor-tests/scripts/playwright-speed-reporter.mjs: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+    .claude/skills/refactor-tests/scripts/speed-reporter.mjs: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+    .claude/skills/refactor-tests/scripts/speed-table.mjs: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+    .claude/skills/refactor-tests/services.md: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
+  content_hash: sha256:f8d55acdf0e2211e5f1076ead6311623b2902e33fa702c9aebf10307cf372d1d
 - repo_url: mattpocock/skills
   name: grill-me
   host: github.com
@@ -6922,6 +7032,114 @@ deployments:
   - cathrynlavery/diagram-design/skills/diagram-design
   active_owner: cathrynlavery/diagram-design/skills/diagram-design
   content_hash: sha256:f8d5d4f0506160e0502f932140306b12d25adea1d1f6f319fb38c2345b0c6b42
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/reference/pr-mode.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/reference/slide-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/bundle-html.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/filters.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/gen-code.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/loc.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/pr-stats.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/preview.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+- kind: project-relative
+  target: claude
+  value: .claude/skills/explain-with-slides/scripts/shoot.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
 - kind: project-relative
   target: claude
   value: .claude/skills/find-skills
@@ -13836,6 +14054,105 @@ deployments:
   content_hash: sha256:f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f
 - kind: project-relative
   target: claude
+  value: .claude/skills/refactor-tests
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: null
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/browser.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/pure-functions.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/round-trips.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/route-handlers.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/scripts/speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/scripts/speed-table.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+- kind: project-relative
+  target: claude
+  value: .claude/skills/refactor-tests/services.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
+- kind: project-relative
+  target: claude
   value: .claude/skills/supabase-postgres-best-practices
   runtime: null
   scope: project
@@ -16417,6 +16734,114 @@ deployments:
   - cathrynlavery/diagram-design/skills/diagram-design
   active_owner: cathrynlavery/diagram-design/skills/diagram-design
   content_hash: sha256:f8d5d4f0506160e0502f932140306b12d25adea1d1f6f319fb38c2345b0c6b42
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:fc7e44dd29e0e1edc077df00990d6317ec3fbbdb768445acc47bc9f03a7901af
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:8e61802d40fcf3b8370f415bb38f64fdf1c5bdf6d8ec4ead075bc7a6d21d8f4a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/reference/pr-mode.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:21e48091f4efe3337a6b59085b62496a64cd9a4548c3bb615cf27c0808c31d42
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/reference/slide-patterns.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:b2dde2833529a3421fc617cea60ac14e758b0e71afce54fa3272508c6bd89342
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/bundle-html.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:52862604e65728f0368a14e0da1853fe999294d76045c8b2277afd079ddf127c
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/filters.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:c83545ccca0c38cb36dc4f259b3aa44682c387b06bc6cdcd9e4b705ca9362db2
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/gen-code.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:0c98ac1e3200b1ff28f41a330ed5d1f001e7c356784169480b946fec3b7fdfca
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/loc.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:e59714c023a772b7b0172ea5770ab50eafa6945d892875292455ac4d68adc775
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/pr-stats.sh
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:8cdb42877085fee199ca9dd86320e9f5f128d550e14ba5e6d5a94eac031b31ff
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/preview.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:2dd63704411e794e5cc1010a65d28bfbe008b83099fbacb396e587496773bf62
+- kind: project-relative
+  target: codex
+  value: .agents/skills/explain-with-slides/scripts/shoot.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/explain-with-slides
+  active_owner: marekkirejczyk/skills/skills/explain-with-slides
+  content_hash: sha256:8af07cc9cc48ad348ea6d870cc035f961edf8628e6bef8387c5ec7b8bf0753ee
 - kind: project-relative
   target: codex
   value: .agents/skills/find-skills
@@ -23329,6 +23754,105 @@ deployments:
   - vercel-labs/agent-skills/skills/react-best-practices
   active_owner: vercel-labs/agent-skills/skills/react-best-practices
   content_hash: sha256:f4c7d68b29c82381baad059c4a7f09e868e71ec9c3115a26ad3ae7d24c0dfe1f
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: null
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/SKILL.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:4960785a1ed811030c6201ecb5d31c1e62b2826d57c7ff0534e9dd9ffb5663a5
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/agents/openai.yaml
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:3fab141d93e5ecdaa0daf2a42072f81d546e127abea7310e9f66c363708ce877
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/browser.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:a89b632444eb0b988849180ad29005e09875b9422fe74a7fca012782b32351fc
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/pure-functions.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:18ac83eeab06913179f094579ff8980a2e9eb3c737776c9ff6584a7f68cc00b3
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/round-trips.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:f27867606f2cc7a3f822784dffad2325ade72640518442058000c66ad7535d56
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/route-handlers.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:f65c9f0ea0515cc1534033a61c8b133e3e203adad5c79730a923e22536e66a52
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/scripts/playwright-speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:de23785a959a2fa50f20abef9e2791104b88ec8e60e4b22948df71a29e482690
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/scripts/speed-reporter.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:69a42d729a2ea4f481c8fce21bce64d9448f43feb5fe961cf872bccef9699f28
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/scripts/speed-table.mjs
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:8b3dcce18181001b1152ed0c8ab6a84206811aa867faa4c2599cea1d2d645d1a
+- kind: project-relative
+  target: codex
+  value: .agents/skills/refactor-tests/services.md
+  runtime: null
+  scope: project
+  owners:
+  - marekkirejczyk/skills/skills/refactor-tests
+  active_owner: marekkirejczyk/skills/skills/refactor-tests
+  content_hash: sha256:80e5eaad477087aba15fcbad7eb972adefb21c04f53e94892ce2cc7b6770015a
 - kind: project-relative
   target: codex
   value: .agents/skills/supabase-postgres-best-practices

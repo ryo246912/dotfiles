@@ -46,6 +46,8 @@
     "chrome-capture": "name-only",
     "crit": "on",
     "crit-cli": "on",
+    "explain-with-slides": "user-invocable-only",
+    "refactor-tests": "user-invocable-only",
     "ctx-agent-history-search": "user-invocable-only",
     "design-artifact": "name-only",
     "desloppify": "name-only",

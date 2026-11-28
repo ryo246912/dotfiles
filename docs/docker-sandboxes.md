@@ -784,7 +784,7 @@ mise run sandbox:mcp-add             # config/sbx/mcp*.yml の MCP をホスト�
 > `--config-dir ~/.claude-account2` のように skills 等を `../.claude/skills` への symlink で
 > 共有しているディレクトリを使う場合、`sbx-agent` はリンク先（`~/.claude/skills` など）も
 > 同じパスへマウントします（対象は `claude-share-config --list-entries` が返す共有 entry のみ）。基本は**書き込み可**ですが、
-> リンクを辿った先が dotfiles リポジトリ内のものは read-only です。`settings.json` はファイルへの symlink で、
+> リンクを辿った先が dotfiles リポジトリ内のものは既定で read-only です。`settings.json` はファイルへの symlink で、
 > sbx はこれを直接マウントできない（`workspace path exists but is not a directory` で作成に失敗する）ため、
 > 代わりにリンク先のあるディレクトリ（`~/.claude`）を **read-only** で足して、symlink の連鎖ごと解決させます。
 > そのため account2 / work3 の sandbox からはメインの `~/.claude`（会話履歴など）も読めます。
@@ -1000,7 +1000,12 @@ mise の `[dotfiles]` は `~/.config` / `~/.claude` / `~/.codex` を **`symlink-
 sbx はホストと同じ絶対パスにマウントするため、`~/.config/nvim` だけを渡すと
 sandbox 内では symlink のリンク先（リポジトリのパス）が存在せず、**全部リンク切れ**になります。
 
-そこで `sbx-agent` は **dotfiles リポジトリ自体も read-only で追加 workspace に渡します**。
+そこで `sbx-agent` は 既定で **dotfiles リポジトリ自体も read-only で追加 workspace に渡します**。
+
+`--writable-dotfiles` は検出した dotfiles checkout を読み書き可能でマウントします。T3 の共有 SBX で使います。
+この指定では、ホストが参照する設定・スクリプトや、次回の sandbox 作成で使う標準の `sbxenv.yaml` と kit のコピー元も編集できます。
+標準設定の snapshot は今回の作成で参照するファイルをホスト側の state に置きます。
+共有範囲には Git の設定とフックも含まれ、その変更により後続のホスト側 Git 操作でコードが実行されることがあります。ホストでのコード実行を許容できる信頼済みエージェントで使ってください。
 パスがホストと同じなので、これだけで `~/.config` 配下の symlink がそのまま解決します。
 
 リポジトリの場所は次の順で解決します。
