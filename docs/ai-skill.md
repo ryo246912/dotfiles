@@ -118,6 +118,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `find-skills`
 - `last30days`
 - `modern-web-guidance`
+- [`impeccable`](#impeccableimpeccable)
 - `prompt-master`
 - `desloppify`
 
