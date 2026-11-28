@@ -294,17 +294,25 @@ def tailscale_pair(profile):
         raise ValueError("tailscale が必要です。docs/t3-code.md を参照してください")
     status = subprocess.run([cli, "status", "--json"], capture_output=True, text=True)
     try:
-        host = json.loads(status.stdout)["Self"]["DNSName"].rstrip(".")
-    except (ValueError, KeyError):
+        state = json.loads(status.stdout)
+        # A stopped client still reports its last Self entry, so check the backend state first.
+        backend_state = state.get("BackendState")
+        host = state["Self"]["DNSName"].rstrip(".")
+    except (ValueError, KeyError, AttributeError):
         raise ValueError("Tailscale が未接続です。アプリでログインし、HTTPS Certificates を有効にしてください")
+    if backend_state != "Running":
+        raise ValueError(f"Tailscale が接続されていません（状態: {backend_state}）。"
+                         "Tailscale アプリで接続（Connect）してから、もう一度実行してください")
     # Every environment already owns a unique host port, so reuse it as the tailnet HTTPS port.
     # This replaces the old fixed per-account ports, which cannot cover several repositories.
     https_port = profile["port"]
-    try:
-        run([cli, "serve", "--bg", f"--https={https_port}", f"http://127.0.0.1:{profile['port']}"])
-    except subprocess.CalledProcessError:
-        raise ValueError(f"tailscale serve に失敗しました。HTTPS ポート {https_port} が使えない場合は、"
-                         "443 / 8443 / 10000 などで docs/t3-code.md の手順を手動で実行してください")
+    serve = subprocess.run([cli, "serve", "--bg", f"--https={https_port}", f"http://127.0.0.1:{profile['port']}"],
+                           capture_output=True, text=True)
+    if serve.returncode:
+        reason = (serve.stderr or serve.stdout).strip()
+        raise ValueError(f"tailscale serve に失敗しました: {reason or '終了コード ' + str(serve.returncode)}\n"
+                         f"HTTPS ポート {https_port} が使えない場合は、443 / 8443 / 10000 などで "
+                         "docs/t3-code.md の手順を手動で実行してください")
     base_url = f"https://{host}:{https_port}"
     result = subprocess.run(sandbox_command(profile, [
         "auth", "pairing", "create", "--ttl", "10m", "--label", "phone", "--base-url", base_url]),

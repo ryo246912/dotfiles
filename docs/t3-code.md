@@ -481,6 +481,8 @@ T3 Connect の登録は不要で、T3 Connect の接続枠（標準で 3 環境�
   実機では中断したため使わない。
 - 管理画面（https://login.tailscale.com/admin/dns）で MagicDNS と HTTPS Certificates を有効にする。
 - Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
+- 実行前に、Mac の Tailscale アプリを接続（Connect）しておく。停止中は
+  `Tailscale が接続されていません（状態: Stopped）` と表示して中断する。
 
 手順（work3 の共有環境の例。環境が異なる場合は `--sbx` を置き換える。`--sbx` を省略すると fzf で選べる。
 リポジトリ別の専用環境は、対象リポジトリ内で `--repo` を付ける）:
@@ -511,8 +513,10 @@ mise run t3:cli -- --sbx work3 tailscale
   その後、`mise run t3:cli -- --sbx work3 auth pairing create --ttl 10m --label phone --base-url https://<MagicDNS名>:<ポート>` で
   token を発行する。
 - このコマンドは、旧実装（アカウントごとの固定ポート 443 / 8443 / 10000）を、共有環境・専用環境のどちらでも
-  使えるよう、環境ごとに一意な公開ポートを使う形に作り直したもの。このリポジトリの作業環境には Mac・Tailscale・sbx が無く、
-  **実機での動作は未検証**（Tailscale と sbx を模したスタブでの動作確認のみ）。
+  使えるよう、環境ごとに一意な公開ポートを使う形に作り直したもの。このリポジトリの作業環境には Mac・Tailscale・sbx が無い。
+  実機では、コマンドの呼び出しと、Tailscale 停止中の失敗までしか確認できていない（その結果を受けて、
+  停止中の判定と失敗理由の表示を追加した）。**`serve` の設定と token の発行は、実機では未検証**
+  （Tailscale と sbx を模したスタブでの動作確認のみ）。
 
 接続後は、通常はアプリの環境選択だけで使える。Token の再発行が要るのは、期限切れ、端末の追加、
 30 日使わずに再ペアリングが必要になったとき（ペアリング済みの端末のセッションは 30 日で切れる。「T3 Connect の安全性」を参照）。
