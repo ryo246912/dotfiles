@@ -65,26 +65,19 @@ mise run sandbox:recreate <sandbox-name> # 名前を指定する場合
 
 ### T3 の sandbox
 
-> [!WARNING]
-> `sandbox:recreate` は T3 の LaunchAgent / systemd user service を停止・復旧しません。
-> 自動起動サービスとの競合や T3 の公開ポート・初期化の復旧を保証しないため、T3 では以下の専用手順を使います。
+T3 の登録済み profile は自動検出されるため、通常の sandbox と同じコマンドを使います。
 
 ```bash
 mise run sandbox:build-template claude # template の変更がある場合
-mise run t3:reset                     # 対象アカウントを選択して削除
-mise run t3:setup                     # 同じアカウントを選択して再作成
+mise run sandbox:recreate
 ```
 
-リポジトリ専用の T3 環境では、対象リポジトリで次を実行します。
-
-```bash
-mise run t3:reset -- --repo
-mise run t3:setup -- --repo
-```
-
-reset は自動起動サービスと profile 登録も削除します。ホストに保存した T3 設定・履歴は残りますが、
-カスタム port や自動起動の有無などは事前に確認し、setup 時に同じ設定を指定してください。
-sandbox 内だけのデータは先に退避し、再作成後は必要に応じて provider に再ログインします。
+T3 の profile、workspace、storage、公開ポートを保持し、稼働中の自動起動サービスを停止してから
+再作成・ネットワーク設定・ポート復旧を行い、成功時にサービスを再開します。
+停止中・未登録のサービスは勝手に起動しません。失敗時は通常の再作成処理にフォールバックせず、
+profile を保持します。原因を解消して再実行し、必要なら `t3:cli` の `restart-server` で復旧してください。
+旧形式の profile は対象外です。sandbox 内だけのデータは事前に退避してください。
+profile 登録も削除したい場合は `t3:reset` と `t3:setup`（専用環境ではそれぞれ `-- --repo`）を使います。
 単なる T3 の再起動なら `mise run t3:cli` の `restart-server` を使い、削除は不要です。
 詳細は [T3 Code の運用手順](t3-code.md) を参照してください。
 
