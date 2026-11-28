@@ -656,9 +656,10 @@ def recreate_registered(name):
             start = ["launchctl", "bootstrap", domain, definition]
         else:
             require("systemctl")
-            status = run(["systemctl", "--user", "show", "--property=ActiveState",
-                          "--value", definition.name], capture_output=True, text=True).stdout.strip()
-            active = status not in ("inactive", "failed")
+            status = subprocess.run(["systemctl", "--user", "is-active", "--quiet", definition.name])
+            if status.returncode not in (0, 3, 4):
+                status.check_returncode()
+            active = status.returncode == 0
             stop = ["systemctl", "--user", "stop", definition.name]
             start = ["systemctl", "--user", "start", definition.name]
         if active and not definition.is_file():
