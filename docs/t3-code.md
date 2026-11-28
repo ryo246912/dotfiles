@@ -30,7 +30,7 @@ T3 アプリから接続済みの環境で **Add Project** を選び、SBX 内�
 
 ```text
 T3 Code アプリ
-  │ PC はローカル公開ポート、スマホは T3 Connect
+  │ PC はローカル公開ポート、スマホは T3 Connect または Tailscale（tailnet 内の HTTPS）
   └─ Mac（ホスト）
       ├─ 127.0.0.1:3800 → programming-oauth-t3
       │                     └─ T3 サーバー :3773（OAuth の認証・履歴）
@@ -66,10 +66,15 @@ T3 Code アプリ
 - **ターミナルや ccmanager で動かしたエージェントは見えるのか**: 見えない。T3 に表示されるのは、
   T3 自身が起動した thread だけ。スマホで見たい作業は、T3 アプリから新規セッションとして始める。
 
-### スマホからの接続
+### スマホからの接続経路
 
-スマホは T3 Connect で接続する。sbx 0.55.0-rc4 以降、`feature.udp-egress` の有効化、
-QUIC と UDP 7844 の許可が必要。接続の準備は「スマホ・別の PC のアプリから接続する」を参照する。
+| 経路       | 条件                                                                                               | 備考                                                                                        |
+| ---------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| T3 Connect | sbx 0.55.0-rc4 以降、T3 の接続先への TCP 443、`feature.udp-egress` の有効化、QUIC・UDP 7844 の許可 | スマホ側に VPN は不要。出先でも使える。通信内容は T3・Cloudflare に見られうる。             |
+| Tailscale  | Mac とスマホの Tailscale、MagicDNS・HTTPS 証明書                                                   | 通信は端末間で暗号化される。機密を含む作業や、T3 Connect が使えないときはこちら。手順は後述 |
+
+どちらもサーバーは同じで、経路だけが違う。接続の準備は「スマホ・別の PC のアプリから接続する」と
+「Tailscale で接続する場合」、通信内容の見え方は「T3 Connect の安全性」を参照する。
 
 ## 初回導入
 
@@ -175,7 +180,7 @@ mise run t3:cli -- --repo
 枠が埋まっている場合はセットアップ時にエラーを表示する。
 セットアップ済みの環境は、枠外であっても登録済みポートを再利用する。
 前回のセットアップが途中で止まり、sandbox に公開ポートだけ設定済みの場合も、そのポートを再利用する。
-リポジトリ別環境のアプリ接続にはローカルの `pair` または T3 Connect を使う。
+リポジトリ別環境のアプリ接続にはローカルの `pair`、T3 Connect、または Tailscale を使う。
 同じ T3 Connect アカウントで登録できるのは、全リポジトリの環境を合計して標準で 3 環境まで。
 PC のローカル `pair` はこの枠を使わない。
 
@@ -257,6 +262,7 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
 | pair           | PC のアプリ接続用 Address / Token / URL を発行                  |
 | login          | Claude / Codex を選んでログイン                                 |
 | connect        | T3 Connect の初回認証（スマホ接続用）                           |
+| tailscale      | Tailscale 経由でスマホ接続用の Address / Token を発行           |
 | sessions       | 接続を許可した端末の一覧                                        |
 | ports          | sandbox の公開ポートを表示                                      |
 | server-status  | ホスト側 T3 サービスの状態                                      |
@@ -291,6 +297,9 @@ sandbox に渡したディレクトリへ保存する。ホストの任意の別
 T3 Connect に sandbox の環境を登録すると、デスクトップ・iOS・Android の T3 Code アプリや
 https://app.t3.codes から同じセッションを開ける。T3 Connect のログインは、sandbox に固定した
 Claude の `account1` / `account2` / `work3` とは別のもの。
+
+スマホ・別の PC からの経路は、T3 Connect と Tailscale の 2 つ。
+機密を含む作業は「Tailscale で接続する場合」を使う（比較は「スマホからの接続経路」を参照）。
 
 ### ホストで T3 Connect に登録する
 
@@ -456,6 +465,242 @@ Settings → Sharing & access で新しい端末のコードを確認して承�
 PC・sandbox・T3 サーバーは起動した状態を維持する。
 T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは、全リポジトリの環境を合わせて
 モバイルから使う環境を 3 つまで選ぶ。PC のローカル接続は T3 Connect の枠を使わない。
+
+### Tailscale で接続する場合
+
+T3 Connect を使わない経路。通信は Tailscale の暗号化経路で端末間を結ぶので、T3 や Cloudflare の中継を通らず、
+sbx の DNS 制限（SRV / TXT）も受けない。機密を含む作業や、T3 Connect が使えない場合（sbx が 0.55.0-rc4 未満、
+`feature.udp-egress` が無効など）はこちらを使う。通信内容の見え方は「T3 Connect の安全性」を参照する。
+T3 Connect の登録は不要で、T3 Connect の接続枠（標準で 3 環境）も使わない。
+
+前提（初回のみ）:
+
+- Mac とスマホに Tailscale を導入し、同じ tailnet にログインする。
+  Mac への導入は private ホストで `mise run bootstrap:mac-packages` が行う（`tailscale-app`）。
+  `mise bootstrap packages apply brew-cask:tailscale-app` は、pkg インストーラの sudo 要求で
+  実機では中断したため使わない。
+- 管理画面（https://login.tailscale.com/admin/dns）で MagicDNS と HTTPS Certificates を有効にする。
+- Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
+- 実行前に、Mac の Tailscale アプリを接続（Connect）しておく。停止中は
+  `Tailscale が接続されていません（状態: Stopped）` と表示して中断する。
+
+手順（work3 の共有環境の例。環境が異なる場合は `--sbx` を置き換える。`--sbx` を省略すると fzf で選べる。
+リポジトリ別の専用環境は、対象リポジトリ内で `--repo` を付ける）:
+
+```sh
+mise run t3:cli -- --sbx work3 tailscale
+```
+
+`tailscale` は次の処理を行う。
+
+1. ホストで `tailscale serve --bg --https=<公開ポート> http://127.0.0.1:<公開ポート>` を実行し、sandbox の公開ポートを tailnet の HTTPS に出す。
+   HTTPS ポートには、環境ごとに重複しないホストの公開ポート（`ports` で確認できる値）をそのまま使う。
+   この設定は永続し、場所を変えても tailnet のアドレスは変わらない。
+2. この Mac の MagicDNS 名（`tailscale status --json` の `Self.DNSName`。末尾の `.` は除く）から、接続先の URL を作る。
+3. スマホ用の pairing token（有効期限 10 分、ラベル `phone`）を発行する。
+
+表示された `https://<MagicDNS名>:<公開ポート>` と Token を、スマホの T3 Code アプリの Add environment に入力する。
+`127.0.0.1` はスマホでは PC を指さない。Token は一度使うと無効で、10 分で期限が切れる。
+ブラウザーで Pair URL を開くと Token を使い切るため、アプリに直接入力する。
+
+注意:
+
+- この `serve` は、同じ tailnet の端末すべてから到達できる。スマホだけに公開する設定ではない。
+  pairing token とは別に、必要なら tailnet の ACL で接続元を絞る。
+- 公開ポートを HTTPS ポートに使えるかは、Tailscale のバージョンで異なる可能性がある。
+  `tailscale serve` が失敗した場合は、`tailscale serve --help` で使えるポートを確認し、
+  443 / 8443 / 10000 など使えるポートで `tailscale serve --bg --https=<ポート> http://127.0.0.1:<公開ポート>` を手動実行する。
+  その後、`mise run t3:cli -- --sbx work3 auth pairing create --ttl 10m --label phone --base-url https://<MagicDNS名>:<ポート>` で
+  token を発行する。
+- このコマンドは、旧実装（アカウントごとの固定ポート 443 / 8443 / 10000）を、共有環境・専用環境のどちらでも
+  使えるよう、環境ごとに一意な公開ポートを使う形に作り直したもの。このリポジトリの作業環境には Mac・Tailscale・sbx が無い。
+  実機では、コマンドの呼び出しと、Tailscale 停止中の失敗までしか確認できていない（その結果を受けて、
+  停止中の判定と失敗理由の表示を追加した）。**`serve` の設定と token の発行は、実機では未検証**
+  （Tailscale と sbx を模したスタブでの動作確認のみ）。
+
+接続後は、通常はアプリの環境選択だけで使える。Token の再発行が要るのは、期限切れ、端末の追加、
+30 日使わずに再ペアリングが必要になったとき（ペアリング済みの端末のセッションは 30 日で切れる。「T3 Connect の安全性」を参照）。
+sandbox を停止・再起動した後に接続できなくなった場合は、`ports` で公開ポートを確認し、`tailscale` をもう一度実行する。
+この経路だけを止める場合は、対応するポートを指定して `tailscale serve --https=<公開ポート> off` を実行する。
+
+## 別ホストのセッションを引き継ぐ
+
+T3 Code に、別ホストで動いているスレッドを手元のホストへ移し替える機能はない。
+スレッドは元のホストで動かしたまま、別の端末から接続して続きを操作する。
+以下は T3 Code 公式リポジトリ（`pingdotgg/t3code`）の `docs/user/`
+に基づく。接続方法は `remote-access.md`、会話の取り込みは `welcome-page.md`、
+データの退避は `thread-migration.md` を参照している。
+「スレッドを別のサーバーへ移す方法はない」の Linked environments と portable handoff は、
+公式ドキュメントの `portable-handoffs.md` などを参照した情報で、このリポジトリの作業では原文を再確認していない。
+バージョンにより項目名が異なる可能性がある。
+
+### 1. 元のホストへ接続して続ける（基本）
+
+どのクライアントからも、サーバー上の同じスレッドが見える。
+スレッドが動くホストを接続先に登録すれば、別のマシン・ブラウザー・スマホから続きを打てる。
+
+| 方法          | 手順                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------- |
+| T3 Connect    | ホストの Settings → Sharing & access で有効化する。CLI のみのホストは `t3 up`。同じアカウントでログイン |
+| SSH           | デスクトップアプリの Settings → Environments → Add environment → SSH に `user@host` を入れる            |
+| LAN/Tailscale | ホストで `t3 serve --lan` を実行し、`t3 pair` でペアリングする                                          |
+
+元のホストは起動したままにする。この dotfiles の sandbox 構成での手順は
+「スマホ・別の PC のアプリから接続する」を参照。
+
+### 2. 別ホストの Claude Code / Codex CLI の会話を取り込む
+
+T3 Code の外で `claude` / `codex` を直接使っていた会話は、取り込める。
+
+1. 上の方法で、そのホストを environment として登録する
+2. Settings → Projects → Import projects and their threads を開き、その environment を選ぶ
+   （公式の `welcome-page.md` にある手順。初回起動の Welcome ページでも取り込める。
+   アプリのバージョンによって画面が異なる場合は、Welcome ページ側の Projects のインポートを使う）
+   （Pi の会話も取り込む場合は、先に Add more agents で Pi を有効にする。既定では対象外）
+3. Claude Code / Codex / Pi の会話が T3 Code のスレッドとして取り込まれ、続きを打てる
+   （取り込まれるのは直近 30 日に活動した会話だけ。それより古い会話は、選んでも取り込まれない）
+
+取り込んだスレッドも、そのホスト上で動く。
+
+取り込みはベストエフォートで、全文の移行ではない（公式の `docs/user/welcome-page.md`）。
+
+- 保持されるのは、最初のユーザープロンプトと、直近の可視メッセージ（最初のプロンプトと合わせて最大 200 件）
+- ツールの実行記録と添付ファイルは省略される
+- 壊れたセッション、空のセッション、サイズの大きいセッション（4 GiB 超のファイル、
+  保持するテキストとメタデータが 32 MiB 超、レコード 100,000 件超）は取り込まれない
+- 1 回の取り込みは、プロジェクトごとに最大 100 会話・4 GiB まで。続きは Welcome ページの Review all から行う
+
+重要なコンテキスト（ツールの結果や添付で渡した情報）が欠けたまま続きを打つことになるため、
+続ける前に、スレッドの内容を確認して、必要な前提を書き足す。
+取り込んだスレッドが、元のプロバイダーのセッションを再開するのか、
+会話ログから新しく始めるのかは、ドキュメントに記載が無く未確認。
+
+### 3. スレッドを別のサーバーへ移す方法はない
+
+ドキュメントにも、スレッド全体を書き出すコマンドは無いと書かれている。代替手段は次のとおり。
+
+- **Linked environments（beta）**: 両方のマシンの Settings → Labs で有効にしてリンクすると、
+  相手のスレッドを読み取り専用で追える。操作するときは Connect to interact で直接ペアリングする
+- **新しいスレッドで引き継ぐ**: 移したい先で新しいスレッドを作り、要点のまとめを貼る。
+  プロバイダー切替時にも使われる portable handoff は履歴の一部しか渡さず、
+  上限は既定 16k トークン（`T3CODE_CONTEXT_HANDOFF_TOKEN_CAP` で変更可）。
+  重要な制約は書き直して渡す
+- **データ丸ごとの退避**: 公式はサーバーを止めて `~/.t3/userdata` を退避する方法を案内している。
+  この dotfiles の sandbox 構成では、保存先が異なり、
+  `${XDG_DATA_HOME:-$HOME/.local/share}/t3-sandbox/<sandbox-name>/t3/userdata` になる
+  （「自動起動と保存先」を参照）。スレッド 1 本だけを移す用途には向かない
+
+## T3 Connect の安全性
+
+T3 Connect は、ルーターのポート開放なしでホストと他の端末をつなぐ仕組み。
+公式ドキュメントの `remote-access.md` で確認できた範囲を整理する。
+
+### 確認できたこと
+
+- 既定では、**同じ T3 Connect アカウントにログインした端末は、どれでも接続できる**
+- 新しい端末の承認を必須にできる。ホストの Settings → Sharing & access で
+  **Require approval for new devices** を有効にする。新端末が出す短いコード（10 分有効）を、
+  接続済みの端末、または `t3 auth connect-device approve <code>` で承認する
+- 端末の失効は Settings → Sharing & access、または `t3 auth connect-device revoke <code>` で行う
+- ペアリング済みの端末は使っている間ログインが続き、30 日使わないと再ペアリングが必要になる
+- `--scope`（例: `orchestration:read` / `filesystem:write` / `terminal:operate`）で、
+  ペアリングやセッションの権限を絞れる。ただし、T3 Connect のログインや端末承認にも効くかは未確認で、
+  同じアカウントの端末が既定で接続できる点は変わらない
+- 解除は、アカウントメニューの T3 Connect → Deregister、または CLI ホストで
+  `t3 connect unlink` / `t3 connect logout`
+- 「ペアリング URL とコードはパスワードと同じに扱い、ログやスクリーンショットに貼らない」という注意がある
+- T3 Connect 自体に beta / experimental の表示は無い（beta なのは Linked environments）
+
+### リレーの構造と通信内容の見え方
+
+公式リポジトリの `docs/internals/06_t3-connect.md`、`docs/user/faq.md`、`docs/user/telemetry.md`、
+`SECURITY.md` に基づく。
+
+**ドキュメントに書かれていること**
+
+- 通常の HTTP / WebSocket の通信は、クライアントからホストの tunnel ホスト名へ直接流れ、
+  リレー（Worker）はデータ経路に入らない。通信は Cloudflare Tunnel（ホスト側の `cloudflared`）経由。
+  リレーは認証情報の発行と tunnel の割り当てを仲介する
+- 例外として、自動化の webhook はリレーを経由する。オフライン保持を有効にすると、
+  生のリクエストがリレーの Durable Object に保存される
+- リレーは環境のセッショントークンを見ない。認証は DPoP で束縛した認証情報と、
+  リレーと環境の相互認証で行う
+- リレーが保持するのは、環境のリンク情報、tunnel の割り当て、承認済み端末の鍵指紋など。
+  ID 管理は Clerk。webhook のオフライン保持を有効にした場合は、保持中の webhook も含む
+- テレメトリは `ingest.t3.codes` へ、ハッシュ化した ID とともに送られる。
+  内容はプロバイダー・モデル・トークン数・所要時間などで、プロンプト・応答・ファイル内容・認証情報は含まれない。
+  リレーの接続診断（所要時間・リクエストパス・環境/スレッド ID・エラー種別）は Axiom に送られる
+- Settings → Sharing & access の「Publish agent activity」を有効にすると、
+  プロジェクト/スレッドのタイトル、モデル名、ターンの状態がモバイル通知のためにリレーへ送られる
+- `SECURITY.md` は、リレーを mint 要求の「信頼するブローカー」とし、
+  リレーの署名鍵が侵害されると、リンク済みの環境向けに認証情報を発行されると明記している
+- プロンプトとコードは、ホストから選んだ AI プロバイダーへ直接送られる（FAQ）
+
+**ドキュメントに書かれていないこと**
+
+- アプリケーション層のエンドツーエンド暗号化（E2EE）の記載は見つからなかった。
+  セッション鍵や E2EE のハンドシェイクの説明が無く、書かれているのは DPoP と相互認証だけ
+- ログの保持期間、アカウント削除の扱い。プライバシーポリシー（`t3.codes/privacy`）は、
+  この環境から到達できず読めていない
+
+**メンテナーの公式な発言（E2EE は見送り）**
+
+[pingdotgg/t3code#32098](https://github.com/pingdotgg/t3code/issues/32098)
+（T3 Connect はクラウドのアカウントだけでリンク済みマシンを操作できる、という指摘。2026-11-14 にクローズ）で、
+メンテナーの juliusmarminge が
+[コメント](https://github.com/pingdotgg/t3code/issues/32098#issuecomment-6869049926)
+に次のように書いている。
+
+> Full end-to-end encryption with mutual pairing would be a bigger change, and we've left it out for now.
+
+- E2EE は「今は見送った」と明言されている。理由は「変更が大きい」という点だけで、時期の見通しは書かれていない
+- 対応として、端末承認（PR #36419）が追加された。既定は無効で、T3 Connect のセットアップ時に案内される。
+  無効のままだと、クラウドが新しい端末を登録できる
+- このスレッドでは、T3 が会話内容を読めるかには触れていない。tunnel や Workers Routes の話も出ていない
+
+**推測（ドキュメントに記載なし）**
+
+Cloudflare Tunnel は TLS を Cloudflare のエッジで終端する。上記の E2EE が無いなら、
+Cloudflare は HTTP / WebSocket の平文（プロンプトや出力を含む）を技術的に読める。
+リレー自体はデータ経路に入らないとされるが、Cloudflare 側の可視性は T3 のドキュメントでは扱われていない。
+
+tunnel の作成元は書かれていない。リレーが割り当てを管理する構成なので、
+T3 のアカウントで発行・運用している可能性が高い。その場合、T3 側が Workers Routes などで
+エッジの通信内容を取得することは、E2EE が無い限り技術的に妨げられない。
+これは構造からの推測で、実際に取得していることを示す証拠は見つかっていない。
+
+**未検証の情報（他の人からの情報で、一次情報を確認していない）**
+
+- 競合の Orca / Paseo / Happier は、デバイス間の通信が暗号化され、運営者でも会話内容を見られないという話
+- bb は暗号化しないが、プライバシーポリシーで E2EE をしないことと、データを保持しないことを明言しているという話
+- T3 Connect にはその種の明言が無いため、会話データを保管している可能性を否定できないという話
+
+第三者による監査（セキュリティ認証など）の有無は確認できていない。
+
+### 判断の目安
+
+- T3 Connect の通信内容は、T3 と中継する Cloudflare に見られうるものとして扱う
+  （E2EE が無く、見送りが明言されているため。実際に見ているかは未確認）
+- プロンプト、コード、出力に機密を含む作業は、T3 Connect を使わない
+  （Tailscale や SSH など、通信内容を第三者に見せない暗号化された経路を使う。
+  Tailscale は中継サーバーを経由することもあるが、通信は端末間で暗号化される）
+- 上の「確認できたこと」の端末承認・失効・権限の絞り込みは、アカウント乗っ取り対策であり、
+  通信内容の秘匿性は変えない
+
+### この構成での注意
+
+T3 Connect に登録した環境からは、エージェントがそのホスト（この構成では sandbox）で
+コマンド実行・ファイル操作できる。アカウントが乗っ取られると、接続できる端末が増える。
+
+- T3 Connect のアカウントに 2 段階認証を設定する
+- **Require approval for new devices** を有効にする。
+  無効のまま端末を失効しても、同じアカウントで再接続できると考えられる（推測）ため、失効だけに頼らない
+- 承認を有効にする前に接続した端末は、有効にした後も信頼済みのまま残る
+  （#32098 のメンテナー発言）。有効にしたら、一覧で信頼済みの端末を確認し、不明な端末は失効させる
+- 使わない端末は失効させ、使わなくなった環境は Deregister する
+- 公開するのは、権限を絞った sandbox（この構成では work3 など）の環境だけにする。
+  認証情報を多く持つホスト本体は公開しない
+- 不安がある場合は T3 Connect を使わず、Tailscale や SSH で接続する
 
 ## 自動起動と保存先
 
