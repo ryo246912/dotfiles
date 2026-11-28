@@ -103,6 +103,7 @@ ASDF_FFMPEG_ENABLE = "gpl libx264"
 "github:d-kuro/gwq"                                         = "0.1.2"
 "github:dyoshikawa/rulesync"                                = "32.0.0"
 "github:github/copilot-cli"                                 = "1.0.88"
+"github:github/gh-actions-lock"                               = { version = "0.5.1", bin = "gh-actions-lock", format = "raw", platforms.macos-arm64 = { asset_pattern = "darwin-arm64" }, platforms.macos-x64 = { asset_pattern = "darwin-amd64" }, platforms.linux-x64 = { asset_pattern = "linux-amd64" }, platforms.linux-arm64 = { asset_pattern = "linux-arm64" } }
 "github:github/gh-stack"                                    = { version = "0.3.0", bin = "gh-stack" }
 "github:gpanders/ijq"                                       = "1.1.2"
 "github:iamrohithrnair/emeraldian"                          = { version = "0.6.0", bin = "emeraldian" }

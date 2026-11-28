@@ -138,6 +138,17 @@ if [ "$(uname)" = "Darwin" ]; then
 else
   export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$PATH"
 fi
+# mise が入れた gh-actions-lock バイナリを gh extension に登録する。
+# gh の extension loader は gh-actions-lock という名前の local extension を参照する。
+# symlink は mise shim を指すため、mise のバージョン更新後も登録し直す必要がない。
+if command -v gh >/dev/null 2>&1 && command -v gh-actions-lock >/dev/null 2>&1; then
+  if ! gh extension list 2>/dev/null | grep -q '^gh actions-lock'; then
+    gh_actions_lock_dir="${XDG_DATA_HOME:-$HOME/.local/share}/gh-local-extensions/gh-actions-lock"
+    { mkdir -p "$gh_actions_lock_dir" && ln -sfn "$(command -v gh-actions-lock)" "$gh_actions_lock_dir/gh-actions-lock" \
+      && (cd "$gh_actions_lock_dir" && gh extension install . >/dev/null 2>&1); } \
+      || echo "warn: gh actions-lock の extension 登録に失敗しました" >&2
+  fi
+fi
 if command -v gh >/dev/null 2>&1 && gh_stack_bin=$(command -v gh-stack 2>/dev/null); then
   # 以前の版が入れた alias は組み込みの stack に隠れて使われないので消しておく
   if gh alias list 2>/dev/null | grep -q '^stack:.*gh-stack'; then
