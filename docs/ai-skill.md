@@ -118,6 +118,7 @@ Claude Code の plugin は、skill とは別に `enabledPlugins` で管理しま
 - `find-skills`
 - `last30days`
 - `modern-web-guidance`
+- [`impeccable`](#impeccableimpeccable)
 - `prompt-master`
 - `desloppify`
 
@@ -704,6 +705,20 @@ npx skills find testing --owner vercel-labs
 候補が見つかると、用途、install数、配布元、install command、詳細ページが提示されます。提示されたskillをこの
 dotfilesで継続管理する場合は、提案された`npx skills add`を直接実行するのではなく、upstreamを確認して
 `apm/apm.yml`へcommit SHAまたはrelease tagでpinし、APMでインストールしてください。
+
+## Impeccable（`impeccable`）
+
+[Impeccable の公式スキル](https://github.com/pbakaus/impeccable/tree/main/plugin/skills/impeccable) は、Web 画面やコンポーネントの設計・評価・改善に使います。dotfiles では APM が公式リポジトリのスキルを Claude Code・Codex 向けに配布します。
+
+| サブコマンド      | 用途                                                                   |
+| ----------------- | ---------------------------------------------------------------------- |
+| `critique <対象>` | 画面を確認し、視覚階層、余白、強調の強さなど UI/UX の改善点を出す      |
+| `audit <対象>`    | アクセシビリティ、パフォーマンス、レスポンシブ表示を技術面から確認する |
+| `shape <対象>`    | 実装前に、目的と利用場面を踏まえて画面や操作を設計する                 |
+
+Claude Code では `/impeccable critique 設定画面`、Codex では `$impeccable critique 設定画面` のように呼び出します。対象にルート、画面名、コンポーネントのパスなどを添えると、確認範囲が明確になります。
+
+`pr-uiux-review` は見た目や情報配置に変更がある場合に `critique` の評価手順を使い、観察結果をレビューにまとめます。
 
 ## `modern-web-guidance`
 
