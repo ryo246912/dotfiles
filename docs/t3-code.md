@@ -485,8 +485,9 @@ T3 Code の外で `claude` / `codex` を直接使っていた会話は、取り�
 
 1. 上の方法で、そのホストを environment として登録する
 2. Settings → Projects → Import projects and their threads を開き、その environment を選ぶ
+   （Pi の会話も取り込む場合は、先に Add more agents で Pi を有効にする。既定では対象外）
 3. Claude Code / Codex / Pi の会話が T3 Code のスレッドとして取り込まれ、続きを打てる
-   （取り込まれるのは直近 30 日分）
+   （取り込まれるのは直近 30 日に活動した会話だけ。それより古い会話は、選んでも取り込まれない）
 
 取り込んだスレッドも、そのホスト上で動く。
 
@@ -532,7 +533,8 @@ T3 Connect は、ルーターのポート開放なしでホストと他の端末
 - 端末の失効は Settings → Sharing & access、または `t3 auth connect-device revoke <code>` で行う
 - ペアリング済みの端末は使っている間ログインが続き、30 日使わないと再ペアリングが必要になる
 - `--scope`（例: `orchestration:read` / `filesystem:write` / `terminal:operate`）で、
-  ペアリングやセッションの権限を絞れる
+  ペアリングやセッションの権限を絞れる。ただし、T3 Connect のログインや端末承認にも効くかは未確認で、
+  同じアカウントの端末が既定で接続できる点は変わらない
 - 解除は、アカウントメニューの T3 Connect → Deregister、または CLI ホストで
   `t3 connect unlink` / `t3 connect logout`
 - 「ペアリング URL とコードはパスワードと同じに扱い、ログやスクリーンショットに貼らない」という注意がある
@@ -620,7 +622,10 @@ T3 Connect に登録した環境からは、エージェントがそのホスト
 コマンド実行・ファイル操作できる。アカウントが乗っ取られると、接続できる端末が増える。
 
 - T3 Connect のアカウントに 2 段階認証を設定する
-- **Require approval for new devices** を有効にする
+- **Require approval for new devices** を有効にする。
+  無効のまま端末を失効しても、同じアカウントで再接続できると考えられる（推測）ため、失効だけに頼らない
+- 承認を有効にする前に接続した端末は、有効にした後も信頼済みのまま残る
+  （#32098 のメンテナー発言）。有効にしたら、一覧で信頼済みの端末を確認し、不明な端末は失効させる
 - 使わない端末は失効させ、使わなくなった環境は Deregister する
 - 公開するのは、権限を絞った sandbox（この構成では work3 など）の環境だけにする。
   認証情報を多く持つホスト本体は公開しない
