@@ -24,7 +24,11 @@ dependencies:
     # pr-author-all-review から対象差分に応じて使う専門レビュー。
     - petrkindlmann/qa-skills/skills/ai-qa-review#v3.6.0
     - supabase/agent-skills/skills/supabase-postgres-best-practices#v0.1.9
+    # PostgreSQL の診断・レビュー・変更検証スキル 5 種。tag がないため Renovate の APM lockFileMaintenance で更新する。
+    - soudai/postgresql-use-improve-agents-skill
     - vercel-labs/agent-skills/skills/web-design-guidelines
+    # pr-uiux-review の画面レビューで使う公式スキル。skill リリースタグに固定する。
+    - pbakaus/impeccable/plugin/skills/impeccable#skill-v4.11.1
     - vercel-labs/agent-skills/skills/react-best-practices
     # Plannotatorのreview / annotate / last launcher skills。
     - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.6
@@ -61,7 +65,7 @@ dependencies:
     - cathrynlavery/diagram-design/skills/diagram-design
     - vercel-labs/skills/skills/find-skills#v1.9.0
     - mvanhorn/last30days-skill/skills/last30days#v4.6.0
-    - GoogleChrome/modern-web-guidance/skills/modern-web-guidance#v1.0.1
+    - GoogleChrome/modern-web-guidance/skills/modern-web-guidance#v1.0.2
     # AI tool向けのprompt生成・改善skill（tag なし、lockfileのcommitでpin）。
     - nidhinjs/prompt-master
     # Ponytail は skill ディレクトリ単位で配布する。
