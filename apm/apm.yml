@@ -31,9 +31,9 @@ dependencies:
     - pbakaus/impeccable/plugin/skills/impeccable#skill-v4.11.1
     - vercel-labs/agent-skills/skills/react-best-practices
     # Plannotatorのreview / annotate / last launcher skills。
-    - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.28.6
-    - backnotprop/plannotator/apps/skills/core/plannotator-annotate#v0.28.6
-    - backnotprop/plannotator/apps/skills/core/plannotator-last#v0.28.6
+    - backnotprop/plannotator/apps/skills/core/plannotator-review#v0.29.4
+    - backnotprop/plannotator/apps/skills/core/plannotator-annotate#v0.29.4
+    - backnotprop/plannotator/apps/skills/core/plannotator-last#v0.29.4
     # Effective HTMLのartifact作成skills（tag なし）。
     - plannotator/effective-html/skills/html
     - plannotator/effective-html/skills/design-artifact
