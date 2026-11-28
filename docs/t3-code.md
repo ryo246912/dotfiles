@@ -487,10 +487,10 @@ mise run t3:cli -- --sbx work3 tailscale
 
 `tailscale` は次の処理を行う。
 
-1. ホストで `tailscale serve --bg --https=<公開ポート>` を実行し、sandbox の公開ポートを tailnet の HTTPS に出す。
+1. ホストで `tailscale serve --bg --https=<公開ポート> http://127.0.0.1:<公開ポート>` を実行し、sandbox の公開ポートを tailnet の HTTPS に出す。
    HTTPS ポートには、環境ごとに重複しないホストの公開ポート（`ports` で確認できる値）をそのまま使う。
    この設定は永続し、場所を変えても tailnet のアドレスは変わらない。
-2. この Mac の MagicDNS 名（`tailscale status --json` の `Self.DNSName`）から、接続先の URL を作る。
+2. この Mac の MagicDNS 名（`tailscale status --json` の `Self.DNSName`。末尾の `.` は除く）から、接続先の URL を作る。
 3. スマホ用の pairing token（有効期限 10 分、ラベル `phone`）を発行する。
 
 表示された `https://<MagicDNS名>:<公開ポート>` と Token を、スマホの T3 Code アプリの Add environment に入力する。
