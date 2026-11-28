@@ -1,5 +1,5 @@
 lockfile_version: '1'
-generated_at: '2026-11-28T10:38:33.152680+00:00'
+generated_at: '2026-11-28T10:47:03.739120+00:00'
 apm_version: 0.33.0
 dependencies:
 - repo_url: backnotprop/plannotator
@@ -1245,8 +1245,8 @@ dependencies:
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail
   is_virtual: true
@@ -1257,15 +1257,15 @@ dependencies:
   - .claude/skills/ponytail
   - .claude/skills/ponytail/SKILL.md
   deployed_file_hashes:
-    .agents/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
-    .claude/skills/ponytail/SKILL.md: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
-  content_hash: sha256:99f0589e5646b46da07b9419a5daa178004b3dd8930fec528918a51ab07f5efc
+    .agents/skills/ponytail/SKILL.md: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
+    .claude/skills/ponytail/SKILL.md: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
+  content_hash: sha256:061f887d9e3e735f85db3be3655a8936a00f24d5fb65ac4ab74a968a770fe342
 - repo_url: dietrichgebert/ponytail
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-audit
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail-audit
   is_virtual: true
@@ -1283,8 +1283,8 @@ dependencies:
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-debt
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail-debt
   is_virtual: true
@@ -1295,15 +1295,15 @@ dependencies:
   - .claude/skills/ponytail-debt
   - .claude/skills/ponytail-debt/SKILL.md
   deployed_file_hashes:
-    .agents/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-    .claude/skills/ponytail-debt/SKILL.md: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
-  content_hash: sha256:cb56e9f1606257dcbbe196197dffa0cb0e0ea136ad98c7eb44a85bd858b51e38
+    .agents/skills/ponytail-debt/SKILL.md: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
+    .claude/skills/ponytail-debt/SKILL.md: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
+  content_hash: sha256:f5d1d2ab891ff0a650a90b67235e487828e7d2a189de08a1ae073032de379407
 - repo_url: dietrichgebert/ponytail
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-gain
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail-gain
   is_virtual: true
@@ -1314,15 +1314,15 @@ dependencies:
   - .claude/skills/ponytail-gain
   - .claude/skills/ponytail-gain/SKILL.md
   deployed_file_hashes:
-    .agents/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
-    .claude/skills/ponytail-gain/SKILL.md: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
-  content_hash: sha256:725571b5c159e6504e0a2b337d7e2a9917e22ab87809f182059c2f2562ec9657
+    .agents/skills/ponytail-gain/SKILL.md: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
+    .claude/skills/ponytail-gain/SKILL.md: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
+  content_hash: sha256:fca2297cf7b5fd26692f6bd94d398b522e19fa81ad6e2aaebf1933575f7a6803
 - repo_url: dietrichgebert/ponytail
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-help
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail-help
   is_virtual: true
@@ -1333,15 +1333,15 @@ dependencies:
   - .claude/skills/ponytail-help
   - .claude/skills/ponytail-help/SKILL.md
   deployed_file_hashes:
-    .agents/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
-    .claude/skills/ponytail-help/SKILL.md: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
-  content_hash: sha256:a2cd9a9040fd39626875b77838ae6525893ff6d28e6368b2a188ca899c86956f
+    .agents/skills/ponytail-help/SKILL.md: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
+    .claude/skills/ponytail-help/SKILL.md: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
+  content_hash: sha256:4582025c3923072fb6c35b8cbd75adf4f7ce47df0eff43cc9a2a39808537fd61
 - repo_url: dietrichgebert/ponytail
   materialization_repo_url: DietrichGebert/ponytail
   name: ponytail-review
   host: github.com
-  resolved_commit: 9cc65d03aa2da1db7121b912d03596409ee340b8
-  resolved_ref: v5.1.0
+  resolved_commit: 7801d061243d7b753bad0e0b3c057cd250b11755
+  resolved_ref: v5.3.3
   version: unknown
   virtual_path: skills/ponytail-review
   is_virtual: true
@@ -12431,7 +12431,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-debt
   active_owner: dietrichgebert/ponytail/skills/ponytail-debt
-  content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+  content_hash: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-gain
@@ -12449,7 +12449,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-gain
   active_owner: dietrichgebert/ponytail/skills/ponytail-gain
-  content_hash: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
+  content_hash: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-help
@@ -12467,7 +12467,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-help
   active_owner: dietrichgebert/ponytail/skills/ponytail-help
-  content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+  content_hash: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
 - kind: project-relative
   target: claude
   value: .claude/skills/ponytail-review
@@ -12494,7 +12494,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail
   active_owner: dietrichgebert/ponytail/skills/ponytail
-  content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+  content_hash: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
 - kind: project-relative
   target: claude
   value: .claude/skills/postgres-config-tuning
@@ -22133,7 +22133,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-debt
   active_owner: dietrichgebert/ponytail/skills/ponytail-debt
-  content_hash: sha256:63168f0e1475affb1211bc004261aa51a037f79e484571aae484bf27fe4d17c2
+  content_hash: sha256:b5ec2762f6ba8c4af9ea7173aa6c9f91b88655a25e43f9de0264f6ce8722b25f
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-gain
@@ -22151,7 +22151,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-gain
   active_owner: dietrichgebert/ponytail/skills/ponytail-gain
-  content_hash: sha256:60e05eaf65e8e404c8975a944eda9d3ed4ae3345478b3550b0e74570982c187e
+  content_hash: sha256:231034a896d6762e4b5c8468287083422c56b499119976ec9f76821f7d083090
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-help
@@ -22169,7 +22169,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail-help
   active_owner: dietrichgebert/ponytail/skills/ponytail-help
-  content_hash: sha256:2927276bc9c10221ce8bcf80adb798db130cd70eb33a95db91ab3a0d105f5109
+  content_hash: sha256:86ab0ce0af70cbeeeef499d5c884873b393f87f86401dcc45553662ce2c1eff9
 - kind: project-relative
   target: codex
   value: .agents/skills/ponytail-review
@@ -22196,7 +22196,7 @@ deployments:
   owners:
   - dietrichgebert/ponytail/skills/ponytail
   active_owner: dietrichgebert/ponytail/skills/ponytail
-  content_hash: sha256:ba68ff26239c3c3b05b2a9a47ee0d9a6b93a69639a2555ec87a5d44bffaf2f0c
+  content_hash: sha256:9badd22a32e19cb884e46dfa8d3aae82bb81dfa5484105b8b4f0262df823a509
 - kind: project-relative
   target: codex
   value: .agents/skills/postgres-config-tuning
