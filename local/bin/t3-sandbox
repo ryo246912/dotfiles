@@ -235,6 +235,7 @@ def sandbox_command(profile, arguments, interactive=False, tool="t3"):
             'export TUNNEL_TRANSPORT_PROTOCOL=quic;'
             'if ! compgen -G "${MISE_CACHE_DIR:-/mise/cache}/aqua-registry/sources/*.yaml" >/dev/null; then '
             'printf "%s\n" "Aqua レジストリを取得しています（初回のみ）..." >&2; '
+            'sudo -n chown -R "$(id -u):$(id -g)" "${MISE_CACHE_DIR:-/mise/cache}" && '
             'mise --cd /mise cache clear aqua:cli/cli && '
             'mise --cd /mise ls-remote --no-versions-host aqua:cli/cli >/dev/null || exit 1; fi; '
             + chrome_env + 'shift 2; exec mise exec -- "$@"',
