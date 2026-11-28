@@ -65,6 +65,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 "brew-cask:kamillobinski/thock/thock" = "latest"
 "brew-cask:karabiner-elements"        = "latest" # 13.7.0
 "brew-cask:keyboardcleantool"         = "latest" # 7
+"brew-cask:ryan-helou/tap/mac-memory-monitor" = "latest"
 "brew-cask:markpad"                   = "latest" # 2.8.4
 "brew-cask:memory-cleaner"            = "latest" # 5.5.3,271
 "brew-cask:obsidian"                  = "latest" # 1.13.4
@@ -82,6 +83,7 @@ PGSSLROOTCERT = "/etc/ssl/cert.pem"
 
 [bootstrap.brew.taps]
 "kamillobinski/thock" = "https://github.com/kamillobinski/homebrew-thock.git"
+"ryan-helou/tap" = "https://github.com/ryan-helou/homebrew-tap.git"
 
 # macOS defaults（`mise bootstrap macos defaults apply` で適用。）
 # Dock は起動時にしか設定を読まないため、適用後に `killall Dock` で再起動する。
