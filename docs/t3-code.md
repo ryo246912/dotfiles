@@ -259,6 +259,7 @@ Codex 側で別途 MCP を設定する。Claude workload の MCP 自動登録は
 | pair           | PC のアプリ接続用 Address / Token / URL を発行                  |
 | login          | Claude / Codex を選んでログイン                                 |
 | connect        | T3 Connect の初回認証（スマホ接続用）                           |
+| tailscale      | Tailscale 経由でスマホ接続用の Address / Token を発行           |
 | sessions       | 接続を許可した端末の一覧                                        |
 | ports          | sandbox の公開ポートを表示                                      |
 | server-status  | ホスト側 T3 サービスの状態                                      |
@@ -293,6 +294,9 @@ sandbox に渡したディレクトリへ保存する。ホストの任意の別
 T3 Connect に sandbox の環境を登録すると、デスクトップ・iOS・Android の T3 Code アプリや
 https://app.t3.codes から同じセッションを開ける。T3 Connect のログインは、sandbox に固定した
 Claude の `account1` / `account2` / `work3` とは別のもの。
+
+スマホ・別の PC からの経路は、T3 Connect と Tailscale の 2 つ。
+機密を含む作業は「Tailscale で接続する場合」を使う（比較は「スマホからの接続経路」を参照）。
 
 ### ホストで T3 Connect に登録する
 
@@ -458,6 +462,58 @@ Settings → Sharing & access で新しい端末のコードを確認して承�
 PC・sandbox・T3 サーバーは起動した状態を維持する。
 T3 Connect の標準上限は 3 環境。同じ T3 Connect アカウントでは、全リポジトリの環境を合わせて
 モバイルから使う環境を 3 つまで選ぶ。PC のローカル接続は T3 Connect の枠を使わない。
+
+### Tailscale で接続する場合
+
+T3 Connect を使わない経路。通信は Tailscale の暗号化経路で端末間を結ぶので、T3 や Cloudflare の中継を通らず、
+sbx の DNS 制限（SRV / TXT）も受けない。機密を含む作業や、T3 Connect が使えない場合（sbx が 0.55.0-rc4 未満、
+`feature.udp-egress` が無効など）はこちらを使う。通信内容の見え方は「T3 Connect の安全性」を参照する。
+T3 Connect の登録は不要で、T3 Connect の接続枠（標準で 3 環境）も使わない。
+
+前提（初回のみ）:
+
+- Mac とスマホに Tailscale を導入し、同じ tailnet にログインする。
+  Mac への導入は private ホストで `mise run bootstrap:mac-packages` が行う（`tailscale-app`）。
+  `mise bootstrap packages apply brew-cask:tailscale-app` は、pkg インストーラの sudo 要求で
+  実機では中断したため使わない。
+- 管理画面（https://login.tailscale.com/admin/dns）で MagicDNS と HTTPS Certificates を有効にする。
+- Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
+
+手順（work3 の例。環境が異なる場合は `--sbx` を置き換える。`--sbx` を省略すると fzf で選べる）:
+
+```sh
+mise run t3:cli -- --sbx work3 tailscale
+```
+
+`tailscale` は次の処理を行う。
+
+1. ホストで `tailscale serve --bg --https=<公開ポート>` を実行し、sandbox の公開ポートを tailnet の HTTPS に出す。
+   HTTPS ポートには、環境ごとに重複しないホストの公開ポート（`ports` で確認できる値）をそのまま使う。
+   この設定は永続し、場所を変えても tailnet のアドレスは変わらない。
+2. この Mac の MagicDNS 名（`tailscale status --json` の `Self.DNSName`）から、接続先の URL を作る。
+3. スマホ用の pairing token（有効期限 10 分、ラベル `phone`）を発行する。
+
+表示された `https://<MagicDNS名>:<公開ポート>` と Token を、スマホの T3 Code アプリの Add environment に入力する。
+`127.0.0.1` はスマホでは PC を指さない。Token は一度使うと無効で、10 分で期限が切れる。
+ブラウザーで Pair URL を開くと Token を使い切るため、アプリに直接入力する。
+
+注意:
+
+- この `serve` は、同じ tailnet の端末すべてから到達できる。スマホだけに公開する設定ではない。
+  pairing token とは別に、必要なら tailnet の ACL で接続元を絞る。
+- 公開ポートを HTTPS ポートに使えるかは、Tailscale のバージョンで異なる可能性がある。
+  `tailscale serve` が失敗した場合は、`tailscale serve --help` で使えるポートを確認し、
+  443 / 8443 / 10000 など使えるポートで `tailscale serve --bg --https=<ポート> http://127.0.0.1:<公開ポート>` を手動実行する。
+  その後、`mise run t3:cli -- --sbx work3 auth pairing create --ttl 10m --label phone --base-url https://<MagicDNS名>:<ポート>` で
+  token を発行する。
+- このコマンドは、旧実装（アカウントごとの固定ポート 443 / 8443 / 10000）を、リポジトリ別 sandbox に合わせて
+  公開ポートを使う形に作り直したもの。このリポジトリの作業環境には Mac・Tailscale・sbx が無く、
+  **実機での動作は未検証**（Tailscale と sbx を模したスタブでの動作確認のみ）。
+
+接続後は、通常はアプリの環境選択だけで使える。Token の再発行が要るのは、期限切れ、端末の追加、
+30 日使わずに再ペアリングが必要になったとき（ペアリング済みの端末のセッションは 30 日で切れる。「T3 Connect の安全性」を参照）。
+sandbox を停止・再起動した後に接続できなくなった場合は、`ports` で公開ポートを確認し、`tailscale` をもう一度実行する。
+この経路だけを止める場合は、対応するポートを指定して `tailscale serve --https=<公開ポート> off` を実行する。
 
 ## 別ホストのセッションを引き継ぐ
 
@@ -637,64 +693,6 @@ T3 Connect に登録した環境からは、エージェントがそのホスト
 - 公開するのは、権限を絞った sandbox（この構成では work3 など）の環境だけにする。
   認証情報を多く持つホスト本体は公開しない
 - 不安がある場合は T3 Connect を使わず、Tailscale や SSH で接続する
-
-### Tailscale で接続する場合
-
-T3 Connect を使わない経路。通信は Tailscale の暗号化経路で端末間を結ぶので、T3 や Cloudflare の中継を通らず、
-sbx の DNS 制限（SRV / TXT）も受けない。機密を含む作業や、T3 Connect が使えない場合（sbx が 0.55.0-rc4 未満、
-`feature.udp-egress` が無効など）はこちらを使う。「T3 Connect の安全性」も参照。
-
-以前の `mise run t3:cli -- <アカウント> tailscale` は、#1872 のリポジトリ別 sandbox への移行で削除済み。
-以下は、旧コマンドが内部で行っていた処理（`tailscale serve` の設定と pairing token の発行）を手動で行う手順。
-このリポジトリの作業環境には Mac・Tailscale・sbx が無く、**現在の構成での実行は未検証**。
-手順の途中で失敗したら、`mise run t3:cli` のメニューの `ports` と `server-status` で状態を確認する。
-
-前提（初回のみ）:
-
-- Mac とスマホに Tailscale を導入し、同じ tailnet にログインする。
-  Mac への導入は private ホストで `mise run bootstrap:mac-packages` が行う（`tailscale-app`）。
-  `mise bootstrap packages apply brew-cask:tailscale-app` は、pkg インストーラの sudo 要求で
-  実機では中断したため使わない。
-- 管理画面（https://login.tailscale.com/admin/dns）で MagicDNS と HTTPS Certificates を有効にする。
-- Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
-
-手順（work3 の例。環境が異なる場合は `--sbx` と各ポートを置き換える）:
-
-1. sandbox の公開ポートを確認する。
-
-   ```sh
-   mise run t3:cli -- --sbx work3 ports
-   ```
-
-2. その公開ポートを、tailnet の HTTPS に出す。HTTPS ポートは環境ごとに重複しないものを選ぶ。
-   旧コードでは、Serve が HTTPS を公開できるポートとして 443 / 8443 / 10000 を使っていた。
-   使えるポートは Tailscale のバージョンで異なる可能性があるため、`tailscale serve --help` で確認する。
-   この設定は永続し、場所を変えても tailnet のアドレスは変わらない。
-
-   この `serve` は、同じ tailnet の端末すべてから到達できる。スマホだけに公開する設定ではない。
-   pairing token とは別に、必要なら tailnet の ACL で接続元を絞る。
-
-   ```sh
-   tailscale serve --bg --https=8443 http://127.0.0.1:<公開ポート>
-   ```
-
-3. この Mac の MagicDNS 名を確認する。`tailscale status --json` の `Self.DNSName`（末尾の `.` は除く）。
-
-4. スマホ用の pairing token を発行する。
-
-   ```sh
-   mise run t3:cli -- --sbx work3 auth pairing create --ttl 10m --label phone \
-     --base-url https://<MagicDNS名>:8443
-   ```
-
-5. スマホの T3 Code アプリで Add environment を開き、`https://<MagicDNS名>:8443` と Token を入力する。
-   `127.0.0.1` はスマホでは PC を指さない。Token は一度使うと無効で、10 分で期限が切れる。
-   ブラウザーで Pair URL を開くと Token を使い切るため、アプリに直接入力する。
-
-接続後は、通常はアプリの環境選択だけで使える。Token の再発行が要るのは、期限切れ、端末の追加、
-30 日使わずに再ペアリングが必要になったとき（ペアリング済みの端末のセッションは 30 日で切れる。「T3 Connect の安全性」を参照）。
-sandbox を停止・再起動した後に接続できなくなった場合は、`ports` で公開ポートを確認し、必要なら手順 2 をやり直す。
-この経路だけを止める場合は、対応するポートを指定して `tailscale serve --https=8443 off` を実行する。
 
 ## 自動起動と保存先
 
