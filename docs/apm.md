@@ -89,7 +89,7 @@ dependencies:
   見つけると `apm.yml` を更新し、同じPRで `apm install` を実行して `apm.lock.yaml` も更新します。
   CLI も配布するリポジトリ（plannotator・crit・ctx・desloppify など）は `.github/renovate.json` の `groupName` で mise の
   CLI 更新と同一PRにまとめます。
-- **release tag が無い依存**（effective-html・tsumiki・diagram-design）は ref を書きません。`apm.lock.yaml`
+- **release tag が無い依存**（effective-html・tsumiki・diagram-design・`marekkirejczyk/skills` の2スキル・`soudai/postgresql-use-improve-agents-skill` など）は ref を書きません。`apm.lock.yaml`
   の `resolved_commit` が pin になり、manifest の他の依存が変わっても lockfile の commit が維持されます。
   Renovate の lockFileMaintenance（`.github/renovate.json` の `apm.lockFileMaintenance`、既定の schedule は
   週1回）が lockfile を作り直し、最新 commit へ更新するPRを作ります。

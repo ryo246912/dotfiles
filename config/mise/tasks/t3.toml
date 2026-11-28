@@ -1,19 +1,19 @@
 # T3 Code: initial setup and occasional CLI operations.
 ["t3:setup"]
-description = "Select and configure T3 sandboxes for the current repository"
+description = "Select and configure T3 sandboxes for the selected account"
 # Preserve the caller's repository when invoked as a global task.
 dir = "{{cwd}}"
 raw = true
 run = 'exec "$HOME/.local/bin/t3-sandbox" setup'
 
 ["t3:cli"]
-description = "Select a T3 operation for the current repository"
+description = "Select a T3 operation for the selected account"
 dir         = "{{cwd}}"
 raw         = true
 run         = 'exec "$HOME/.local/bin/t3-sandbox" cli'
 
 ["t3:reset"]
-description = "Remove a T3 sandbox and its registration for the current repository"
+description = "Remove a T3 sandbox and its registration for the selected account"
 dir         = "{{cwd}}"
 raw         = true
 run         = 'exec "$HOME/.local/bin/t3-sandbox" reset'

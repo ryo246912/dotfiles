@@ -50,6 +50,11 @@ CLAUDE.local.md
 
 ## crit
 .crit/
+
+## Lefthook
+lefthook-local.yml
+lefthook-local.yaml
+# 旧ファイルが残っている環境向け
 lefthook.local.yml
 
 ## desloppify

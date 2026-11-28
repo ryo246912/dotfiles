@@ -91,6 +91,7 @@ capabilities:
           - "twitter.com"
           - "api.fxtwitter.com"
           # パッケージ・ビルドツールの取得元（Balanced preset に無いもの）
+          - "conda.anaconda.org"
           # mise のバージョン解決・インストール
           - "mise-versions.jdx.dev"
           - "mise.run"

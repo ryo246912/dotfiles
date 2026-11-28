@@ -1,0 +1,2 @@
+[includeIf "hasconfig:remote.*.url:git@github.com:<org>/<repo>.git"]
+  path = guard

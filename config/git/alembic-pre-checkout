@@ -1,0 +1,222 @@
+#!/usr/bin/env bash
+set -uo pipefail
+
+[[ "${ALEMBIC_GUARD:-}" != 0 ]] || exit 0
+
+resolve_target() {
+  local subcommand=$1 target='' creating=0 guess=default detach=0 trailing_separator=0 remote candidate='' preferred='' count=0 default_remote
+  shift
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -b|-B|-c|-C|--orphan|--create|--force-create)
+        [[ $# -ge 2 && "$creating" == 0 ]] || return 1
+        creating=1
+        shift ;;
+      --orphan=*|--create=*|--force-create=*|-b?*|-B?*|-c?*|-C?*)
+        [[ "$creating" == 0 ]] || return 1
+        creating=1 ;;
+      --no-guess|--no-track) guess=0 ;;
+      --guess) guess=1 ;;
+      --detach|-d) detach=1 ;;
+      --conflict=merge|--conflict=diff3|--conflict=zdiff3|-f|--force|-m|--merge|-q|--quiet|--progress|--no-progress|--track|-t|--track=direct|--track=inherit|--discard-changes|--ignore-other-worktrees|--recurse-submodules|--no-recurse-submodules) ;;
+      --)
+        if [[ "$subcommand" == switch && $# == 2 && -z "$target" ]]; then
+          target=$2
+          [[ "$target" != - ]] || target='@{-1}'
+        else
+          [[ $# == 1 ]] || return 1
+          trailing_separator=1
+        fi
+        break ;;
+      -) [[ -z "$target" ]] || return 1; target='@{-1}' ;;
+      -*) return 1 ;;
+      *) [[ -z "$target" ]] || return 1; target=$1 ;;
+    esac
+    shift
+  done
+
+  [[ -n "$target" ]] || return 1
+  if [[ "$creating" == 0 && "$detach" == 0 ]]; then
+    git rev-parse -q --verify --end-of-options "refs/heads/${target}^{commit}" 2>/dev/null && return 0
+  fi
+  git rev-parse -q --verify --end-of-options "${target}^{commit}" 2>/dev/null && return 0
+
+  # A guessed tracking branch must be a remote-tracking ref.
+  [[ "$guess" != 0 && "$detach" == 0 && "$creating" == 0 && "$target" != '@{-1}' ]] || return 1
+  if [[ "$subcommand" == checkout && "$trailing_separator" == 0 && -e "$target" ]]; then
+    return 1
+  fi
+  if [[ "$guess" == default && $(git config --type=bool --get checkout.guess) == false ]]; then
+    return 1
+  fi
+  default_remote=$(git config --get checkout.defaultRemote)
+  while IFS= read -r remote; do
+    [[ -n "$remote" ]] || continue
+    local resolved
+    resolved=$(git rev-parse -q --verify --end-of-options "refs/remotes/$remote/${target}^{commit}" 2>/dev/null) || continue
+    candidate=$resolved
+    ((count += 1))
+    [[ "$remote" != "$default_remote" ]] || preferred=$resolved
+  done < <(git remote)
+  if [[ -n "$preferred" || "$count" == 1 ]]; then
+    printf '%s\n' "${preferred:-$candidate}"
+  else
+    return 1
+  fi
+}
+
+case "${1:-}" in
+  checkout|switch) ;;
+  *) exit 0 ;;
+esac
+
+new=$(resolve_target "$@") || exit 0
+prev=$(git rev-parse --verify HEAD 2>/dev/null) || exit 0
+[[ "$prev" != "$new" ]] || exit 0
+git_dir=$(git rev-parse --git-dir 2>/dev/null) || exit 0
+if [[ -d "$git_dir/rebase-merge" || -d "$git_dir/rebase-apply" || -f "$git_dir/BISECT_LOG" ]]; then
+  exit 0
+fi
+
+guard_config() {
+  git config --get "dotfiles.alembicGuard.$1"
+}
+
+app_dir=$(guard_config appDir) || exit 0
+versions_dir=$(guard_config versionsDir) || exit 0
+[[ -n "$app_dir" && -n "$versions_dir" ]] || exit 0
+root=$(git rev-parse --show-toplevel) || exit 0
+cd -- "$root" || exit 0
+[[ "$app_dir" == /* ]] || app_dir="$root/$app_dir"
+
+git --literal-pathspecs diff --quiet "$prev" "$new" -- "$versions_dir" 2>/dev/null
+[[ $? == 1 ]] || exit 0
+
+# Read revision assignments without importing migration modules.
+list_revisions() {
+  local path declaration
+  git --literal-pathspecs grep -Iz --no-color --no-line-number --no-column -E \
+    '^revision[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null |
+    while IFS= read -r -d '' path && IFS= read -r declaration; do
+      [[ "$path" == *.py ]] && printf '%s\n' "$declaration"
+    done |
+    sed -nE "s/^revision[^=]*=[[:space:]]*\"([^\"]+)\".*/\\1/p; s/^revision[^=]*=[[:space:]]*'([^']+)'.*/\\1/p" |
+    LC_ALL=C sort -u
+}
+
+prev_revs=$(list_revisions "$prev")
+new_revs=$(list_revisions "$new")
+[[ "$prev_revs" != "$new_revs" ]] || exit 0
+
+db_service=$(guard_config dbService)
+db_user=$(guard_config dbUser)
+db_name=$(guard_config dbName)
+
+if ! db_revs=$(cd -- "$app_dir" && docker compose exec -T "${db_service:-db}" \
+  psql -U "${db_user:-postgres}" -d "${db_name:-postgres}" -tAc \
+  'select version_num from alembic_version' 2>/dev/null); then
+  db_revs=
+fi
+
+if [[ -z "$db_revs" ]]; then
+  only_prev=$(LC_ALL=C comm -23 <(printf '%s\n' "$prev_revs") <(printf '%s\n' "$new_revs"))
+  if [[ -n "$only_prev" ]]; then
+    printf '[alembic-guard] DB の revision を確認できません。切替元にだけ存在する revision:\n%s\n' "$only_prev" >&2
+  fi
+  exit 0
+fi
+
+missing=$(LC_ALL=C comm -23 \
+  <(printf '%s\n' "$db_revs" | LC_ALL=C sort -u) <(printf '%s\n' "$new_revs"))
+[[ -n "$missing" ]] || exit 0
+
+list_edges() {
+  git --literal-pathspecs grep -Iz -A 20 --no-color --no-line-number --no-column -E \
+    '^(down_)?revision[[:space:]:=]' "$1" -- "$versions_dir" 2>/dev/null |
+    tr '\0' '\t' |
+    awk '
+      function take_ids(path, text) {
+        while (match(text, /["\047][^"\047]+["\047]/)) {
+          down[path] = down[path] " " substr(text, RSTART + 1, RLENGTH - 2)
+          text = substr(text, RSTART + RLENGTH)
+        }
+      }
+      {
+        tab = index($0, "\t")
+        if (tab == 0) next
+        path = substr($0, 1, tab - 1)
+        line = substr($0, tab + 1)
+        if (path !~ /\.py$/) next
+        if (line ~ /^revision[[:space:]:=]/) {
+          sub(/^[^=]*=/, "", line)
+          if (match(line, /["\047][^"\047]+["\047]/)) rev[path] = substr(line, RSTART + 1, RLENGTH - 2)
+          next
+        }
+        if (line ~ /^down_revision[[:space:]:=]/) {
+          sub(/^[^=]*=/, "", line)
+          depth[path] = 0
+          open[path] = 1
+        }
+        if (!open[path]) next
+        sub(/#.*/, "", line)
+        take_ids(path, line)
+        depth[path] += gsub(/\(/, "", line) - gsub(/\)/, "", line)
+        if (depth[path] <= 0) open[path] = 0
+      }
+      END {
+        for (path in rev) print rev[path] down[path]
+      }'
+}
+
+# Walk down from the missing revisions until reaching ones the target also has.
+common_revisions() {
+  ALEMBIC_MISSING=$1 ALEMBIC_TARGETS=$2 awk '
+    { parents[$1] = $0; sub(/^[^ ]+ ?/, "", parents[$1]) }
+    function ancestors(rev, seen,    queue, head, tail, current, count, i, list) {
+      head = 1; tail = 0
+      count = split(parents[rev], list, " ")
+      for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      while (head <= tail) {
+        current = queue[head++]
+        if (current in seen) continue
+        seen[current] = 1
+        count = split(parents[current], list, " ")
+        for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      }
+    }
+    END {
+      count = split(ENVIRON["ALEMBIC_TARGETS"], list, "\n")
+      for (i = 1; i <= count; i++) in_target[list[i]] = 1
+      head = 1; tail = 0
+      count = split(ENVIRON["ALEMBIC_MISSING"], list, "\n")
+      for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      while (head <= tail) {
+        current = queue[head++]
+        if (current in visited) continue
+        visited[current] = 1
+        if (current in in_target) { common[current] = 1; continue }
+        count = split(parents[current], list, " ")
+        for (i = 1; i <= count; i++) queue[++tail] = list[i]
+      }
+      for (rev in common) {
+        split("", seen)
+        ancestors(rev, seen)
+        for (other in common) if (other in seen) redundant[other] = 1
+      }
+      for (rev in common) if (!(rev in redundant)) print rev
+    }' | LC_ALL=C sort
+}
+
+common=$(common_revisions "$missing" "$new_revs" < <(list_edges "$prev"))
+
+printf '[alembic-guard] 切替を中止しました。切替先に存在しない DB revision:\n%s\n' "$missing" >&2
+if [[ -z "$common" ]]; then
+  printf '現在のブランチで alembic history を確認し、必要な downgrade を行ってから切り替えてください。\n' >&2
+elif [[ "$common" != *$'\n'* ]]; then
+  printf '切替先との共通 revision: %s\n' "$common" >&2
+  printf '現在のブランチで alembic downgrade %s を行ってから切り替えてください。\n' "$common" >&2
+else
+  printf '切替先との共通 revision:\n%s\n' "$common" >&2
+  printf '現在のブランチで alembic history を確認し、DB がこれらの revision になるまで downgrade してから切り替えてください。\n' >&2
+fi
+exit 1

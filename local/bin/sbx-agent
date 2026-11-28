@@ -18,6 +18,7 @@
 #   --claude-account ID Claude サブスクを sandbox ごとに固定（account1/account2/work3 など）
 #   --claude-oauth      通常の OAuth 用。ホストの Claude 設定・認証を共有しない
 #   --config-dir DIR   agent の設定ディレクトリ（既定: agent ごとの標準パス）
+#   --writable-dotfiles 検出した dotfiles を読み書き可能で追加マウント
 #   --mount PATH       追加 workspace（複数指定可、`:ro` 接尾辞で read-only）
 #   --branch NAME      branch mode で起動する（auto を渡すと sbx が命名）
 #   --template REF     sandbox template の OCI 参照（既定: sbx-agent:<agent>）
@@ -100,6 +101,7 @@ SETUP_ONLY=false
 FORCE_NEW=false
 REMOVE_ON_EXIT=false
 MOUNT_CONFIG=true
+WRITABLE_DOTFILES=false
 HOST_BRIDGE=true
 ENV_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/sbx/sbxenv.yaml"
 ENV_PLAN=false
@@ -254,6 +256,7 @@ while [[ $# -gt 0 ]]; do
         --rm) REMOVE_ON_EXIT=true ;;
         --new) FORCE_NEW=true ;;
         --setup-only) SETUP_ONLY=true ;;
+        --writable-dotfiles) WRITABLE_DOTFILES=true ;;
         --no-config) MOUNT_CONFIG=false ;;
         --no-host-bridge) HOST_BRIDGE=false ;;
         -h | --help)
@@ -289,6 +292,7 @@ for _spec in ${STATIC_MCP[@]+"${STATIC_MCP[@]}"}; do REPLAY_ARGS+=(--static-mcp 
 [[ -n "$CPUS" ]] && REPLAY_ARGS+=(--cpus "$CPUS")
 [[ -n "$MEMORY" ]] && REPLAY_ARGS+=(--memory "$MEMORY")
 [[ "$MOUNT_CONFIG" == false ]] && REPLAY_ARGS+=(--no-config)
+[[ "$WRITABLE_DOTFILES" == true ]] && REPLAY_ARGS+=(--writable-dotfiles)
 [[ "$HOST_BRIDGE" == false ]] && REPLAY_ARGS+=(--no-host-bridge)
 
 # sandbox 内の固定パス・固定ポート
@@ -500,6 +504,16 @@ for spec in ${EXTRA_MOUNTS[@]+"${EXTRA_MOUNTS[@]}"}; do
     add_mount "$spec"
 done
 
+writable_dotfiles=""
+if [[ "$WRITABLE_DOTFILES" == true ]]; then
+    dotfiles_repo=$(find_dotfiles_repo) || {
+        log_error "dotfiles が見つかりません。DOTFILES_DIR に checkout のパスを設定してください"
+        exit 1
+    }
+    writable_dotfiles=$(cd "$dotfiles_repo" && pwd -P) || exit 1
+    add_mount "$dotfiles_repo"
+fi
+
 if [[ "$MOUNT_CONFIG" == true ]]; then
     # devcontainer.json の mounts に対応するホスト設定
     # ファイル単位では checkout や設定再生成による inode の置換に追従できない。
@@ -528,12 +542,12 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     [[ -n "$CONFIG_DIR" ]] && add_mount "$CONFIG_DIR"
     # 上のホスト設定は mise の [dotfiles] が symlink-each で配置しているため、中身は
     # dotfiles リポジトリを指す symlink になっている。リポジトリも同じ絶対パスへ
-    # read-only で渡さないと、sandbox 内では全てリンク切れになる。
-    if dotfiles_repo=$(find_dotfiles_repo); then
+    # 渡さないと sandbox 内ではリンク切れになる。既定では read-only にする。
+    if [[ -n "$writable_dotfiles" ]] || dotfiles_repo=$(find_dotfiles_repo); then
         # 省略するのは workspace がリポジトリ root そのもののときだけ（既に rw でマウント
         # 済み）。サブディレクトリを workspace にした場合は root が見えないため、
         # ~/.config 配下の symlink を解決するにはリポジトリの追加マウントが必要になる。
-        if [[ "$WORKSPACE" != "$dotfiles_repo" ]]; then
+        if [[ "$WORKSPACE" != "$dotfiles_repo" && "$(cd "$dotfiles_repo" && pwd -P)" != "$writable_dotfiles" ]]; then
             add_mount "${dotfiles_repo}:ro"
         fi
     else
@@ -548,9 +562,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
     # skills などがリンク切れで見つからなくなる。devcontainer と同じく書き込み可で渡す。
     # 対象は claude-share-config が共有する entry に限る（任意の symlink を辿ると、認証情報など
     # 意図しないホストのファイルを書き込み可で sandbox に渡しかねないため）。
-    # 最終的に dotfiles リポジトリ内を指すディレクトリは read-only にする。書き込み可で渡すと、
-    # 上の `${dotfiles_repo}:ro` より子のマウントが優先され、sandbox からホストの dotfiles を
-    # 書き換えられてしまう。
+    # dotfiles 内を指す子マウントは、親と同じ書き込みポリシーにする。
     if [[ -n "$CONFIG_DIR" && -d "$CONFIG_DIR" ]]; then
         config_dir_real=$(cd "$CONFIG_DIR" && pwd -P)
         dotfiles_repo_real=""
@@ -581,7 +593,7 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
             # （~/.claude/settings.json など）は "exists but is not a directory" で作成ごと失敗する。
             # ファイル（settings.json）はリンク先のあるディレクトリ（~/.claude）を read-only で
             # 足して、symlink の連鎖ごと sandbox 内で解決させる。dotfiles リポジトリ内なら
-            # 上の `${dotfiles_repo}:ro` で既に解決するので足さない。
+            # 上の dotfiles マウントで既に解決するので足さない。
             if [[ ! -d "$target" ]]; then
                 [[ -n "$dotfiles_repo_real" && ("$target_parent" == "$dotfiles_repo_real" || "$target_parent" == "$dotfiles_repo_real"/*) ]] \
                     || add_mount "${target_parent}:ro"
@@ -590,7 +602,8 @@ if [[ "$MOUNT_CONFIG" == true ]]; then
 
             # symlink の連鎖を辿りきった実体の場所で read-only にするか決める
             final=$(cd "$target" 2>/dev/null && pwd -P) || continue
-            if [[ -n "$dotfiles_repo_real" && ("$final" == "$dotfiles_repo_real" || "$final" == "$dotfiles_repo_real"/*) ]]; then
+            if [[ -n "$dotfiles_repo_real" && "$dotfiles_repo_real" != "$writable_dotfiles" &&
+                  ("$final" == "$dotfiles_repo_real" || "$final" == "$dotfiles_repo_real"/*) ]]; then
                 add_mount "${target}:ro"
             else
                 add_mount "$target"
@@ -631,11 +644,26 @@ fi
 # workspace が linked worktree の場合、.git file は common git dir を絶対パスで参照する。
 # sbx はホストと同じ絶対パスにマウントするため、これも渡さないと sandbox 内で git が壊れる
 # （公式ドキュメントの "Host worktree" の制限を回避する方法。docs/docker-sandboxes.md 参照）。
-if grep -q '^gitdir: [^/]' "${WORKSPACE}/.git" 2>/dev/null; then
-    log_warn "workspace が relative-paths 形式の worktree のため、sandbox 内で git が使えません"
-elif common_git_dir=$(git -C "$WORKSPACE" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
-    [[ "$common_git_dir" != "${WORKSPACE}/.git" ]] && add_mount "$common_git_dir"
+mount_worktree_git_dir() {
+    local workspace="$1" suffix="${2:-}" common_git_dir workspace_git_dir
+    if grep -q '^gitdir: [^/]' "${workspace}/.git" 2>/dev/null; then
+        log_warn "$workspace が relative-paths 形式の worktree のため、sandbox 内で git が使えません"
+    elif common_git_dir=$(git -C "$workspace" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
+        if [[ "$common_git_dir" != "${workspace}/.git" ]]; then
+            if [[ "$suffix" == :ro ]]; then
+                workspace_git_dir=$(git -C "$WORKSPACE" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || workspace_git_dir=""
+                [[ "$common_git_dir" != "$workspace_git_dir" ]] || return 0
+            fi
+            add_mount "${common_git_dir}${suffix}"
+        fi
+    fi
+}
+if [[ -n "$writable_dotfiles" ]]; then
+    mount_worktree_git_dir "$writable_dotfiles"
+elif [[ -n "${dotfiles_repo:-}" && "$WORKSPACE" != "$dotfiles_repo" ]]; then
+    mount_worktree_git_dir "$dotfiles_repo" :ro
 fi
+mount_worktree_git_dir "$WORKSPACE"
 
 # ---------------------------------------------------------------------------
 # sandbox の環境変数
@@ -935,7 +963,7 @@ run_post_create() {
 # 作成したときの呼び出しを、そのまま実行できる bash スクリプトとして記録する。
 # 追加の引数（"$@"）は agent 引数の `--` より前に入るので、--new --setup-only を後から足せる。
 # 記録に失敗しても sandbox 自体は使えるため warning 止まりにする。
-readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY)
+readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY SBX_AGENT_HOST_PROFILE)
 record_invocation() {
     local dir="${XDG_STATE_HOME:-${HOME}/.local/state}/sbx-agent" file var
     file="${dir}/${SANDBOX_NAME}.sh"
@@ -1017,6 +1045,9 @@ prepare_env_files() {
     mkdir -p "$state_dir" || exit 1
     state_dir=$(cd "$state_dir" && pwd -P)
     assert_env_path_unmounted "$state_dir"
+    if [[ -n "${SBX_AGENT_HOST_PROFILE:-}" ]]; then
+        assert_env_path_unmounted "$SBX_AGENT_HOST_PROFILE"
+    fi
     # mise の symlink-each で配った標準設定は dotfiles 自身を指す。
     # dotfiles を workspace にしても使えるよう、相対 kit 参照を保ってホスト専用の
     # snapshot に展開する。任意の --env-file は参照先の構成を推測せず、そのまま検証する。
@@ -1039,7 +1070,7 @@ prepare_env_files() {
     assert_env_path_unmounted "$ENV_FILE"
     [[ -z "$SUBSCRIPTION_KIT" ]] || assert_env_path_unmounted "$SUBSCRIPTION_KIT"
     ENV_OVERLAY="$state_dir/runtime.yaml"
-    local env_json='{}' mounts_json='[]' ports_json='[]' options_json
+    local env_json='{}' mounts_json='[]' ports_json='[]' options_json target
     local i=0
     while [[ $i -lt ${#ENV_ARGS[@]} ]]; do
         item="${ENV_ARGS[i + 1]}"
@@ -1050,7 +1081,12 @@ prepare_env_files() {
     done
     for spec in ${MOUNTS[@]+"${MOUNTS[@]}"}; do
         path="${spec%:ro}"
-        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
+        target=""
+        if [[ -n "$writable_dotfiles" && "$path" == "$dotfiles_repo" && "$path" != "$writable_dotfiles" ]]; then
+            target="$path"
+            path="$writable_dotfiles"
+        fi
+        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --arg t "$target" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro} + (if $t=="" then {} else {target:$t} end)]') || exit 1
     done
     if [[ -n "$CLAUDE_PROJECTS_HOST" ]]; then
         # 別 target の rw mount で、明示された read-only mount を迂回しない。
