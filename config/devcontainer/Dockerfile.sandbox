@@ -153,7 +153,8 @@ RUN --mount=type=secret,id=github_token \
     chown -R agent:agent "${AGENT_HOME}/.local/share/gh"
 
 # mise でインストールした gh-actions-lock を gh extension として登録する。
-# gh の extension store は mise の PATH とは独立している。
+# 一時的な GH_CONFIG_DIR は認証情報を image に残さないためのもの。
+# gh の extension 本体は XDG_DATA_HOME 配下に symlink として登録される。
 RUN set -eu; \
     ext_dir="${AGENT_HOME}/.local/share/gh-local-extensions/gh-actions-lock"; \
     install -d -o agent -g agent "$ext_dir"; \
