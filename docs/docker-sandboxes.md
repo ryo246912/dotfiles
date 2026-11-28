@@ -43,6 +43,51 @@ Claude の token 登録・初期設定・組織 ID 確認の Python 処理も、
 | `sandbox:disk`              | ディスク使用量の内訳を表示する（ホストの Docker / sbx の template / 各 sandbox）。読み取り専用                                                                                           | 容量が気になったとき                       |
 | `sandbox:prune`             | ディスクを回収する。既定は dry-run で `--yes` で実行（`--template` / `--build-cache` / `--all` で対象を広げる）                                                                          | 容量が足りないとき                         |
 
+## 既存 sandbox を更新・再作成する
+
+ホスト側のスクリプトや bind mount 済みのファイルだけの変更なら、再アタッチで反映できる場合があります。
+template 内のツール・初期化スクリプト、kit、作成時の mount 構成を更新する場合は、既存 sandbox を削除して再作成します。
+単に停止・再開するだけでは新しい template は反映されません。
+
+### 通常の sandbox
+
+```bash
+mise run sandbox:build-template claude # template の変更がある場合
+mise run sandbox:recreate             # fzf で複数選択
+mise run sandbox:recreate <sandbox-name> # 名前を指定する場合
+```
+
+再作成は保存済みの起動引数に `--new --setup-only` を追加して実行します。
+作成時の記録がない場合は元の起動コマンドに `--new` を付けます。
+実行前に作業を終了し、sandbox 内だけにあるファイル、未 push のコミット、必要な認証情報の再設定手段を確認してください。
+ホストに bind mount した workspace や永続化済みの会話ログは残りますが、sandbox 内だけのファイル、
+追加インストールしたツール、内部 Docker データ、実行中のセッションは引き継がれません。
+
+### T3 の sandbox
+
+> [!WARNING]
+> `sandbox:recreate` は T3 の LaunchAgent / systemd user service を停止・復旧しません。
+> 自動起動サービスとの競合や T3 の公開ポート・初期化の復旧を保証しないため、T3 では以下の専用手順を使います。
+
+```bash
+mise run sandbox:build-template claude # template の変更がある場合
+mise run t3:reset                     # 対象アカウントを選択して削除
+mise run t3:setup                     # 同じアカウントを選択して再作成
+```
+
+リポジトリ専用の T3 環境では、対象リポジトリで次を実行します。
+
+```bash
+mise run t3:reset -- --repo
+mise run t3:setup -- --repo
+```
+
+reset は自動起動サービスと profile 登録も削除します。ホストに保存した T3 設定・履歴は残りますが、
+カスタム port や自動起動の有無などは事前に確認し、setup 時に同じ設定を指定してください。
+sandbox 内だけのデータは先に退避し、再作成後は必要に応じて provider に再ログインします。
+単なる T3 の再起動なら `mise run t3:cli` の `restart-server` を使い、削除は不要です。
+詳細は [T3 Code の運用手順](t3-code.md) を参照してください。
+
 ## devcontainer に対する利点
 
 ### 隔離境界が強い
