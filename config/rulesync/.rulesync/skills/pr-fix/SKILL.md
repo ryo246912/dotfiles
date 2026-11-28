@@ -133,6 +133,27 @@ gh run view <run-ID> --log-failed
 
 待機は既定で 60 秒間隔とし、API の rate limit / Retry-After に従って間隔を広げる。待機状況はユーザーへ随時報告する。各 head の CI・レビュー待ちは既定 30 分を上限とし、ユーザー指定があればそれを優先する。時間切れ・取得不能・外部障害の場合は成功とせず、対象 SHA、未着レビュー、未完了 CI、残る指摘、再開方法を報告して終了する。同じ原因の修正が 2 回続けて失敗した場合は、その原因への追加試行を保留し、最後の判断依頼に含める。PR が closed / merged になった場合は新たな push を止めて状態を報告する。自動マージはしない。
 
+### イベント待ち（`gh event listen`）
+
+レビュー待ち・コンフリクト待ち・check suite 完了待ちは、`gh event listen` が使える場合は定期取得の代わりにこれで待つ。REST API の commit status を含む CI 待ちはイベントで検出できないため、`gh pr checks` の定期取得を併用する。
+`gh event` は preview で Event Streams のアクセス権が必要なため、最初に `gh event --help`（`gh` が対応しているか）と `gh event subscription list`（アカウントにアクセス権があるか。権限がなければ 403 になる）で使えるか確認する。
+
+```bash
+# PR の URL は --resource、イベントは --event に完全な種別名で渡す（位置引数は受け付けない。短縮名は無い）
+gh event listen --resource <PR URL> --event com.github.pull_request.review.submitted.v1,com.github.pull_request.state.changed.v1 --timeout <待機上限>
+# CI は check suite の完了イベント（check suite ごとに 1 件届く）
+gh event listen --resource <PR URL> --event com.github.pull_request.check_suite.status.changed.v1 --timeout <待機上限>
+```
+
+- 上記以外のイベント種別（head の変更、マージコンフリクトなど）の名前は `gh event listen --help` で確認して指定する。推測で書かない。待機中の push や競合を検出するため、head の変更・マージコンフリクトを表す種別も `--event` に加える
+- 既定は最初の 1 件で終了する（待機上限に達すると終了コード 8）。イベントを受けたら、まず `gh event listen` を再起動して stderr に `Listening for events.` が出るのを確認し、その後で本節の各回の確認（`headRefOid`・`mergeable`・base 先端 SHA・CI・コメントの再取得）を行う。再取得中に届いたイベントは再起動したリスナーで受け取り、完了条件を満たさなければ待機を続ける
+- イベントは過去分を再配信しない。リスナーをバックグラウンドで起動し、stderr に `Listening for events.` が出てから（再接続後の同じ表示の後も）現在の状態を 1 回取得する。起動と取得を同時に行うと、その間のイベントを取りこぼす
+- `--timeout` には上記の待機上限の残りを指定する。タイムアウトは未着として扱い、成功にしない
+- イベントの内容だけで完了判定しない。受信後は必ず最新の head SHA・`mergeable`・CI・レビューを再取得して判定する（古い SHA へのイベントを現在の head の結果として使わない）
+- イベントでは検出できないものは、定期取得を併用する: PR の会話コメント、commit status 形式の外部 CI（check suite を発生させない）、base ブランチ先端 SHA の更新、`mergeable` が `UNKNOWN` から確定する変化
+- `gh` が古い・サブコマンドが無い・アクセス権がない・接続に失敗した場合は、その旨を報告し、上記の定期取得に切り替える。`gh event listen` の失敗を成功扱いしない
+- `--watch` モードの `watch_feedback.py` は別機構のまま使う。修正担当内のレビュー・CI・コンフリクト待ちに限り、この節を適用する
+
 役割と作業フロー:
 
 ### 0. 対象リポジトリ・ディレクトリの特定（PR番号取得の前に実施）:
