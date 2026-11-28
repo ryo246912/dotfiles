@@ -511,7 +511,7 @@ if [[ "$WRITABLE_DOTFILES" == true ]]; then
         exit 1
     }
     writable_dotfiles=$(cd "$dotfiles_repo" && pwd -P) || exit 1
-    add_mount "$writable_dotfiles"
+    add_mount "$dotfiles_repo"
 fi
 
 if [[ "$MOUNT_CONFIG" == true ]]; then
@@ -645,11 +645,15 @@ fi
 # sbx はホストと同じ絶対パスにマウントするため、これも渡さないと sandbox 内で git が壊れる
 # （公式ドキュメントの "Host worktree" の制限を回避する方法。docs/docker-sandboxes.md 参照）。
 mount_worktree_git_dir() {
-    local workspace="$1" suffix="${2:-}" common_git_dir
+    local workspace="$1" suffix="${2:-}" common_git_dir workspace_git_dir
     if grep -q '^gitdir: [^/]' "${workspace}/.git" 2>/dev/null; then
         log_warn "$workspace が relative-paths 形式の worktree のため、sandbox 内で git が使えません"
     elif common_git_dir=$(git -C "$workspace" rev-parse --path-format=absolute --git-common-dir 2>/dev/null); then
         if [[ "$common_git_dir" != "${workspace}/.git" ]]; then
+            if [[ "$suffix" == :ro ]]; then
+                workspace_git_dir=$(git -C "$WORKSPACE" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || workspace_git_dir=""
+                [[ "$common_git_dir" != "$workspace_git_dir" ]] || return 0
+            fi
             add_mount "${common_git_dir}${suffix}"
         fi
     fi
@@ -925,7 +929,7 @@ run_post_create() {
 # 作成したときの呼び出しを、そのまま実行できる bash スクリプトとして記録する。
 # 追加の引数（"$@"）は agent 引数の `--` より前に入るので、--new --setup-only を後から足せる。
 # 記録に失敗しても sandbox 自体は使えるため warning 止まりにする。
-readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY)
+readonly REPLAY_ENV_VARS=(SBX_AGENT_MOUNTS SBX_AGENT_TEMPLATE SBX_AGENT_STATIC_MCP SBX_AGENT_SIGNING_KEY SBX_AGENT_HOST_PROFILE)
 record_invocation() {
     local dir="${XDG_STATE_HOME:-${HOME}/.local/state}/sbx-agent" file var
     file="${dir}/${SANDBOX_NAME}.sh"
@@ -1007,6 +1011,9 @@ prepare_env_files() {
     mkdir -p "$state_dir" || exit 1
     state_dir=$(cd "$state_dir" && pwd -P)
     assert_env_path_unmounted "$state_dir"
+    if [[ -n "${SBX_AGENT_HOST_PROFILE:-}" ]]; then
+        assert_env_path_unmounted "$SBX_AGENT_HOST_PROFILE"
+    fi
     # mise の symlink-each で配った標準設定は dotfiles 自身を指す。
     # dotfiles を workspace にしても使えるよう、相対 kit 参照を保ってホスト専用の
     # snapshot に展開する。任意の --env-file は参照先の構成を推測せず、そのまま検証する。
@@ -1029,7 +1036,7 @@ prepare_env_files() {
     assert_env_path_unmounted "$ENV_FILE"
     [[ -z "$SUBSCRIPTION_KIT" ]] || assert_env_path_unmounted "$SUBSCRIPTION_KIT"
     ENV_OVERLAY="$state_dir/runtime.yaml"
-    local env_json='{}' mounts_json='[]' ports_json='[]' options_json
+    local env_json='{}' mounts_json='[]' ports_json='[]' options_json target
     local i=0
     while [[ $i -lt ${#ENV_ARGS[@]} ]]; do
         item="${ENV_ARGS[i + 1]}"
@@ -1040,7 +1047,12 @@ prepare_env_files() {
     done
     for spec in ${MOUNTS[@]+"${MOUNTS[@]}"}; do
         path="${spec%:ro}"
-        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro}]') || exit 1
+        target=""
+        if [[ -n "$writable_dotfiles" && "$path" == "$dotfiles_repo" && "$path" != "$writable_dotfiles" ]]; then
+            target="$path"
+            path="$writable_dotfiles"
+        fi
+        mounts_json=$(jq -cn --argjson m "$mounts_json" --arg p "$path" --arg t "$target" --argjson ro "$([[ "$spec" == *:ro ]] && echo true || echo false)" '$m + [{path:$p,readOnly:$ro} + (if $t=="" then {} else {target:$t} end)]') || exit 1
     done
     if [[ -n "$CLAUDE_PROJECTS_HOST" ]]; then
         # 別 target の rw mount で、明示された read-only mount を迂回しない。

@@ -217,6 +217,7 @@ def prepare(profile):
     mounts = ["--mount", profile["storage"]]
     if profile["name"] == profile_key(account, SHARED_PROFILE):
         mounts.append("--writable-dotfiles")
+        environment = {**environment, "SBX_AGENT_HOST_PROFILE": str(profile_path(account, SHARED_PROFILE).resolve())}
     run(["sbx-agent", "claude", *auth_args,
          "--workspace", profile["workspace"], "--name", profile["name"],
          *mounts, "--publish", f'{profile["port"]}:3773', "--setup-only"],
