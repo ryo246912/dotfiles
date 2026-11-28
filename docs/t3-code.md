@@ -633,6 +633,57 @@ T3 Connect に登録した環境からは、エージェントがそのホスト
   認証情報を多く持つホスト本体は公開しない
 - 不安がある場合は T3 Connect を使わず、Tailscale や SSH で接続する
 
+### Tailscale で接続する場合
+
+T3 Connect を使わない経路。通信は Tailscale の暗号化経路で端末間を結ぶので、T3 や Cloudflare の中継を通らず、
+sbx の DNS 制限（SRV / TXT）も受けない。機密を含む作業や、T3 Connect が使えない場合（sbx が 0.55.0-rc4 未満、
+`feature.udp-egress` が無効など）はこちらを使う。「T3 Connect の安全性」も参照。
+
+以前の `mise run t3:cli -- <アカウント> tailscale` は、#1872 のリポジトリ別 sandbox への移行で削除済み。
+以下は、旧コマンドが内部で行っていた処理（`tailscale serve` の設定と pairing token の発行）を手動で行う手順。
+このリポジトリの作業環境には Mac・Tailscale・sbx が無く、**現在の構成での実行は未検証**。
+手順の途中で失敗したら、`mise run t3:cli` のメニューの `ports` と `server-status` で状態を確認する。
+
+前提（初回のみ）:
+
+- Mac とスマホに Tailscale を導入し、同じ tailnet にログインする。
+  Mac への導入は private ホストで `mise run bootstrap:mac-packages` が行う（`tailscale-app`）。
+  `mise bootstrap packages apply brew-cask:tailscale-app` は、pkg インストーラの sudo 要求で
+  実機では中断したため使わない。
+- 管理画面（https://login.tailscale.com/admin/dns）で MagicDNS と HTTPS Certificates を有効にする。
+- Mac は起動したままにする（スリープ中は接続できない）。スマホは Tailscale の VPN をオンにする。
+
+手順（work3 の例。環境が異なる場合は `--sbx` と各ポートを置き換える）:
+
+1. sandbox の公開ポートを確認する。
+
+   ```sh
+   mise run t3:cli -- --sbx work3 ports
+   ```
+
+2. その公開ポートを、tailnet の HTTPS に出す。HTTPS ポートは 443 / 8443 / 10000 から選び、
+   環境ごとに重複しないようにする。この設定は永続し、場所を変えても tailnet のアドレスは変わらない。
+
+   ```sh
+   tailscale serve --bg --https=8443 http://127.0.0.1:<公開ポート>
+   ```
+
+3. この Mac の MagicDNS 名を確認する。`tailscale status --json` の `Self.DNSName`（末尾の `.` は除く）。
+
+4. スマホ用の pairing token を発行する。
+
+   ```sh
+   mise run t3:cli -- --sbx work3 auth pairing create --ttl 10m --label phone \
+     --base-url https://<MagicDNS名>:8443
+   ```
+
+5. スマホの T3 Code アプリで Add environment を開き、`https://<MagicDNS名>:8443` と Token を入力する。
+   `127.0.0.1` はスマホでは PC を指さない。Token は一度使うと無効で、10 分で期限が切れる。
+   ブラウザーで Pair URL を開くと Token を使い切るため、アプリに直接入力する。
+
+接続後は、アプリの環境選択だけで使える。再実行が要るのは、Token の期限切れと端末の追加のときだけ。
+この経路だけを止める場合は、対応するポートを指定して `tailscale serve --https=8443 off` を実行する。
+
 ## 自動起動と保存先
 
 | 項目                        | 保存先（既定）                                                   |
