@@ -485,6 +485,8 @@ T3 Code の外で `claude` / `codex` を直接使っていた会話は、取り�
 
 1. 上の方法で、そのホストを environment として登録する
 2. Settings → Projects → Import projects and their threads を開き、その environment を選ぶ
+   （公式の `welcome-page.md` にある手順。初回起動の Welcome ページでも取り込める。
+   アプリのバージョンによって画面が異なる場合は、Welcome ページ側の Projects のインポートを使う）
    （Pi の会話も取り込む場合は、先に Add more agents で Pi を有効にする。既定では対象外）
 3. Claude Code / Codex / Pi の会話が T3 Code のスレッドとして取り込まれ、続きを打てる
    （取り込まれるのは直近 30 日に活動した会話だけ。それより古い会話は、選んでも取り込まれない）
