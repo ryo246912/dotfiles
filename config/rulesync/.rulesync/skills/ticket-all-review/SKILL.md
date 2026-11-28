@@ -1,6 +1,6 @@
 ---
 name: ticket-all-review
-description: Notion・Jira などのチケット、Slack リンク、直接の要望を、ticket-spec-review と ticket-uiux-review で順にレビューする。考慮漏れ、要求そのものの妥当性、画像付きの実現案と実装難易度をまとめる。
+description: Notion・Jira などのチケット、Slack リンク、直接の要望を統合レビューする。考慮漏れ、要求そのものの妥当性、画像付きの実現案と実装難易度をまとめる。
 targets:
   - claudecode
   - codexcli

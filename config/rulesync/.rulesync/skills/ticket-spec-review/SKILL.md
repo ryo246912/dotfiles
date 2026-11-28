@@ -8,7 +8,7 @@ targets:
 
 # チケット・要望の仕様レビュー
 
-チケット URL・識別子、Slack リンク、貼り付けた本文、直接の要望を受け取る。単独実行では [チケット・要望の取得](../pr-spec-review/references/ticket-intake.md) に従う。`ticket-all-review` からは取得済みの資料を受け取る。
+チケット URL・識別子、Slack リンク、貼り付けた本文、直接の要望を受け取る。単独実行では [チケット・要望の取得](references/ticket-intake.md) に従う。`ticket-all-review` からは取得済みの資料を受け取る。
 
 [共通の仕様レビュー手順](../pr-spec-review/references/spec-review.md) を使う。明示された関連 PR があれば差分と統合後の状態を根拠にする。関連 PR がなく対象リポジトリを確認できる場合は、既定ブランチの SHA で現状を調べ、対応案と現状を区別する。実装状況を確認できない案は未確認とする。
 
